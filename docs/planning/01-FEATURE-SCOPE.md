@@ -88,14 +88,14 @@ subfinder (opsional, skip bila predefined subs)
 
 ## C. Profil Kompleksitas (apa yang sebenarnya harus didukung tech)
 
-| Dimensi | Beban | Catatan |
-| ------- | ----- | ------- |
-| Orkestrasi job long-running | **Sedang** | Pipeline 5 tahap, cancellation, progress, retry. Bukan throughput ekstrem (self-hosted, target terbatas). |
-| Menjalankan tool eksternal | Rendah | Exec 4 binary Go + 1 gem Ruby (wpscan). Sama untuk semua bahasa. |
-| Integrasi I/O (API eksternal, webhook, AI) | **Tinggi** | OTX/LeakCheck/AI/webhook — dominan I/O, async-friendly. |
-| API + RBAC + multi-tenant + realtime | **Tinggi** | Permukaan CRUD/typed-API/SSE besar. |
-| Render PDF | Sedang | HTML/CSS→PDF via Playwright/Typst (bahasa-agnostik). |
-| Dashboard/visualisasi | **Tinggi** | Tabel besar, chart, dark mode, desain keren. |
+| Dimensi                                    | Beban      | Catatan                                                                                                   |
+| ------------------------------------------ | ---------- | --------------------------------------------------------------------------------------------------------- |
+| Orkestrasi job long-running                | **Sedang** | Pipeline 5 tahap, cancellation, progress, retry. Bukan throughput ekstrem (self-hosted, target terbatas). |
+| Menjalankan tool eksternal                 | Rendah     | Exec 4 binary Go + 1 gem Ruby (wpscan). Sama untuk semua bahasa.                                          |
+| Integrasi I/O (API eksternal, webhook, AI) | **Tinggi** | OTX/LeakCheck/AI/webhook — dominan I/O, async-friendly.                                                   |
+| API + RBAC + multi-tenant + realtime       | **Tinggi** | Permukaan CRUD/typed-API/SSE besar.                                                                       |
+| Render PDF                                 | Sedang     | HTML/CSS→PDF via Playwright/Typst (bahasa-agnostik).                                                      |
+| Dashboard/visualisasi                      | **Tinggi** | Tabel besar, chart, dark mode, desain keren.                                                              |
 
 ➡️ **Kompleksitas didominasi I/O + API/integrasi + UI**, bukan komputasi berat atau konkurensi
 ekstrem. Orkestrasi scan "sedang" dan bisa ditangani queue Postgres-backed + 1 worker.

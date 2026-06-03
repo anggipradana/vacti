@@ -36,6 +36,7 @@ Menutup baris Feature Parity Checklist: **1.1, 1.3, 1.4, 1.6, 1.7, 1.8, 1.15–1
 ## Technical Approach
 
 ### Backend Services
+
 - `@vacti/db` (extend): `targets`, `scans` (ScanHistory: status, profile, timing, counts),
   `scan_activity` (timeline), `commands` (audit perintah+output), `subdomains`, `endpoints`,
   `ip_addresses`, `ports`, `technologies`, `vulnerabilities` (severity -1..4, CVE/CWE/CVSS,
@@ -46,10 +47,12 @@ Menutup baris Feature Parity Checklist: **1.1, 1.3, 1.4, 1.6, 1.7, 1.8, 1.15–1
   recon notes. SSE channel progress.
 
 ### Frontend Components
+
 - Diserahkan ke epic **dashboard-ui** (scan management UI, results, diff). Epic ini menyediakan
   data + API + SSE; UI minimal (form trigger) boleh untuk e2e.
 
 ### Infrastructure
+
 - Binari + nuclei-templates sudah ada di image worker (epic platform-foundation task 008).
 - Cron ringan via pg-boss schedule untuk scheduled scans.
 
@@ -91,10 +94,12 @@ Menutup baris Feature Parity Checklist: **1.1, 1.3, 1.4, 1.6, 1.7, 1.8, 1.15–1
 - Setiap perintah tool terekam (audit) dengan exit code & durasi.
 
 ## Estimated Effort
+
 - Timeline: ~2.5–3 minggu (1 dev).
 - Jalur kritis: 001 → 002 → {003,004} → 005 → 006 → 007.
 
 ## Tasks Created
+
 - [ ] 001.md - Recon data models (parallel: true)
 - [ ] 002.md - Tool runner framework (parallel: true)
 - [ ] 003.md - Adapters subfinder + httpx + WordPress detection (parallel: true)

@@ -45,6 +45,7 @@ Menutup baris Feature Parity Checklist: **4.1, 5.6 (sebagian), 6.3, 6.4, 8.1–8
 ## Technical Approach
 
 ### Frontend Components (web)
+
 - App shell Next.js (App Router): layout root, tema dark/light (next-themes), provider tRPC + React
   Query, error boundary, toaster.
 - Halaman auth: login, logout, (opsional) first-run create-admin. Guarded layout (redirect bila
@@ -52,9 +53,10 @@ Menutup baris Feature Parity Checklist: **4.1, 5.6 (sebagian), 6.3, 6.4, 8.1–8
 - Halaman Settings dasar: profil user, manajemen API token (buat/cabut), daftar user + assign role
   (khusus SysAdmin), API Key Vault (input terenkripsi, tampil masked).
 - `@vacti/ui`: inisialisasi shadcn/ui (button, input, dialog, table, dropdown, toast, form, card)
-  + token desain (warna severity/risk, radius, typografi) supaya epic UI tinggal pakai.
+  - token desain (warna severity/risk, radius, typografi) supaya epic UI tinggal pakai.
 
 ### Backend Services
+
 - `@vacti/db`: skema Drizzle fondasi — `users`, `sessions`, `api_tokens`, `roles`/`permissions`
   (atau enum + matriks statis), `projects`, `project_members`, `api_keys` (vault terenkripsi),
   `audit_log`. Migrasi awal + seed (admin pertama, profil scan default placeholder).
@@ -69,6 +71,7 @@ Menutup baris Feature Parity Checklist: **4.1, 5.6 (sebagian), 6.3, 6.4, 8.1–8
   PORT, NODE_ENV, opsional keys) — fail-fast saat boot.
 
 ### Infrastructure
+
 - **Dockerfile** multi-stage: base (node) → builder (nx build web+worker) → runtime. Image worker
   membawa 4 binary Go (subfinder/httpx/naabu/nuclei) + nuclei-templates + Chromium (Playwright)
   — disiapkan di sini, dipakai recon-engine/reports.
@@ -85,6 +88,7 @@ Menutup baris Feature Parity Checklist: **4.1, 5.6 (sebagian), 6.3, 6.4, 8.1–8
 ## Implementation Strategy
 
 Urut karena saling bertumpu, tapi governance/CI bisa paralel dengan kode:
+
 1. Scaffold monorepo + tooling (Nx, TS, ESLint/Prettier, Vitest, Playwright) → bisa paralel dgn (2).
 2. Governance docs + Husky + commitlint + CI + .env guards (paralel dgn 1, butuh repo init).
 3. DB schema + Drizzle + migrasi + `@vacti/config` (butuh 1).
@@ -100,22 +104,23 @@ satu e2e smoke wajib hijau sebagai bukti fondasi hidup.
 ## Task Breakdown Preview
 
 - [ ] **001 Monorepo scaffold & toolchain** — Nx workspace, web+worker apps, libs kosong, TS/ESLint/
-  Prettier(120)/Vitest/Playwright, npm scripts. (parallel dgn 002)
+      Prettier(120)/Vitest/Playwright, npm scripts. (parallel dgn 002)
 - [ ] **002 Governance, Husky, commitlint & CI** — repo-governance 6-lapis + Diátaxis skeleton,
-  Husky 3-stage + guard scripts, commitlint, GitHub Actions gate, .env.example. (parallel dgn 001)
+      Husky 3-stage + guard scripts, commitlint, GitHub Actions gate, .env.example. (parallel dgn 001)
 - [ ] **003 DB schema, Drizzle & config** — skema fondasi + migrasi awal + seed + env loader Zod.
 - [ ] **004 Auth, sessions & API tokens** — argon2id, cookie session, token hashed+scoped, login UI.
 - [ ] **005 RBAC & permission middleware** — peran + matriks permission, guard tRPC/Hono, tests.
 - [ ] **006 pg-boss queue & worker bootstrap** — wrapper queue ber-tipe, worker entrypoint+migrate.
 - [ ] **007 App shell, Project scoping & Settings/Vault UI** — layout/tema, `/[projectSlug]`,
-  settings user/token/role + API Key Vault terenkripsi, tRPC root + Hono skeleton.
+      settings user/token/role + API Key Vault terenkripsi, tRPC root + Hono skeleton.
 - [ ] **008 Dockerfile, compose & runtime image** — multi-stage, bundling 4 Go tools + Chromium,
-  3-service compose, Makefile.
+      3-service compose, Makefile.
 - [ ] **009 E2E smoke & coverage gate** — Playwright smoke (login→project→token), wiring CI green.
 
 (Target ≤10 task. Detail + dependency final di file 001.md…009.md saat decompose.)
 
 ## Tasks Created
+
 - [ ] 001.md - Monorepo scaffold & toolchain (parallel: true)
 - [ ] 002.md - Governance, Husky, commitlint & CI (parallel: true)
 - [ ] 003.md - DB schema, Drizzle & config (parallel: true)

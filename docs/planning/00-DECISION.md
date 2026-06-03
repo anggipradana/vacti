@@ -5,18 +5,18 @@
 
 ## Stack terpilih — Full-stack TypeScript (ringan · modern · reliable)
 
-| Lapisan | Pilihan |
-| ------- | ------- |
-| App/UI | **Next.js 15** (App Router, React 19) + **Tailwind** + **shadcn/ui** + Radix (dark mode, WCAG AA) |
-| API | **tRPC** (internal type-safe) + **Hono** untuk REST publik + **Zod** + **OpenAPI** auto |
-| DB/ORM | **PostgreSQL** + **Drizzle ORM** (+ drizzle-kit migrasi) |
-| Background jobs | **pg-boss** (antrian di Postgres, TANPA Redis) + worker proses terpisah |
-| Recon engine | exec **4 binary Go**: subfinder · httpx · naabu · nuclei (WordPress = nuclei + template wordfence, kondisional). **Tanpa Ruby.** |
-| AI | **Vercel AI SDK** — provider abstraction: Claude (default) + OpenAI + Ollama |
-| Reports | route HTML/CSS (desain baru) → **Playwright** render PDF; alternatif **Typst** |
-| Charts | Recharts / Visx |
-| Realtime | SSE (progres scan) |
-| Auth | session + API token; RBAC (SysAdmin / PenTester / Auditor) |
+| Lapisan         | Pilihan                                                                                                                          |
+| --------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| App/UI          | **Next.js 15** (App Router, React 19) + **Tailwind** + **shadcn/ui** + Radix (dark mode, WCAG AA)                                |
+| API             | **tRPC** (internal type-safe) + **Hono** untuk REST publik + **Zod** + **OpenAPI** auto                                          |
+| DB/ORM          | **PostgreSQL** + **Drizzle ORM** (+ drizzle-kit migrasi)                                                                         |
+| Background jobs | **pg-boss** (antrian di Postgres, TANPA Redis) + worker proses terpisah                                                          |
+| Recon engine    | exec **4 binary Go**: subfinder · httpx · naabu · nuclei (WordPress = nuclei + template wordfence, kondisional). **Tanpa Ruby.** |
+| AI              | **Vercel AI SDK** — provider abstraction: Claude (default) + OpenAI + Ollama                                                     |
+| Reports         | route HTML/CSS (desain baru) → **Playwright** render PDF; alternatif **Typst**                                                   |
+| Charts          | Recharts / Visx                                                                                                                  |
+| Realtime        | SSE (progres scan)                                                                                                               |
+| Auth            | session + API token; RBAC (SysAdmin / PenTester / Auditor)                                                                       |
 
 ## Infra (minimal)
 
@@ -29,7 +29,7 @@ ada di image worker. Tidak ada Celery, Redis, Ollama-wajib, Nginx berat.
 - **Planning**: metodologi **ccpm** (PRD → Epic → Tasks → GitHub issues → agen paralel).
 - **Governance**: model 6-lapis **ose-primer** + docs **Diátaxis** + trunk-based.
 - **Git**: Conventional Commits + commitlint; Husky pre-commit (git-identity + no-`.env` + lint-staged)
-  + commit-msg + pre-push (gate: typecheck+lint+test+e2e affected).
+  - commit-msg + pre-push (gate: typecheck+lint+test+e2e affected).
 - **CI**: GitHub Actions dynamic-detection + reusable workflows; **Playwright e2e** + integration
   test (Postgres service container); gate wajib lulus.
 - **Testing**: Vitest (unit/integration) + Playwright (e2e), 3-tier (quick/integration/e2e).

@@ -35,6 +35,7 @@ Menutup baris Feature Parity Checklist: **5.1–5.6, 6.1, 6.2, 6.5, 6.6.**
 ## Technical Approach
 
 ### Backend Services
+
 - `@vacti/api` (lib): Hono app, route per resource (project/target/scan/subdomain/endpoint/port/vuln/
   threat-intel/report/settings), Zod schemas, OpenAPI doc, auth middleware (session+Bearer), rate-limit.
 - `@vacti/integrations` (lib): notifier (kanal + dispatcher + templates + retry), AI service
@@ -44,10 +45,12 @@ Menutup baris Feature Parity Checklist: **5.1–5.6, 6.1, 6.2, 6.5, 6.6.**
 - SSE endpoint terpusat.
 
 ### Frontend Components
+
 - Halaman integrasi (webhook config, AI settings) + API docs link diserahkan ke **dashboard-ui**;
   epic ini sediakan API + service + skema.
 
 ### Infrastructure
+
 - Tidak ada layanan baru. AI Ollama opsional (self-host) — degrade bila tak ada.
 
 ## Implementation Strategy
@@ -82,10 +85,12 @@ Menutup baris Feature Parity Checklist: **5.1–5.6, 6.1, 6.2, 6.5, 6.6.**
 - Fitur AI/webhook degrade anggun tanpa kunci.
 
 ## Estimated Effort
+
 - Timeline: ~2.5 minggu (1 dev).
 - Jalur kritis: 001 → 002 → {003,004} → 005.
 
 ## Tasks Created
+
 - [ ] 001.md - Public REST (Hono) + Zod + OpenAPI (parallel: true)
 - [ ] 002.md - API token scopes + rate limiting (parallel: false)
 - [ ] 003.md - Event bus + webhook notifier (parallel: true)

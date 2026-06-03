@@ -32,6 +32,7 @@ Menutup baris Feature Parity Checklist: **7.1–7.7, 6.6 (tabel), 4.6/4.7/4.9/4.
 ## Technical Approach
 
 ### Frontend Components
+
 - Layout app + nav per-project (di atas app shell platform-foundation).
 - Dashboard: kartu metrik, donut severity, area tren 7 hari, kartu TI + gauge risk score,
   analitik IoC/CVE/leak.
@@ -45,9 +46,11 @@ Menutup baris Feature Parity Checklist: **7.1–7.7, 6.6 (tabel), 4.6/4.7/4.9/4.
   recon notes; onboarding ringkas.
 
 ### Backend Services
+
 - Konsumsi tRPC/Hono + SSE dari epic lain; menambah query agregasi ringan bila perlu (`charts`).
 
 ### Infrastructure
+
 - Tidak ada; murni app `web`.
 
 ## Implementation Strategy
@@ -82,10 +85,12 @@ Menutup baris Feature Parity Checklist: **7.1–7.7, 6.6 (tabel), 4.6/4.7/4.9/4.
 - Kontrol dibatasi RBAC (Auditor tak melihat aksi mutasi selain report).
 
 ## Estimated Effort
+
 - Timeline: ~3 minggu (1 dev) — permukaan UI besar.
 - Jalur kritis: 001 → 002 → 003 → 004 → {005,006}.
 
 ## Tasks Created
+
 - [ ] 001.md - Design system, charts & dark mode (parallel: true)
 - [ ] 002.md - Server-side DataTable + recon result views (parallel: false)
 - [ ] 003.md - Main dashboard + analytics (parallel: false)

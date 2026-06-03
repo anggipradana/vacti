@@ -36,6 +36,7 @@ Redis. The lightweight modern stack is finally low-risk.
 ## User Stories
 
 ### Persona: Security Analyst / Pentester (primary)
+
 - As an analyst, I want to add a target domain (optionally with predefined subdomains) and run a
   simplified VA scan, so I get subdomains → live hosts → open ports → vulnerabilities without
   configuring dozens of tools.
@@ -51,6 +52,7 @@ Redis. The lightweight modern stack is finally low-risk.
     provider-abstracted LLM fills description/impact/remediation and the result is cached.
 
 ### Persona: Threat Intel Operator
+
 - As a TI operator, I want to refresh OTX + LeakCheck data for all project domains and see a unified
   risk score, so I understand exposure at a glance.
   - **AC:** Given API keys are set, when I click "Refresh all", then per-domain OTX (pulses,
@@ -63,6 +65,7 @@ Redis. The lightweight modern stack is finally low-risk.
   tied to a scanned target.
 
 ### Persona: Report Consumer / Manager
+
 - As a manager, I want a polished bilingual (EN/ID) PDF report for VA and for Threat Intel, branded
   per project, so I can share results with stakeholders.
   - **AC:** Given a completed scan/TI refresh, when I generate a report, then a redesigned PDF is
@@ -70,6 +73,7 @@ Redis. The lightweight modern stack is finally low-risk.
     selected language.
 
 ### Persona: Platform Admin / Integrator
+
 - As an admin, I want role-based access (SysAdmin/PenTester/Auditor) and an API-token, so I can
   automate scans from CI and restrict permissions.
   - **AC:** Given an API token with PenTester role, when I POST to the scan-start endpoint, then a
@@ -82,6 +86,7 @@ Redis. The lightweight modern stack is finally low-risk.
 ## Functional Requirements
 
 ### FR1 — Recon / VA engine
+
 - Single linear pipeline: **subfinder (optional)** → **httpx** → **naabu** → **nuclei**
   (+ nuclei WordPress/wordfence templates conditionally).
 - Scan profiles (lightweight config): which stages enabled, ports (e.g. top-100/custom), nuclei
@@ -92,6 +97,7 @@ Redis. The lightweight modern stack is finally low-risk.
 - Scheduled scans via lightweight cron.
 
 ### FR2 — Threat Intelligence (full)
+
 - OTX AlienVault: per-domain general (pulses, reputation, WHOIS), malware, passive DNS, URL list;
   global subscribed pulses feed.
 - LeakCheck: domain & origin (stealer-log) credential search; checked/unchecked tracking via hash.
@@ -102,16 +108,19 @@ Redis. The lightweight modern stack is finally low-risk.
 - Refresh-all & per-domain refresh with progress polling/streaming.
 
 ### FR3 — Reports
+
 - VA report and Threat Intel report as **redesigned** HTML/CSS → PDF (Playwright; Typst optional).
 - Bilingual EN/ID; per-project branding (logo, primary/secondary color, document number,
   classification label, footer, signatories/approval sheet).
 - Inline view + download.
 
 ### FR4 — Project & target management
+
 - Projects (multi-tenant, slug-scoped); targets (domain/org, predefined subdomains, custom request
   headers); scan history with diff vs previous scan; recon notes (lightweight).
 
 ### FR5 — Integrations
+
 - Webhook notifications: Discord, Slack, Telegram, Google Chat (Lark optional); configurable per-event
   triggers (scan status, vuln found, subdomain change).
 - AI provider abstraction (Vercel AI SDK): Claude (default), OpenAI, Ollama — vuln enrichment,
@@ -119,6 +128,7 @@ Redis. The lightweight modern stack is finally low-risk.
 - Encrypted API key vault: OTX, LeakCheck, AI providers (+ any future source).
 
 ### FR6 — API & auth
+
 - Typed internal API (tRPC) + public REST (Hono) with auto-generated OpenAPI.
 - Auth: session (UI) + API token (automation).
 - RBAC roles: SysAdmin / PenTester / Auditor with permissions {modify_system_config,
@@ -126,6 +136,7 @@ Redis. The lightweight modern stack is finally low-risk.
 - Realtime scan progress over SSE.
 
 ### FR7 — Dashboard & UI
+
 - Project dashboard: target/subdomain/endpoint/vuln counts, severity breakdown, 7-day trends, TI
   summary cards (risk score, pulses, malware, leaks), IoC/CVE/leak analytics.
 - Data tables with server-side filtering/sorting/pagination; charts (donut/bar/area); dark mode;
@@ -134,7 +145,7 @@ Redis. The lightweight modern stack is finally low-risk.
 ## Non-Functional Requirements
 
 - **Lightweight:** runtime = app + worker + Postgres; image carries 4 Go binaries + nuclei templates
-  + Chromium (Playwright). No Redis/Celery/Ollama-required/Ruby.
+  - Chromium (Playwright). No Redis/Celery/Ollama-required/Ruby.
 - **Reliable:** jobs survive worker restarts (pg-boss visibility timeout + retries); scans are
   cancellable; idempotent completion (no stuck "running" scans).
 - **Type-safe / low-error:** end-to-end TypeScript types (DB→API→UI) via Drizzle + Zod + tRPC.

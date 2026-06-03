@@ -32,6 +32,7 @@ Menutup baris Feature Parity Checklist: **2.1–2.8.**
 ## Technical Approach
 
 ### Backend Services
+
 - `@vacti/db` (extend): `otx_threat_data`, `leakcheck_data`, `threat_intel_scan_status`,
   `manual_indicators`, `threat_intel_report_setting` (branding — dipakai epic reports).
 - `@vacti/threat-intel` (lib): OTX client (pulses/reputation/malware/passive-DNS/url), LeakCheck
@@ -41,10 +42,12 @@ Menutup baris Feature Parity Checklist: **2.1–2.8.**
   toggle checked/unchecked kredensial, ambil risk score.
 
 ### Frontend Components
+
 - Diserahkan ke epic **dashboard-ui** (TI page, kartu risk score, IoC/CVE/leak analytics). Epic ini
   menyuplai data + API + skor.
 
 ### Infrastructure
+
 - Tidak ada layanan baru; job di worker pg-boss. Caching di Postgres (kolom + timestamp) atau memori.
 
 ## Implementation Strategy
@@ -67,7 +70,7 @@ Menutup baris Feature Parity Checklist: **2.1–2.8.**
 
 ## Dependencies
 
-- **platform-foundation** (DB, vault kunci, pg-boss, RBAC). 
+- **platform-foundation** (DB, vault kunci, pg-boss, RBAC).
 - **recon-engine** (opsional, untuk komponen VA pada risk score; degrade anggun bila VA belum ada).
 - Menyuplai skor & data ke **reports** dan **dashboard-ui**.
 
@@ -79,10 +82,12 @@ Menutup baris Feature Parity Checklist: **2.1–2.8.**
 - Toggle checked menurunkan skor sesuai formula (teruji).
 
 ## Estimated Effort
+
 - Timeline: ~2 minggu (1 dev).
 - Jalur kritis: 001 → 002 → {003,004} → 005 → 006.
 
 ## Tasks Created
+
 - [ ] 001.md - Threat-intel data models (parallel: true)
 - [ ] 002.md - Unified Risk Score engine (parallel: true)
 - [ ] 003.md - OTX AlienVault client + cache (parallel: true)
