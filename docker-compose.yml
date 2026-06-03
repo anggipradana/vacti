@@ -1,0 +1,52 @@
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: vacti
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-vacti}
+      POSTGRES_DB: vacti
+    volumes:
+      - vacti-pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U vacti']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    ports:
+      - '5432:5432'
+
+  # The worker runs DB migrations on boot, then consumes the pg-boss queue.
+  worker:
+    build:
+      context: .
+      target: runtime
+    command: ['npx', 'tsx', 'apps/worker/src/main.ts']
+    environment:
+      DATABASE_URL: postgres://vacti:${POSTGRES_PASSWORD:-vacti}@db:5432/vacti
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+      SESSION_SECRET: ${SESSION_SECRET}
+      NODE_ENV: production
+    depends_on:
+      db:
+        condition: service_healthy
+
+  app:
+    build:
+      context: .
+      target: runtime
+    command: ['npx', 'next', 'start', 'apps/web', '-p', '3000']
+    environment:
+      DATABASE_URL: postgres://vacti:${POSTGRES_PASSWORD:-vacti}@db:5432/vacti
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+      SESSION_SECRET: ${SESSION_SECRET}
+      NODE_ENV: production
+    depends_on:
+      db:
+        condition: service_healthy
+      worker:
+        condition: service_started
+    ports:
+      - '3000:3000'
+
+volumes:
+  vacti-pg: {}
