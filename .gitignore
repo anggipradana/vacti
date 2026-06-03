@@ -1,0 +1,19 @@
+# deps & build
+node_modules/
+dist/
+.next/
+out/
+.nx/
+coverage/
+playwright-report/
+test-results/
+
+# env — only .env.example may be committed
+.env
+.env.*
+!.env.example
+
+# os/editor
+.DS_Store
+*.log
+tmp/
