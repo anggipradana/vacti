@@ -1,0 +1,6 @@
+#!/usr/bin/env sh
+set -e
+PARALLEL=$(( $(nproc 2>/dev/null || echo 4) - 1 ))
+[ "$PARALLEL" -lt 1 ] && PARALLEL=1
+npx nx affected -t typecheck lint test:quick --parallel="$PARALLEL"
+npm run lint:md
