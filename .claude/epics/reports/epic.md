@@ -32,6 +32,7 @@ Menutup baris Feature Parity Checklist: **3.1–3.6** (dan konsumsi risk score 2
 ## Technical Approach
 
 ### Backend Services
+
 - `@vacti/reports` (lib): template VA + TI (komponen + CSS paged), data assembler (tarik dari recon +
   threat-intel), i18n resolver, branding resolver, Playwright render service (job pg-boss), storage.
 - tRPC + Hono routes: generate report (VA/TI), status, download; CRUD branding setting.
@@ -39,10 +40,12 @@ Menutup baris Feature Parity Checklist: **3.1–3.6** (dan konsumsi risk score 2
   generated_at, doc_number).
 
 ### Frontend Components
+
 - UI generate/download + form branding diserahkan ke **dashboard-ui**; epic ini sediakan service+API.
 - Template di-preview-able sebagai route HTML (dev) untuk iterasi desain.
 
 ### Infrastructure
+
 - Chromium sudah di image worker (platform-foundation 008). Render headless di worker.
 
 ## Implementation Strategy
@@ -76,10 +79,12 @@ Menutup baris Feature Parity Checklist: **3.1–3.6** (dan konsumsi risk score 2
 - Desain lulus review visual (rapi, modern) + dapat dipreview sebagai HTML saat dev.
 
 ## Estimated Effort
+
 - Timeline: ~2 minggu (1 dev).
 - Jalur kritis: 001 → 002 → {003,004} → 005.
 
 ## Tasks Created
+
 - [ ] 001.md - Report data model, branding & i18n (parallel: true)
 - [ ] 002.md - Paged design system (parallel: true)
 - [ ] 003.md - VA report template + data assembler (parallel: false)
