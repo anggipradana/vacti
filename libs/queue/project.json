@@ -5,8 +5,29 @@
   "sourceRoot": "libs/queue/src",
   "tags": ["lang:ts", "scope:lib"],
   "targets": {
-    "typecheck": { "executor": "nx:run-commands", "options": { "command": "tsc -p libs/queue/tsconfig.json" } },
-    "lint": { "executor": "nx:run-commands", "options": { "command": "eslint libs/queue/src" } },
-    "test:quick": { "executor": "nx:run-commands", "options": { "command": "vitest run --root libs/queue" } }
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc -p libs/queue/tsconfig.json"
+      }
+    },
+    "lint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "eslint libs/queue/src"
+      }
+    },
+    "test:quick": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "vitest run --root libs/queue"
+      }
+    },
+    "test:integration": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "vitest run --config libs/queue/vitest.integration.config.ts"
+      }
+    }
   }
 }
