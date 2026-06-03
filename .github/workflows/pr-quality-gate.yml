@@ -1,0 +1,140 @@
+name: PR - Quality Gate
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: quality-gate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  detect:
+    name: Detect affected
+    runs-on: ubuntu-latest
+    outputs:
+      has-code: ${{ steps.detect.outputs.has-code }}
+      has-markdown: ${{ steps.detect.outputs.has-markdown }}
+    env:
+      NX_BASE: origin/${{ github.base_ref }}
+      NX_HEAD: ${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/setup-node
+      - id: detect
+        shell: bash
+        run: |
+          AFFECTED=$(npx nx show projects --affected 2>/dev/null || echo "")
+          if [ -n "$AFFECTED" ]; then echo "has-code=true" >> "$GITHUB_OUTPUT"; else echo "has-code=false" >> "$GITHUB_OUTPUT"; fi
+          CHANGED=$(git diff --name-only origin/${{ github.base_ref }}...HEAD 2>/dev/null || echo "")
+          if echo "$CHANGED" | grep -q '\.md$'; then echo "has-markdown=true" >> "$GITHUB_OUTPUT"; else echo "has-markdown=false" >> "$GITHUB_OUTPUT"; fi
+
+  format:
+    name: Format (Prettier)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-node
+      - run: npx prettier --check .
+
+  markdown:
+    name: Markdown lint
+    needs: detect
+    if: needs.detect.outputs.has-markdown == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-node
+      - run: npm run lint:md
+
+  quality:
+    name: TypeScript quality (typecheck/lint/unit)
+    needs: detect
+    if: needs.detect.outputs.has-code == 'true'
+    runs-on: ubuntu-latest
+    env:
+      NX_BASE: origin/${{ github.base_ref }}
+      NX_HEAD: ${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/setup-node
+      - run: npx nx affected -t typecheck lint test:quick
+
+  integration:
+    name: Integration (Postgres)
+    needs: detect
+    if: needs.detect.outputs.has-code == 'true'
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: vacti
+          POSTGRES_PASSWORD: vacti
+          POSTGRES_DB: vacti_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U vacti"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      NX_BASE: origin/${{ github.base_ref }}
+      NX_HEAD: ${{ github.sha }}
+      DATABASE_URL: postgres://vacti:vacti@localhost:5432/vacti_test
+      ENCRYPTION_KEY: dGVzdC1lbmNyeXB0aW9uLWtleS0zMmJ5dGVzLXRlc3Q=
+      SESSION_SECRET: dGVzdC1zZXNzaW9uLXNlY3JldC0zMmJ5dGVzLXRlc3Rf
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/setup-node
+      - run: npx nx affected -t test:integration
+
+  e2e:
+    name: E2E (Playwright + Postgres)
+    needs: detect
+    if: needs.detect.outputs.has-code == 'true'
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: vacti
+          POSTGRES_PASSWORD: vacti
+          POSTGRES_DB: vacti_e2e
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U vacti"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      NX_BASE: origin/${{ github.base_ref }}
+      NX_HEAD: ${{ github.sha }}
+      DATABASE_URL: postgres://vacti:vacti@localhost:5432/vacti_e2e
+      ENCRYPTION_KEY: dGVzdC1lbmNyeXB0aW9uLWtleS0zMmJ5dGVzLXRlc3Q=
+      SESSION_SECRET: dGVzdC1zZXNzaW9uLXNlY3JldC0zMmJ5dGVzLXRlc3Rf
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/setup-node
+      - run: npx playwright install --with-deps chromium
+      - run: npx nx affected -t test:e2e
+
+  quality-gate:
+    name: Quality gate
+    needs: [detect, format, markdown, quality, integration, e2e]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - shell: bash
+        run: |
+          if [ "${{ contains(needs.*.result, 'failure') }}" = "true" ]; then
+            echo "One or more quality-gate jobs failed"; exit 1
+          fi
+          echo "All quality gates passed"

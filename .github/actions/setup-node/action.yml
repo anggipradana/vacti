@@ -1,0 +1,11 @@
+name: Setup Node
+description: Checkout-independent Node + npm setup with cache for the vacti monorepo
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@v4
+      with:
+        node-version: 20
+        cache: npm
+    - shell: bash
+      run: npm ci

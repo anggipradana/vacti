@@ -1,0 +1,3 @@
+./scripts/git-identity-check.sh
+./scripts/check-no-env-staged.sh
+npx lint-staged

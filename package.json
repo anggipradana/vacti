@@ -1,0 +1,53 @@
+{
+  "name": "vacti",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Lightweight, modern recon (VA) + Threat Intelligence platform",
+  "type": "module",
+  "workspaces": ["apps/*", "libs/*"],
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "build": "nx run-many -t build",
+    "dev": "nx run-many -t dev",
+    "typecheck": "nx run-many -t typecheck",
+    "lint": "nx run-many -t lint",
+    "lint:md": "markdownlint-cli2 \"**/*.md\"",
+    "lint:md:fix": "markdownlint-cli2 --fix \"**/*.md\"",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "nx run-many -t test:quick",
+    "test:quick": "nx run-many -t test:quick",
+    "test:integration": "nx run-many -t test:integration",
+    "test:e2e": "nx run-many -t test:e2e",
+    "e2e": "nx run-many -t test:e2e",
+    "affected:typecheck": "nx affected -t typecheck",
+    "affected:lint": "nx affected -t lint",
+    "affected:test": "nx affected -t test:quick",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:seed": "nx run @vacti/db:seed",
+    "graph": "nx graph",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx,mjs,cjs}": "prettier --write",
+    "*.json": "prettier --write",
+    "*.md": "prettier --write",
+    "*.{yml,yaml}": "prettier --write",
+    "*.{css,scss}": "prettier --write"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^19.5.0",
+    "@commitlint/config-conventional": "^19.5.0",
+    "@playwright/test": "^1.48.0",
+    "drizzle-kit": "^0.28.0",
+    "eslint": "^9.13.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^15.2.10",
+    "markdownlint-cli2": "^0.15.0",
+    "nx": "^20.1.0",
+    "prettier": "^3.3.3",
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.4"
+  }
+}
