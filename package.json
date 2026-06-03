@@ -54,11 +54,15 @@
     "markdownlint-cli2": "^0.15.0",
     "nx": "^20.1.0",
     "prettier": "^3.3.3",
+    "@types/pg": "^8.11.10",
     "typescript": "^5.6.3",
     "typescript-eslint": "^8.12.0",
     "vitest": "^2.1.4"
   },
   "dependencies": {
+    "drizzle-orm": "^0.36.0",
+    "pg": "^8.13.1",
+    "pg-boss": "^10.1.5",
     "zod": "^3.23.8"
   }
 }
