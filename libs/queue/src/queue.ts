@@ -22,6 +22,18 @@ export interface Queue {
 /** Create a typed pg-boss queue. Payloads are validated with Zod on enqueue and on receipt. */
 export function createQueue(connectionString: string): Queue {
   const boss = new PgBoss({ connectionString, schema: PGBOSS_SCHEMA });
+  const ensured = new Set<string>();
+
+  // pg-boss v10 requires queues to exist before send/work. Idempotent + cached per process.
+  const ensureQueue = async (name: string): Promise<void> => {
+    if (ensured.has(name)) return;
+    try {
+      await boss.createQueue(name);
+    } catch {
+      // Queue already exists — safe to ignore.
+    }
+    ensured.add(name);
+  };
 
   return {
     start: async () => {
@@ -30,12 +42,17 @@ export function createQueue(connectionString: string): Queue {
     stop: async () => {
       await boss.stop({ graceful: true });
     },
-    enqueue: (name, schema, payload) => boss.send(name, validatePayload(schema, payload) as object),
-    work: (name, schema, handler) =>
-      boss.work(name, async (jobs) => {
+    enqueue: async (name, schema, payload) => {
+      await ensureQueue(name);
+      return boss.send(name, validatePayload(schema, payload) as object);
+    },
+    work: async (name, schema, handler) => {
+      await ensureQueue(name);
+      return boss.work(name, async (jobs) => {
         for (const job of jobs) {
           await handler(validatePayload(schema, job.data));
         }
-      }),
+      });
+    },
   };
 }
