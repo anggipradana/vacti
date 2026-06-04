@@ -1,9 +1,9 @@
 ---
 name: api-and-integrations
-status: in-progress
+status: completed
 created: 2026-06-03T19:09:19Z
-updated: 2026-06-04T16:00:00Z
-progress: 67%
+updated: 2026-06-05T02:30:00Z
+progress: 100%
 prd: .claude/prds/vacti.md
 github: (will be set on sync)
 ---

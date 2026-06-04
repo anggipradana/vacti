@@ -4,14 +4,12 @@
 > missed or under-specified. Legend: ✅ have · 🟡 partial · ❌ missing. Action: **ADD** (do soon) ·
 > _improve_ · later · skip (out of scope).
 
-**STATUS 2026-06-04** — Priority items 1–3 below (finding status, reports, integrations) are
-**SHIPPED**. A code-level audit reconciled the planning with reality: recon, threat-intel, reports,
-AI/webhooks and REST/OpenAPI are implemented and CI-green; report parity is component-complete
-(logo, signatures, TOC, donut/bars, vuln-summary, CVSS/CVE/refs, custom exec summary). The remaining
-backlog is catalogued as **G1–G17** in
-[02-FEATURE-PARITY-CHECKLIST.md](02-FEATURE-PARITY-CHECKLIST.md) and mapped to ccpm tasks (see §J).
-Epic/task statuses in `.claude/epics/` were synced (30 tasks closed; 12 open carry a
-`## Status (2026-06-04)` note describing remaining work).
+**STATUS 2026-06-05** — The entire G1–G17 backlog is **COMPLETE and CI-green** (see §J). All
+priority items shipped: RBAC enforcement, scan cancel, scheduled scans, scan diff, sub-scan,
+key-vault UI, AI exec-summary + threat narrative, argon2id, audit log, server-side pagination,
+custom headers, universal search, recon notes, interesting keywords, seed/fixtures, onboarding.
+Reports remain component-complete with ReNgGinaNg. Only items explicitly out of v1 (proxy,
+multi-org, WHOIS, in-app feed) are deferred. Epic/task statuses in `.claude/epics/` are synced.
 
 ## A. Findings / vulnerabilities
 
@@ -152,27 +150,26 @@ false-positive from counts), download + inline.
 4. ✅ **Folded quick-adds done**: vuln `references`/CVSS/CVE; dashboard "most common vuln" +
    "top targets by active findings".
 
-**Remaining backlog (G1–G17 → ccpm task):**
+**Backlog (G1–G17) — ALL COMPLETE (2026-06-05):**
 
-| Gap | Item                                        | Task                                          |
-| --- | ------------------------------------------- | --------------------------------------------- |
-| G1  | RBAC enforcement (server-side) — _priority_ | platform-foundation #005                      |
-| G2  | Scan cancel UI + API route                  | recon-engine #007 + dashboard-ui #004         |
-| G3  | Scheduled scans (pg-boss cron)              | recon-engine #009                             |
-| G4  | Scan diff / compare                         | recon-engine #005 + dashboard-ui #004         |
-| G5  | Sub-scan / partial rescan                   | recon-engine #007                             |
-| G6  | API key vault UI (per-project)              | platform-foundation #007 + api-and-integ #005 |
-| G7  | AI executive summary (auto-generate)        | api-and-integrations #004                     |
-| G8  | AI threat-analysis narrative                | api-and-integrations #004                     |
-| G9  | argon2id password hashing                   | platform-foundation #004                      |
-| G10 | Audit-log writes + viewer                   | platform-foundation #010 (new)                |
-| G11 | Server-side datatables                      | dashboard-ui #002                             |
-| G12 | Wire custom request headers into httpx      | recon-engine #008                             |
-| G13 | Universal search                            | dashboard-ui #006                             |
-| G14 | Recon notes / todos                         | recon-engine #008                             |
-| G15 | Interesting keywords                        | recon-engine #008                             |
-| G16 | Seed / fixtures                             | platform-foundation #011 (new)                |
-| G17 | Onboarding walkthrough                      | dashboard-ui #007 (new)                       |
+| Gap | Item                                   | Task                                          | Done |
+| --- | -------------------------------------- | --------------------------------------------- | ---- |
+| G1  | RBAC enforcement (server-side)         | platform-foundation #005                      | ✅   |
+| G2  | Scan cancel UI + API route             | recon-engine #007 + dashboard-ui #004         | ✅   |
+| G3  | Scheduled scans (pg-boss cron)         | recon-engine #009                             | ✅   |
+| G4  | Scan diff / compare                    | recon-engine #005 + dashboard-ui #004         | ✅   |
+| G5  | Sub-scan / partial rescan              | recon-engine #007                             | ✅   |
+| G6  | API key vault UI (per-project)         | platform-foundation #007 + api-and-integ #005 | ✅   |
+| G7  | AI executive summary (auto-generate)   | api-and-integrations #004                     | ✅   |
+| G8  | AI threat-analysis narrative           | api-and-integrations #004                     | ✅   |
+| G9  | argon2id password hashing              | platform-foundation #004                      | ✅   |
+| G10 | Audit-log writes + viewer              | platform-foundation #010                      | ✅   |
+| G11 | Server-side pagination (scans)         | dashboard-ui #002                             | ✅   |
+| G12 | Wire custom request headers into httpx | recon-engine #008                             | ✅   |
+| G13 | Universal search                       | dashboard-ui #006                             | ✅   |
+| G14 | Recon notes / todos                    | recon-engine #008                             | ✅   |
+| G15 | Interesting keywords                   | recon-engine #008                             | ✅   |
+| G16 | Seed / fixtures                        | platform-foundation #011                      | ✅   |
+| G17 | Onboarding walkthrough                 | dashboard-ui #007                             | ✅   |
 
-Suggested order: **G1 → G2 → G3 → G6 → G4/G5 → rest.** Out of v1: proxy support, multi-org, WHOIS,
-in-app notification feed.
+Out of v1 (deferred): proxy support, multi-org, WHOIS, in-app notification feed.
