@@ -55,6 +55,8 @@ export const threatIntelStatus = pgTable(
     state: text('state').notNull().default('idle'), // idle | running | completed | failed
     progress: integer('progress').notNull().default(0),
     message: text('message'),
+    // AI-generated risk-analysis narrative (G8), regenerated on demand.
+    aiNarrative: text('ai_narrative'),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => ({ uniqProject: uniqueIndex('threat_intel_status_project_uniq').on(t.projectId) }),

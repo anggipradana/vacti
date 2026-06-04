@@ -1,0 +1,1 @@
+ALTER TABLE "threat_intel_status" ADD COLUMN "ai_narrative" text;

@@ -14,6 +14,7 @@ import { projects, reportSettings, reportSignatories } from '@vacti/db';
 import { getDb } from '../../../lib/db';
 import { getCurrentUser } from '../../../lib/session';
 import { saveReportSettingsAction, addSignatoryAction, deleteSignatoryAction } from '../../../lib/report-actions';
+import { generateExecSummaryAction } from '../../../lib/ai-actions';
 
 export const dynamic = 'force-dynamic';
 
@@ -158,6 +159,17 @@ export default async function ReportSettingsPage({ searchParams }: { searchParam
             ) : null}
             <Button type="submit">Save</Button>
           </form>
+          {kind === 'va' ? (
+            <form action={generateExecSummaryAction} className="mt-3 border-t border-border pt-3">
+              <input type="hidden" name="projectId" value={projectId} />
+              <Button type="submit" variant="outline" size="sm">
+                Generate executive summary with AI
+              </Button>
+              <p className="mt-1 text-xs text-fg-subtle">
+                Uses the latest scan + configured AI provider; fills both EN/ID and enables the custom summary.
+              </p>
+            </form>
+          ) : null}
         </CardContent>
       </Card>
     );
