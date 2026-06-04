@@ -1,7 +1,14 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import Nav from '../../components/nav';
-import { Severity, SEVERITY_LABEL, type SeverityValue } from '@vacti/core';
+import { Crosshair, Radar, Globe, ShieldAlert, ShieldCheck } from 'lucide-react';
+import { AppShell } from '../../components/shell/app-shell';
+import { PageHeader } from '../../components/ui/page-header';
+import { StatCard } from '../../components/ui/stat-card';
+import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
+import { Button } from '../../components/ui/button';
+import { SeverityDonut } from '../../components/ui/severity-donut';
+import { TrendArea } from '../../components/ui/trend-area';
+import { Severity } from '@vacti/core';
 import { targets, scans, endpoints, vulnerabilities } from '@vacti/db';
 import { getDb } from '../../lib/db';
 import { getCurrentUser } from '../../lib/session';
@@ -19,70 +26,72 @@ export default async function Dashboard() {
     db.select().from(vulnerabilities),
   ]);
 
-  const byStatus = scanRows.reduce<Record<string, number>>((acc, s) => {
-    acc[s.status] = (acc[s.status] ?? 0) + 1;
-    return acc;
-  }, {});
-  const bySeverity = vulnRows.reduce<Record<number, number>>((acc, v) => {
-    acc[v.severity] = (acc[v.severity] ?? 0) + 1;
-    return acc;
-  }, {});
-  const severityOrder: SeverityValue[] = [
-    Severity.Critical,
-    Severity.High,
-    Severity.Medium,
-    Severity.Low,
-    Severity.Info,
+  const sev = (v: number) => vulnRows.filter((x) => x.severity === v).length;
+  const severityCounts: [number, number, number, number, number] = [
+    sev(Severity.Critical),
+    sev(Severity.High),
+    sev(Severity.Medium),
+    sev(Severity.Low),
+    sev(Severity.Info),
   ];
 
-  const Card = ({ label, value }: { label: string; value: number | string }) => (
-    <div className="card" style={{ minWidth: 140, textAlign: 'center' }}>
-      <div style={{ fontSize: '2rem', fontWeight: 700 }}>{value}</div>
-      <div className="muted">{label}</div>
-    </div>
-  );
+  // 7-day scan trend
+  const days: { label: string; value: number }[] = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    d.setDate(d.getDate() - i);
+    const next = new Date(d);
+    next.setDate(d.getDate() + 1);
+    const label = d.toLocaleDateString(undefined, { weekday: 'short' });
+    const value = scanRows.filter((s) => s.createdAt >= d && s.createdAt < next).length;
+    days.push({ label, value });
+  }
 
   return (
-    <>
-      <Nav email={user.email} />
-      <main>
-        <h1>Dashboard</h1>
-        <p className="muted" data-testid="welcome">
-          Signed in as {user.email}
-          {user.isSysAdmin ? ' · SysAdmin' : ''}
-        </p>
+    <AppShell user={{ email: user.email, isSysAdmin: user.isSysAdmin }}>
+      <PageHeader
+        title="Dashboard"
+        description={`Signed in as ${user.email}${user.isSysAdmin ? ' · SysAdmin' : ''}`}
+        actions={
+          <Button asChild>
+            <Link href="/scans">New scan</Link>
+          </Button>
+        }
+      />
 
-        <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-          <Card label="Targets" value={targetRows.length} />
-          <Card label="Scans" value={scanRows.length} />
-          <Card label="Live endpoints" value={endpointRows.length} />
-          <Card label="Vulnerabilities" value={vulnRows.length} />
-        </div>
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <StatCard label="Targets" value={targetRows.length} icon={<Crosshair />} />
+        <StatCard label="Scans" value={scanRows.length} icon={<Radar />} />
+        <StatCard label="Live endpoints" value={endpointRows.length} icon={<Globe />} />
+        <StatCard label="Vulnerabilities" value={vulnRows.length} icon={<ShieldAlert />} />
+      </div>
 
-        <h2>Scans by status</h2>
-        <p className="muted">
-          {Object.keys(byStatus).length
-            ? Object.entries(byStatus)
-                .map(([k, v]) => `${k}: ${v}`)
-                .join(' · ')
-            : 'No scans yet.'}
-        </p>
+      <div className="mt-6 grid gap-6 lg:grid-cols-3">
+        <Card className="lg:col-span-1">
+          <CardHeader>
+            <CardTitle>Severity breakdown</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <SeverityDonut counts={severityCounts} />
+          </CardContent>
+        </Card>
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle>Scans · last 7 days</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <TrendArea data={days} />
+          </CardContent>
+        </Card>
+      </div>
 
-        <h2>Severity breakdown</h2>
-        <p className="muted">
-          {vulnRows.length
-            ? severityOrder
-                .filter((s) => bySeverity[s])
-                .map((s) => `${SEVERITY_LABEL[s]}: ${bySeverity[s]}`)
-                .join(' · ')
-            : 'No findings yet.'}
-        </p>
-
-        <div className="card">
-          Quick start: <Link href="/targets">add a target</Link> → <Link href="/scans">run a scan</Link>. Richer charts
-          (Recharts) + Threat Intel cards land as dashboard-ui matures.
-        </div>
-      </main>
-    </>
+      <Card className="mt-6">
+        <CardContent className="flex items-center gap-3 py-5 text-sm text-fg-muted">
+          <ShieldCheck className="size-5 text-accent" />
+          Threat Intelligence (OTX · LeakCheck · risk score) and PDF reports arrive in upcoming releases.
+        </CardContent>
+      </Card>
+    </AppShell>
   );
 }
