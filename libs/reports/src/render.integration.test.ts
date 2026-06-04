@@ -23,8 +23,9 @@ describe.skipIf(!hasBrowser)('renderPdf', () => {
       target: { domain: 'example.com' },
       scan: { status: 'completed', startedAt: new Date(), finishedAt: new Date() },
       counts: { subdomains: 1, endpoints: 1, ports: 0 },
-      severityCounts: [0, 1, 0, 0, 0],
       endpoints: [{ url: 'http://example.com', statusCode: 200, title: 'Home' }],
+      ports: [],
+      subdomains: ['a.example.com'],
       vulns: [{ name: 'Test', severity: 3, status: 'open' }],
     });
     const pdf = await renderPdf(html);
