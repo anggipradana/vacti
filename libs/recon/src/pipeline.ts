@@ -36,6 +36,10 @@ export async function runScanPipeline(input: ScanInput, deps: PipelineDeps): Pro
   const { db } = deps;
   const timeoutMs = (input.profile.timeoutSec ?? 600) * 1000;
   const counts = { subdomains: 0, endpoints: 0, ports: 0, vulnerabilities: 0 };
+  // Backstop for cancellation between stages (a running tool is killed via the AbortSignal directly).
+  const checkAbort = () => {
+    if (input.signal?.aborted) throw new Error('cancelled');
+  };
 
   const activity = async (stage: string, status: string, message?: string): Promise<void> => {
     await db.insert(scanActivity).values({ scanId: input.scanId, stage, status, message });
@@ -98,6 +102,7 @@ export async function runScanPipeline(input: ScanInput, deps: PipelineDeps): Pro
     if (!hosts.length) hosts = [input.domain];
 
     // Stage 2 — httpx probe + WordPress detection.
+    checkAbort();
     const live: { url: string; host: string; isWp: boolean }[] = [];
     if (input.profile.tools.httpx !== false) {
       await activity('httpx', 'running');
@@ -128,6 +133,7 @@ export async function runScanPipeline(input: ScanInput, deps: PipelineDeps): Pro
     }
 
     // Stage 3 — naabu port scan.
+    checkAbort();
     if (input.profile.tools.naabu !== false) {
       await activity('naabu', 'running');
       const scanHosts = [...new Set((live.length ? live.map((e) => e.host) : hosts).filter(Boolean))];
@@ -155,6 +161,7 @@ export async function runScanPipeline(input: ScanInput, deps: PipelineDeps): Pro
     }
 
     // Stage 4 — nuclei (+ conditional wordfence on WordPress hosts).
+    checkAbort();
     if (input.profile.tools.nuclei !== false && live.length) {
       await activity('nuclei', 'running');
       const args = nucleiArgs({ severities: input.profile.severities });

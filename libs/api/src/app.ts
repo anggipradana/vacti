@@ -207,6 +207,26 @@ export function buildApi(deps: ApiDeps): Hono<{ Variables: Vars }> {
     });
   });
 
+  // Cancel a running/queued scan (cooperative: sets a flag the worker polls).
+  app.post('/scans/:id/cancel', async (c) => {
+    const g = guard(c, Permission.InitiateScans);
+    if (g) return g;
+    const id = c.req.param('id');
+    const [scan] = await db.select().from(scans).where(eq(scans.id, id));
+    if (!scan) return c.json({ error: 'not found' }, 404);
+    if (['completed', 'failed', 'cancelled'].includes(scan.status)) return c.json({ scan });
+    if (scan.status === 'queued') {
+      const [row] = await db
+        .update(scans)
+        .set({ status: 'cancelled', cancelRequested: true, finishedAt: new Date() })
+        .where(eq(scans.id, id))
+        .returning();
+      return c.json({ scan: row });
+    }
+    const [row] = await db.update(scans).set({ cancelRequested: true }).where(eq(scans.id, id)).returning();
+    return c.json({ scan: row }, 202);
+  });
+
   // ---- Threat Intelligence ----
   app.get('/threat-intel', async (c) => {
     const projectId = c.req.query('projectId');

@@ -28,6 +28,11 @@ async function main(): Promise<void> {
   await queue.work('scan', scanJobSchema, async ({ scanId }) => {
     const [scan] = await db.select().from(scans).where(eq(scans.id, scanId));
     if (!scan) return;
+    // Cancelled while still queued — never start it.
+    if (scan.status === 'cancelled' || scan.cancelRequested) {
+      await db.update(scans).set({ status: 'cancelled', finishedAt: new Date() }).where(eq(scans.id, scanId));
+      return;
+    }
     const [target] = await db.select().from(targets).where(eq(targets.id, scan.targetId));
     if (!target) return;
     let profile = DEFAULT_PROFILE;
@@ -42,10 +47,34 @@ async function main(): Promise<void> {
         };
     }
     console.log(`[worker] scan ${scanId} starting (${target.domain})`);
-    await runScanPipeline(
-      { scanId, domain: target.domain, predefinedSubdomains: target.predefinedSubdomains, profile },
-      { db, onProgress: (stage, msg) => console.log(`[scan ${scanId}] ${stage}: ${msg}`) },
-    );
+    // Poll the cancel flag and abort the in-flight run (kills child processes).
+    const controller = new AbortController();
+    const poll = setInterval(() => {
+      void db
+        .select()
+        .from(scans)
+        .where(eq(scans.id, scanId))
+        .then(([s]) => {
+          if (s?.cancelRequested && !controller.signal.aborted) {
+            console.log(`[worker] scan ${scanId} cancellation requested`);
+            controller.abort();
+          }
+        });
+    }, 2000);
+    try {
+      await runScanPipeline(
+        {
+          scanId,
+          domain: target.domain,
+          predefinedSubdomains: target.predefinedSubdomains,
+          profile,
+          signal: controller.signal,
+        },
+        { db, onProgress: (stage, msg) => console.log(`[scan ${scanId}] ${stage}: ${msg}`) },
+      );
+    } finally {
+      clearInterval(poll);
+    }
     const [done] = await db.select().from(scans).where(eq(scans.id, scanId));
     if (done) {
       const counts = (done.counts ?? {}) as Record<string, number>;

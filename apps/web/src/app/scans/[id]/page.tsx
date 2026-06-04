@@ -14,11 +14,12 @@ import { Badge } from '../../../components/ui/badge';
 import { Button } from '../../../components/ui/button';
 import { Select } from '../../../components/ui/select';
 import { VulnStatusBadge } from '../../../components/ui/finding-status';
-import { VULN_STATUS_LABEL, type SeverityValue } from '@vacti/core';
+import { VULN_STATUS_LABEL, userCan, Permission, type SeverityValue } from '@vacti/core';
 import { scans, targets, scanActivity, subdomains, endpoints, ports as portsTable, vulnerabilities } from '@vacti/db';
 import { getDb } from '../../../lib/db';
 import { getCurrentUser } from '../../../lib/session';
 import { setVulnStatusAction } from '../../../lib/status-actions';
+import { cancelScanAction } from '../../../lib/recon-actions';
 import { enrichVulnAction } from '../../../lib/ai-actions';
 import AutoRefresh from './auto-refresh';
 
@@ -70,11 +71,21 @@ export default async function ScanDetail({ params }: { params: Promise<{ id: str
               <StatusPill status={scan.status} />
             </span>
           </div>
-          <Button asChild variant="secondary" size="sm">
-            <a href={`/reports/va/${scan.id}?type=full`} target="_blank" rel="noopener noreferrer">
-              Generate report
-            </a>
-          </Button>
+          <div className="flex items-center gap-2">
+            {!terminal && userCan(user, Permission.InitiateScans) ? (
+              <form action={cancelScanAction}>
+                <input type="hidden" name="id" value={scan.id} />
+                <Button type="submit" variant="outline" size="sm" className="text-danger hover:bg-danger/10">
+                  Cancel scan
+                </Button>
+              </form>
+            ) : null}
+            <Button asChild variant="secondary" size="sm">
+              <a href={`/reports/va/${scan.id}?type=full`} target="_blank" rel="noopener noreferrer">
+                Generate report
+              </a>
+            </Button>
+          </div>
         </div>
         {scan.error ? <p className="mt-2 text-sm text-danger">Error: {scan.error}</p> : null}
       </div>

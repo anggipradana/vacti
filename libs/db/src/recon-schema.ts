@@ -39,6 +39,8 @@ export const scans = pgTable('scans', {
   profileId: uuid('profile_id').references(() => scanProfiles.id, { onDelete: 'set null' }),
   status: text('status').notNull().default('queued'), // queued|running|completed|failed|cancelled
   stage: text('stage'),
+  // Cross-process cancellation flag: the API/web sets it, the worker polls it and aborts the run.
+  cancelRequested: boolean('cancel_requested').notNull().default(false),
   startedAt: timestamp('started_at', { withTimezone: true }),
   finishedAt: timestamp('finished_at', { withTimezone: true }),
   counts: jsonb('counts'),
