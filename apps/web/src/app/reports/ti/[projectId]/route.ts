@@ -41,7 +41,12 @@ export async function GET(req: Request, ctx: { params: Promise<{ projectId: stri
   const lang = (langParam === 'id' || langParam === 'en' ? langParam : (settingRow?.language ?? 'en')) as Lang;
   const signatories: Signatory[] = signRows
     .sort((a, b) => a.sortOrder - b.sortOrder)
-    .map((s) => ({ role: s.role as Signatory['role'], name: s.name, position: s.position }));
+    .map((s) => ({
+      role: s.role as Signatory['role'],
+      name: s.name,
+      position: s.position,
+      signatureImage: s.signatureImage,
+    }));
 
   const html = renderTiReport({
     lang,

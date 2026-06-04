@@ -50,6 +50,7 @@ export function reportCss(primary: string, secondary: string, footer: string, cl
   .cover-top { display: flex; align-items: center; justify-content: space-between; position: relative; }
   .cover-top .mark { display: flex; align-items: center; gap: 11px; }
   .cover-top .mark .m { width: 34px; height: 34px; border-radius: 9px; background: var(--teal); color: #04222c; font-family:'Space Grotesk'; font-weight: 700; font-size: 22px; display: flex; align-items: center; justify-content: center; }
+  .cover-top .mark .logo { max-height: 40px; max-width: 150px; object-fit: contain; }
   .cover-top .mark .nm { font-family:'Space Grotesk'; font-weight: 600; font-size: 17px; color: #fff; }
   .conf-pill { font-family:'IBM Plex Mono'; font-size: 10px; letter-spacing: .22em; border: 1px solid rgba(234,88,12,.7); color: #ff9d63; padding: 6px 13px; border-radius: 2px; text-transform: uppercase; font-weight: 600; }
   .cover-mid { margin-top: auto; position: relative; }
@@ -148,7 +149,8 @@ export function reportCss(primary: string, secondary: string, footer: string, cl
   .approve-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; margin-top: 10px; }
   .approve-card { border: 1px solid var(--line); border-radius: 8px; padding: 26px 24px; break-inside: avoid; }
   .approve-card .acrole { font-family:'IBM Plex Mono'; font-size: 9.5px; letter-spacing: .16em; text-transform: uppercase; color: var(--teal-deep); }
-  .approve-card .acsig { height: 74px; border-bottom: 1px dashed var(--line); margin: 20px 0 14px; }
+  .approve-card .acsig { height: 74px; border-bottom: 1px dashed var(--line); margin: 20px 0 14px; display: flex; align-items: flex-end; justify-content: center; }
+  .approve-card .acsig .acsigimg { max-height: 70px; max-width: 180px; object-fit: contain; }
   .approve-card .acname { font-family:'Space Grotesk'; font-size: 17px; font-weight: 600; }
   .approve-card .acpos { font-size: 11.5px; color: var(--muted); margin-top: 3px; }
 

@@ -10,12 +10,20 @@ export interface ReportSettings {
   documentNumber?: string | null;
   classification?: string | null;
   footerText?: string | null;
+  /** Company logo as a data: URL, embedded on the cover (falls back to a monogram). */
+  companyLogo?: string | null;
+  /** When set, use the analyst-authored executive summary instead of the auto-generated one. */
+  showExecutiveSummary?: boolean | null;
+  executiveSummary?: string | null;
+  executiveSummaryId?: string | null;
 }
 
 export interface Signatory {
   role: 'prepared' | 'reviewed' | 'approved';
   name: string;
   position: string;
+  /** Signature image as a data: URL, embedded on the approval sheet. */
+  signatureImage?: string | null;
 }
 
 export interface VaReportData {

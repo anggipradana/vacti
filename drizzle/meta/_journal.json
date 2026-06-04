@@ -57,6 +57,13 @@
       "when": 1780563881185,
       "tag": "0007_report_teal_navy_defaults",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1780568299562,
+      "tag": "0008_report_logo_signature_execsummary",
+      "breakpoints": true
     }
   ]
 }
