@@ -3,7 +3,7 @@
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { and, eq } from 'drizzle-orm';
-import { hashPassword, verifyPassword, generateApiToken } from '@vacti/auth';
+import { hashPassword, verifyPassword, generateApiToken, needsRehash } from '@vacti/auth';
 import { Role, Permission, isRoleName } from '@vacti/core';
 import { users, projects, projectMembers, apiTokens } from '@vacti/db';
 import { getDb } from './db';
@@ -29,6 +29,13 @@ export async function loginAction(formData: FormData) {
   const [user] = await getDb().select().from(users).where(eq(users.email, email));
   if (!user || !(await verifyPassword(password, user.passwordHash))) {
     redirect('/login?error=invalid');
+  }
+  // Transparently upgrade legacy scrypt hashes to argon2id on successful login.
+  if (needsRehash(user.passwordHash)) {
+    await getDb()
+      .update(users)
+      .set({ passwordHash: await hashPassword(password) })
+      .where(eq(users.id, user.id));
   }
   await createSession(user.id);
   redirect('/dashboard');
