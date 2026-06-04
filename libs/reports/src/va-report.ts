@@ -1,6 +1,6 @@
 import { reportCss, escapeHtml } from './styles';
 import { labels } from './i18n';
-import { cover, approvalSheet, doc, section, kv, scoreTiles, sevBar, sevClass, sevLabel, statusChip } from './shared';
+import { cover, approvalCards, doc, section, kv, statRow, sevBarLegend, findingCard } from './shared';
 import { VULN_STATUS_LABEL, VULN_ACTIVE_STATUSES, type VulnStatusValue } from '@vacti/core';
 import type { VaReportData } from './types';
 
@@ -22,23 +22,28 @@ export function renderVaReport(d: VaReportData): string {
     {},
   );
 
-  const exec = `${section('02', l.executiveSummary, false)}
+  const exec = `${section('02', l.executiveSummary, 'Overview')}
     <p>This assessment of <strong>${escapeHtml(d.target.domain)}</strong> (scan ${escapeHtml(d.scan.status)}) identified
-    <strong>${d.counts.endpoints}</strong> live endpoint(s), <strong>${d.counts.ports}</strong> open port(s), and
-    <strong>${total}</strong> vulnerabilit${total === 1 ? 'y' : 'ies'}. <strong>${active}</strong> remain active;
-    ${total - active} are closed or triaged.</p>
-    ${showVuln ? scoreTiles(counts, d.lang) + sevBar(counts, d.lang) : ''}
+    <strong>${d.counts.endpoints}</strong> live endpoint(s), <strong>${d.counts.ports}</strong> open port(s) and
+    <strong>${total}</strong> vulnerabilit${total === 1 ? 'y' : 'ies'}; <strong>${active}</strong> remain active.</p>
+    ${statRow([
+      { value: d.counts.endpoints, label: l.endpoints },
+      { value: d.counts.ports, label: l.openPorts },
+      { value: total, label: l.vulnerabilities },
+      { value: active, label: 'Active' },
+    ])}
+    ${showVuln ? sevBarLegend(counts, d.lang) : ''}
     ${
       showVuln && Object.keys(statusGroups).length
-        ? `<p class="muted" style="margin-top:10px">Status — ${Object.entries(statusGroups)
+        ? `<div class="note" style="margin-top:14px">Status — ${Object.entries(statusGroups)
             .map(([st, n]) => `${escapeHtml(VULN_STATUS_LABEL[st as VulnStatusValue] ?? st)}: ${n}`)
-            .join(' · ')}</p>`
+            .join(' · ')}</div>`
         : ''
     }`;
 
   const recon = showRecon
-    ? `${section('03', l.reconResults)}
-      <h3>${escapeHtml(l.endpoints)} (${d.endpoints.length})</h3>
+    ? `${section('03', l.reconResults, 'Discovery')}
+      <h3>${escapeHtml(l.endpoints)} · ${d.endpoints.length}</h3>
       <table><thead><tr><th>URL</th><th>Status</th><th>Title</th><th>Tech</th></tr></thead><tbody>
       ${
         d.endpoints
@@ -47,38 +52,35 @@ export function renderVaReport(d: VaReportData): string {
             (e) =>
               `<tr><td class="mono">${escapeHtml(e.url)}</td><td>${e.statusCode ?? ''}</td><td>${escapeHtml(e.title ?? '')}</td><td>${escapeHtml((e.tech ?? []).slice(0, 3).join(', '))}${e.isWordpress ? ' · WordPress' : ''}</td></tr>`,
           )
-          .join('') || `<tr><td colspan="4" class="muted">${escapeHtml(l.none)}</td></tr>`
+          .join('') || `<tr><td colspan="4" class="idx">${escapeHtml(l.none)}</td></tr>`
       }
       </tbody></table>
-      <h3>${escapeHtml(l.openPorts)} (${d.ports.length})</h3>
-      ${d.ports.length ? `<p class="mono muted">${d.ports.map((p) => `${escapeHtml(p.ip)}:${p.port}`).join('  ·  ')}</p>` : `<div class="empty">${escapeHtml(l.none)}</div>`}
-      <h3>Subdomains (${d.subdomains.length})</h3>
-      ${d.subdomains.length ? `<p class="mono muted">${d.subdomains.map(escapeHtml).join('  ·  ')}</p>` : `<div class="empty">${escapeHtml(l.none)}</div>`}`
+      <h3 style="margin-top:18px">${escapeHtml(l.openPorts)} · ${d.ports.length}</h3>
+      ${d.ports.length ? `<p class="mono" style="color:#5b7480">${d.ports.map((p) => `${escapeHtml(p.ip)}:${p.port}`).join('   ')}</p>` : `<div class="empty">${escapeHtml(l.none)}</div>`}
+      <h3 style="margin-top:18px">Subdomains · ${d.subdomains.length}</h3>
+      ${d.subdomains.length ? `<p class="mono" style="color:#5b7480">${d.subdomains.map(escapeHtml).join('   ')}</p>` : `<div class="empty">${escapeHtml(l.none)}</div>`}`
     : '';
 
-  const block = (label: string, text?: string | null) =>
-    text
-      ? `<div class="block"><div class="blabel">${escapeHtml(label)}</div><div class="btext">${escapeHtml(text)}</div></div>`
-      : '';
-
   const findings = showVuln
-    ? `${section('04', l.vulnerabilities)}
+    ? `${section('04', l.vulnerabilities, 'Findings')}
       ${
         d.vulns.length
           ? d.vulns
-              .map((v) => {
-                const cls = sevClass(v.severity);
-                const loc = v.url ?? v.matchedAt ?? '';
-                return `<div class="finding f-${cls}">
-                  <div class="finding-head"><span class="chip ${cls}">${escapeHtml(sevLabel(v.severity, d.lang))}</span> <span class="ftitle">${escapeHtml(v.name)}</span></div>
-                  <div class="finding-body">
-                    <div class="finding-meta">${statusChip(VULN_STATUS_LABEL[v.status as VulnStatusValue] ?? v.status, activeSet.has(v.status))}${v.type ? ` · ${escapeHtml(v.type)}` : ''}${loc ? ` · <span class="mono">${escapeHtml(loc)}</span>` : ''}</div>
-                    ${block('Description', v.aiDescription)}
-                    ${block('Impact', v.aiImpact)}
-                    ${block('Remediation', v.aiRemediation)}
-                  </div>
-                </div>`;
-              })
+              .map((v, i) =>
+                findingCard({
+                  index: i + 1,
+                  severity: v.severity,
+                  lang: d.lang,
+                  title: v.name,
+                  tags: [VULN_STATUS_LABEL[v.status as VulnStatusValue] ?? v.status, ...(v.type ? [v.type] : [])],
+                  blocks: [
+                    { label: 'Location', text: v.url ?? v.matchedAt ?? '' },
+                    { label: 'Description', text: v.aiDescription ?? '' },
+                    { label: 'Impact', text: v.aiImpact ?? '' },
+                    { label: 'Remediation', text: v.aiRemediation ?? '' },
+                  ],
+                }),
+              )
               .join('')
           : `<div class="empty">No vulnerabilities identified.</div>`
       }`
@@ -93,17 +95,16 @@ export function renderVaReport(d: VaReportData): string {
       meta: {
         [l.reportDate]: new Date().toISOString().slice(0, 10),
         [l.status]: d.scan.status,
-        ...(s.documentNumber ? { [l.documentNumber]: s.documentNumber } : {}),
-        ...(s.companyName ? { Prepared: s.companyName } : {}),
+        Findings: String(total),
       },
     }) +
-    approvalSheet(d.signatories, d.lang) +
-    section('01', l.scope) +
+    approvalCards(d.signatories, d.lang) +
+    section('01', l.scope, 'Engagement') +
     kv([
       [l.project, d.target.domain],
       [l.status, d.scan.status],
-      ['Started', d.scan.startedAt ? new Date(d.scan.startedAt).toISOString() : '—'],
-      ['Finished', d.scan.finishedAt ? new Date(d.scan.finishedAt).toISOString() : '—'],
+      ['Started', d.scan.startedAt ? new Date(d.scan.startedAt).toISOString().slice(0, 19).replace('T', ' ') : '—'],
+      ['Finished', d.scan.finishedAt ? new Date(d.scan.finishedAt).toISOString().slice(0, 19).replace('T', ' ') : '—'],
     ]) +
     exec +
     recon +
