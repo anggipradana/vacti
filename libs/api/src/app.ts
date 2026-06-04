@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { desc, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { hashToken } from '@vacti/auth';
+import { isVulnStatus, isLeakStatus } from '@vacti/core';
 import { computeProjectRisk } from '@vacti/threat-intel';
 import {
   apiTokens,
@@ -231,6 +232,33 @@ export function buildApi(deps: ApiDeps): Hono<{ Variables: Vars }> {
   app.delete('/indicators/:id', async (c) => {
     await db.delete(manualIndicators).where(eq(manualIndicators.id, c.req.param('id')));
     return c.json({ status: 'deleted' });
+  });
+
+  // Finding triage status
+  app.post('/vulnerabilities/:id/status', async (c) => {
+    const body = z
+      .object({ status: z.string(), note: z.string().optional() })
+      .safeParse(await c.req.json().catch(() => ({})));
+    if (!body.success || !isVulnStatus(body.data.status)) return c.json({ error: 'invalid status' }, 400);
+    const [row] = await db
+      .update(vulnerabilities)
+      .set({ status: body.data.status, statusNote: body.data.note ?? null, statusChangedAt: new Date() })
+      .where(eq(vulnerabilities.id, c.req.param('id')))
+      .returning();
+    if (!row) return c.json({ error: 'not found' }, 404);
+    return c.json({ vulnerability: row });
+  });
+
+  app.post('/leaks/:id/status', async (c) => {
+    const body = z.object({ status: z.string() }).safeParse(await c.req.json().catch(() => ({})));
+    if (!body.success || !isLeakStatus(body.data.status)) return c.json({ error: 'invalid status' }, 400);
+    const [row] = await db
+      .update(leakcheckData)
+      .set({ status: body.data.status, checked: body.data.status !== 'new' })
+      .where(eq(leakcheckData.id, c.req.param('id')))
+      .returning();
+    if (!row) return c.json({ error: 'not found' }, 404);
+    return c.json({ leak: row });
   });
 
   app.post('/leaks/:id/toggle', async (c) => {

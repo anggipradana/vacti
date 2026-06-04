@@ -14,10 +14,12 @@ import { Badge } from '../../components/ui/badge';
 import { Table, THead, TBody, TR, TH, TD } from '../../components/ui/table';
 import { EmptyState } from '../../components/ui/empty-state';
 import { computeProjectRisk } from '@vacti/threat-intel';
+import { LEAK_STATUS_LABEL } from '@vacti/core';
 import { projects, otxThreatData, leakcheckData, manualIndicators, threatIntelStatus } from '@vacti/db';
 import { getDb } from '../../lib/db';
 import { getCurrentUser } from '../../lib/session';
-import { refreshTiAction, addIndicatorAction, toggleLeakAction } from '../../lib/threat-actions';
+import { refreshTiAction, addIndicatorAction } from '../../lib/threat-actions';
+import { setLeakStatusAction } from '../../lib/status-actions';
 
 export const dynamic = 'force-dynamic';
 
@@ -127,7 +129,7 @@ export default async function ThreatPage({ searchParams }: { searchParams: Promi
               <TH>Identifier</TH>
               <TH>Source</TH>
               <TH>Type</TH>
-              <TH className="text-right">Triage</TH>
+              <TH className="text-right">Triage status</TH>
             </TR>
           </THead>
           <TBody>
@@ -138,11 +140,18 @@ export default async function ThreatPage({ searchParams }: { searchParams: Promi
                 <TD>
                   <Badge variant="neutral">{l.type}</Badge>
                 </TD>
-                <TD className="text-right">
-                  <form action={toggleLeakAction} className="inline">
+                <TD>
+                  <form action={setLeakStatusAction} className="flex items-center justify-end gap-1.5">
                     <input type="hidden" name="id" value={l.id} />
-                    <Button type="submit" variant={l.checked ? 'ghost' : 'outline'} size="sm">
-                      {l.checked ? 'Checked' : 'Mark checked'}
+                    <Select name="status" defaultValue={l.status} className="h-8 w-40 text-xs">
+                      {Object.entries(LEAK_STATUS_LABEL).map(([val, label]) => (
+                        <option key={val} value={val}>
+                          {label}
+                        </option>
+                      ))}
+                    </Select>
+                    <Button type="submit" size="sm" variant="ghost">
+                      Set
                     </Button>
                   </form>
                 </TD>
