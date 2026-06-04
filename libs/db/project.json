@@ -28,6 +28,12 @@
       "options": {
         "command": "vitest run --config libs/db/vitest.integration.config.ts"
       }
+    },
+    "seed": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsx libs/db/src/seed.ts"
+      }
     }
   }
 }
