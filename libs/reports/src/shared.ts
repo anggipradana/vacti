@@ -1,31 +1,89 @@
-import { escapeHtml } from './styles';
+import { escapeHtml, SEV_KEYS, SEV_HEX } from './styles';
 import { labels, type Lang } from './i18n';
 import type { ReportSettings, Signatory } from './types';
 
-const SEV = ['sev-info', 'sev-low', 'sev-medium', 'sev-high', 'sev-critical'];
 export function sevClass(sev: number): string {
-  return SEV[Math.max(0, Math.min(4, sev))] ?? 'sev-info';
+  return SEV_KEYS[Math.max(0, Math.min(4, sev))] ?? 'info';
 }
 export function sevLabel(sev: number, lang: Lang): string {
   const l = labels(lang);
   return [l.info, l.low, l.medium, l.high, l.critical][Math.max(0, Math.min(4, sev))] ?? l.info;
 }
 
-export function cover(title: string, subtitle: string, s: ReportSettings, meta: Record<string, string>): string {
-  const rows = Object.entries(meta)
-    .map(([k, v]) => `<div><strong>${escapeHtml(k)}:</strong> ${escapeHtml(v)}</div>`)
+export function doc(title: string, css: string, body: string): string {
+  return `<!doctype html><html><head><meta charset="utf-8"><title>${escapeHtml(title)}</title><style>${css}</style></head><body><span class="doctitle">${escapeHtml(title)}</span>${body}</body></html>`;
+}
+
+export function cover(opts: {
+  kicker: string;
+  title: string;
+  target: string;
+  settings: ReportSettings;
+  meta: Record<string, string>;
+}): string {
+  const { kicker, title, target, settings: s, meta } = opts;
+  const cells = Object.entries(meta)
+    .map(([k, v]) => `<div><div class="k">${escapeHtml(k)}</div><div class="v">${escapeHtml(v)}</div></div>`)
     .join('');
   return `<section class="cover">
     ${s.classification ? `<div class="classif">${escapeHtml(s.classification)}</div>` : ''}
-    <div class="brandbar"></div>
-    ${s.companyName ? `<div style="font-size:12pt;color:#cbd5e1">${escapeHtml(s.companyName)}</div>` : ''}
+    <div class="ckicker">${escapeHtml(kicker)}</div>
     <h1>${escapeHtml(title)}</h1>
-    <div style="font-size:13pt;color:${s.primaryColor}">${escapeHtml(subtitle)}</div>
-    <div class="meta">
-      ${rows}
-      ${s.companyWebsite ? `<div>${escapeHtml(s.companyWebsite)}</div>` : ''}
-    </div>
+    <div class="ctarget">${escapeHtml(target)}</div>
+    ${s.companyName ? `<div class="company">${escapeHtml(s.companyName)}</div>` : ''}
+    <div class="metagrid">${cells}</div>
   </section>`;
+}
+
+export function section(kicker: string, title: string, pageBreak = true): string {
+  return `${pageBreak ? '<div class="page-break"></div>' : ''}<div class="secwrap"><p class="kicker">${escapeHtml(kicker)}</p><h2>${escapeHtml(title)}</h2></div>`;
+}
+
+export function kv(pairs: [string, string][]): string {
+  return `<div class="kv">${pairs.map(([k, v]) => `<div class="k">${escapeHtml(k)}</div><div class="v">${escapeHtml(v)}</div>`).join('')}</div>`;
+}
+
+/** Severity scorecard: Total + Critical/High/Medium/Low/Info tiles. */
+export function scoreTiles(
+  counts: { crit: number; high: number; med: number; low: number; info: number },
+  lang: Lang,
+): string {
+  const l = labels(lang);
+  const total = counts.crit + counts.high + counts.med + counts.low + counts.info;
+  const tile = (cls: string, n: number, label: string) =>
+    `<div class="score ${cls}"><div class="num">${n}</div><div class="lbl">${escapeHtml(label)}</div></div>`;
+  return `<div class="scorecard">
+    ${tile('total', total, l.vulnerabilities)}
+    ${tile('crit', counts.crit, l.critical)}
+    ${tile('high', counts.high, l.high)}
+    ${tile('med', counts.med, l.medium)}
+    ${tile('low', counts.low, l.low)}
+    ${tile('info', counts.info, l.info)}
+  </div>`;
+}
+
+export function sevBar(
+  counts: { crit: number; high: number; med: number; low: number; info: number },
+  lang: Lang,
+): string {
+  const l = labels(lang);
+  const order = [counts.info, counts.low, counts.med, counts.high, counts.crit];
+  const total = order.reduce((a, b) => a + b, 0);
+  if (!total) return '';
+  const labelsArr = [l.info, l.low, l.medium, l.high, l.critical];
+  const segs = order
+    .map((n, i) =>
+      n > 0 ? `<div style="width:${((n / total) * 100).toFixed(1)}%;background:${SEV_HEX[i]}"></div>` : '',
+    )
+    .join('');
+  const legend = order
+    .map((n, i) => `<span><i style="background:${SEV_HEX[i]}"></i>${escapeHtml(labelsArr[i] ?? '')} ${n}</span>`)
+    .join('');
+  return `<div class="sevbar">${segs}</div><div class="legend">${legend}</div>`;
+}
+
+export function statusChip(label: string, active: boolean): string {
+  return `<span class="status-chip ${active ? 'active' : 'closed'}">${escapeHtml(label)}</span>`;
 }
 
 export function approvalSheet(signatories: Signatory[], lang: Lang): string {
@@ -41,13 +99,8 @@ export function approvalSheet(signatories: Signatory[], lang: Lang): string {
   const names = sorted
     .map(
       (s) =>
-        `<td style="text-align:center"><strong>${escapeHtml(s.name)}</strong><br/><span class="muted">${escapeHtml(s.position)}</span></td>`,
+        `<td><div class="sigline"><strong>${escapeHtml(s.name)}</strong><br/><span class="muted">${escapeHtml(s.position)}</span></div></td>`,
     )
     .join('');
-  return `<div class="page-break"></div><h2>${escapeHtml(l.approvalSheet)}</h2>
-    <table class="approval"><thead><tr>${head}</tr></thead><tbody><tr>${sign}</tr><tr>${names}</tr></tbody></table>`;
-}
-
-export function doc(title: string, css: string, body: string): string {
-  return `<!doctype html><html><head><meta charset="utf-8"><title>${escapeHtml(title)}</title><style>${css}</style></head><body>${body}</body></html>`;
+  return `${section(l.approvalSheet, l.approvalSheet)}<table class="approval"><thead><tr>${head}</tr></thead><tbody><tr>${sign}</tr><tr>${names}</tr></tbody></table>`;
 }
