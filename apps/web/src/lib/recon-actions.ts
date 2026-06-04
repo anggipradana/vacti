@@ -38,3 +38,22 @@ export async function startScanAction(formData: FormData) {
   await q.enqueue('scan', scanJob, { scanId: scan!.id });
   redirect(`/scans/${scan!.id}`);
 }
+
+/** Request cancellation of a running/queued scan (worker polls the flag and aborts). */
+export async function cancelScanAction(formData: FormData) {
+  await requirePermission(Permission.InitiateScans);
+  const id = String(formData.get('id') ?? '');
+  if (!id) return;
+  const db = getDb();
+  const [scan] = await db.select().from(scans).where(eq(scans.id, id));
+  if (!scan || ['completed', 'failed', 'cancelled'].includes(scan.status)) return;
+  if (scan.status === 'queued') {
+    await db
+      .update(scans)
+      .set({ status: 'cancelled', cancelRequested: true, finishedAt: new Date() })
+      .where(eq(scans.id, id));
+  } else {
+    await db.update(scans).set({ cancelRequested: true }).where(eq(scans.id, id));
+  }
+  revalidatePath(`/scans/${id}`);
+}

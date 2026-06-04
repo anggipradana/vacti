@@ -72,6 +72,27 @@ describe.skipIf(!url)('@vacti/api', () => {
     expect((await results.json()).endpoints).toEqual([]);
   });
 
+  it('cancels a queued scan (sets cancelled) and is idempotent on terminal scans', async () => {
+    const tr = await app.request('/api/targets', {
+      method: 'POST',
+      headers: auth(),
+      body: JSON.stringify({ projectId, domain: 'cancel.com' }),
+    });
+    const { target } = (await tr.json()) as { target: { id: string } };
+    const sr = await app.request('/api/scans', {
+      method: 'POST',
+      headers: auth(),
+      body: JSON.stringify({ targetId: target.id }),
+    });
+    const { scan } = (await sr.json()) as { scan: { id: string } };
+    const cancel = await app.request(`/api/scans/${scan.id}/cancel`, { method: 'POST', headers: auth() });
+    expect(cancel.status).toBe(200);
+    expect((await cancel.json()).scan.status).toBe('cancelled');
+    // Idempotent: cancelling an already-cancelled scan is a no-op 200.
+    const again = await app.request(`/api/scans/${scan.id}/cancel`, { method: 'POST', headers: auth() });
+    expect(again.status).toBe(200);
+  });
+
   it('rejects an invalid target payload', async () => {
     const r = await app.request('/api/targets', {
       method: 'POST',
