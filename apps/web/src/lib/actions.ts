@@ -9,6 +9,7 @@ import { users, projects, projectMembers, apiTokens } from '@vacti/db';
 import { getDb } from './db';
 import { createSession, destroySession, getCurrentUser, userCount } from './session';
 import { requirePermission } from './authz';
+import { recordAudit } from './audit';
 
 export async function createAdminAction(formData: FormData) {
   if ((await userCount()) > 0) redirect('/login');
@@ -54,6 +55,13 @@ export async function createProjectAction(formData: FormData) {
   const db = getDb();
   const [project] = await db.insert(projects).values({ name, slug }).returning();
   await db.insert(projectMembers).values({ projectId: project!.id, userId: user!.id, role: Role.SysAdmin });
+  await recordAudit({
+    actorId: user.id,
+    action: 'project.create',
+    resource: `project:${project!.id}`,
+    projectId: project!.id,
+    metadata: { slug },
+  });
   revalidatePath('/projects');
 }
 
@@ -92,5 +100,6 @@ export async function changeUserRoleAction(formData: FormData) {
     .update(users)
     .set({ role, isSysAdmin: role === Role.SysAdmin, updatedAt: new Date() })
     .where(eq(users.id, id));
+  await recordAudit({ actorId: actor.id, action: 'user.role_change', resource: `user:${id}`, metadata: { role } });
   revalidatePath('/settings/users');
 }

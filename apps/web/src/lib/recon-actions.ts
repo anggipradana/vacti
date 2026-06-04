@@ -9,6 +9,7 @@ import { eq } from 'drizzle-orm';
 import { getDb } from './db';
 import { getQueue } from './queue';
 import { requirePermission } from './authz';
+import { recordAudit } from './audit';
 
 const scanJob = z.object({ scanId: z.string().uuid() });
 
@@ -44,7 +45,7 @@ export async function createTargetAction(formData: FormData) {
 }
 
 export async function startScanAction(formData: FormData) {
-  await requirePermission(Permission.InitiateScans);
+  const actor = await requirePermission(Permission.InitiateScans);
   const targetId = String(formData.get('targetId') ?? '');
   const profileId = String(formData.get('profileId') ?? '').trim() || null;
   const [target] = await getDb().select().from(targets).where(eq(targets.id, targetId));
@@ -53,6 +54,13 @@ export async function startScanAction(formData: FormData) {
     .insert(scans)
     .values({ projectId: target.projectId, targetId: target.id, profileId })
     .returning();
+  await recordAudit({
+    actorId: actor.id,
+    action: 'scan.start',
+    resource: `scan:${scan!.id}`,
+    projectId: target.projectId,
+    metadata: { targetId },
+  });
   const q = await getQueue();
   await q.enqueue('scan', scanJob, { scanId: scan!.id });
   redirect(`/scans/${scan!.id}`);
@@ -60,12 +68,13 @@ export async function startScanAction(formData: FormData) {
 
 /** Request cancellation of a running/queued scan (worker polls the flag and aborts). */
 export async function cancelScanAction(formData: FormData) {
-  await requirePermission(Permission.InitiateScans);
+  const actor = await requirePermission(Permission.InitiateScans);
   const id = String(formData.get('id') ?? '');
   if (!id) return;
   const db = getDb();
   const [scan] = await db.select().from(scans).where(eq(scans.id, id));
   if (!scan || ['completed', 'failed', 'cancelled'].includes(scan.status)) return;
+  await recordAudit({ actorId: actor.id, action: 'scan.cancel', resource: `scan:${id}`, projectId: scan.projectId });
   if (scan.status === 'queued') {
     await db
       .update(scans)
