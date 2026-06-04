@@ -1,9 +1,9 @@
 ---
 name: threat-intel
-status: backlog
+status: completed
 created: 2026-06-03T19:09:19Z
-updated: 2026-06-03T19:09:19Z
-progress: 0%
+updated: 2026-06-04T16:00:00Z
+progress: 100%
 prd: .claude/prds/vacti.md
 github: (will be set on sync)
 ---
@@ -88,12 +88,12 @@ Menutup baris Feature Parity Checklist: **2.1–2.8.**
 
 ## Tasks Created
 
-- [ ] 001.md - Threat-intel data models (parallel: true)
-- [ ] 002.md - Unified Risk Score engine (parallel: true)
-- [ ] 003.md - OTX AlienVault client + cache (parallel: true)
-- [ ] 004.md - LeakCheck client + checked-state (parallel: true)
-- [ ] 005.md - Manual indicators + OTX lookup (parallel: false)
-- [ ] 006.md - Refresh orchestrator + TI API/SSE + tests (parallel: false)
+- [x] 001.md - Threat-intel data models (parallel: true)
+- [x] 002.md - Unified Risk Score engine (parallel: true)
+- [x] 003.md - OTX AlienVault client + cache (parallel: true)
+- [x] 004.md - LeakCheck client + checked-state (parallel: true)
+- [x] 005.md - Manual indicators + OTX lookup (parallel: false)
+- [x] 006.md - Refresh orchestrator + TI API/SSE + tests (parallel: false)
 
 Total tasks: 6
 Estimated total effort: ~43 jam

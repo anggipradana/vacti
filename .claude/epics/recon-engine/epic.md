@@ -1,9 +1,9 @@
 ---
 name: recon-engine
-status: backlog
+status: in-progress
 created: 2026-06-03T19:09:19Z
-updated: 2026-06-03T19:09:19Z
-progress: 0%
+updated: 2026-06-04T16:00:00Z
+progress: 56%
 prd: .claude/prds/vacti.md
 github: (will be set on sync)
 ---
@@ -100,12 +100,12 @@ Menutup baris Feature Parity Checklist: **1.1, 1.3, 1.4, 1.6, 1.7, 1.8, 1.15–1
 
 ## Tasks Created
 
-- [ ] 001.md - Recon data models (parallel: true)
-- [ ] 002.md - Tool runner framework (parallel: true)
-- [ ] 003.md - Adapters subfinder + httpx + WordPress detection (parallel: true)
-- [ ] 004.md - Adapters naabu + nuclei + conditional wordfence (parallel: true)
+- [x] 001.md - Recon data models (parallel: true)
+- [x] 002.md - Tool runner framework (parallel: true)
+- [x] 003.md - Adapters subfinder + httpx + WordPress detection (parallel: true)
+- [x] 004.md - Adapters naabu + nuclei + conditional wordfence (parallel: true)
 - [ ] 005.md - Parsers, persistence, dedup & scan diff (parallel: false)
-- [ ] 006.md - Pipeline orchestrator on pg-boss (parallel: false)
+- [x] 006.md - Pipeline orchestrator on pg-boss (parallel: false)
 - [ ] 007.md - Scan control API + SSE progress (parallel: false)
 - [ ] 008.md - Target & scan-profile management + keywords + notes (parallel: true)
 - [ ] 009.md - Scheduled scans (cron) + tests (parallel: false)

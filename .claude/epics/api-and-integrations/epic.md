@@ -1,9 +1,9 @@
 ---
 name: api-and-integrations
-status: backlog
+status: in-progress
 created: 2026-06-03T19:09:19Z
-updated: 2026-06-03T19:09:19Z
-progress: 0%
+updated: 2026-06-04T16:00:00Z
+progress: 67%
 prd: .claude/prds/vacti.md
 github: (will be set on sync)
 ---
@@ -91,12 +91,12 @@ Menutup baris Feature Parity Checklist: **5.1–5.6, 6.1, 6.2, 6.5, 6.6.**
 
 ## Tasks Created
 
-- [ ] 001.md - Public REST (Hono) + Zod + OpenAPI (parallel: true)
-- [ ] 002.md - API token scopes + rate limiting (parallel: false)
-- [ ] 003.md - Event bus + webhook notifier (parallel: true)
+- [x] 001.md - Public REST (Hono) + Zod + OpenAPI (parallel: true)
+- [x] 002.md - API token scopes + rate limiting (parallel: false)
+- [x] 003.md - Event bus + webhook notifier (parallel: true)
 - [ ] 004.md - AI provider abstraction + enrichment + cache (parallel: true)
 - [ ] 005.md - Vault wiring (external keys) + central SSE (parallel: false)
-- [ ] 006.md - API & integrations tests (parallel: false)
+- [x] 006.md - API & integrations tests (parallel: false)
 
 Total tasks: 6
 Estimated total effort: ~54 jam

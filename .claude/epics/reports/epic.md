@@ -1,9 +1,9 @@
 ---
 name: reports
-status: backlog
+status: completed
 created: 2026-06-03T19:09:19Z
-updated: 2026-06-03T19:09:19Z
-progress: 0%
+updated: 2026-06-04T16:00:00Z
+progress: 100%
 prd: .claude/prds/vacti.md
 github: (will be set on sync)
 ---
@@ -85,13 +85,14 @@ Menutup baris Feature Parity Checklist: **3.1–3.6** (dan konsumsi risk score 2
 
 ## Tasks Created
 
-- [ ] 001.md - Report data model, branding & i18n (parallel: true)
-- [ ] 002.md - Paged design system (parallel: true)
-- [ ] 003.md - VA report template + data assembler (parallel: false)
-- [ ] 004.md - TI report template (parallel: false)
-- [ ] 005.md - Playwright PDF render service + storage + API (parallel: false)
-- [ ] 006.md - Report tests (snapshot + smoke + consistency) (parallel: false)
+- [x] 001.md - Report data model, branding & i18n (parallel: true)
+- [x] 002.md - Paged design system (parallel: true)
+- [x] 003.md - VA report template + data assembler (parallel: false)
+- [x] 004.md - TI report template (parallel: false)
+- [x] 005.md - Playwright PDF render service + storage + API (parallel: false)
+- [x] 006.md - Report tests (snapshot + smoke + consistency) (parallel: false)
+- [x] 007.md - Report parity additions: logo, signatures, CVSS/CVE/refs, exec summary (parallel: false)
 
-Total tasks: 6
+Total tasks: 7
 Estimated total effort: ~46 jam
-Dependency order: {001,002} → {003,004} → 005 → 006
+Dependency order: {001,002} → {003,004} → 005 → 006 → 007 (parity additions, 2026-06-04)

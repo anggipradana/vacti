@@ -1,8 +1,8 @@
 ---
 name: platform-foundation
-status: backlog
+status: in-progress
 created: 2026-06-03T19:09:19Z
-progress: 0%
+progress: 55%
 prd: .claude/prds/vacti.md
 github: (will be set on sync)
 ---
@@ -121,18 +121,20 @@ satu e2e smoke wajib hijau sebagai bukti fondasi hidup.
 
 ## Tasks Created
 
-- [ ] 001.md - Monorepo scaffold & toolchain (parallel: true)
-- [ ] 002.md - Governance, Husky, commitlint & CI (parallel: true)
-- [ ] 003.md - DB schema, Drizzle & config (parallel: true)
+- [x] 001.md - Monorepo scaffold & toolchain (parallel: true)
+- [x] 002.md - Governance, Husky, commitlint & CI (parallel: true)
+- [x] 003.md - DB schema, Drizzle & config (parallel: true)
 - [ ] 004.md - Auth, sessions & API tokens (parallel: true)
 - [ ] 005.md - RBAC & permission middleware (parallel: false)
-- [ ] 006.md - pg-boss queue & worker bootstrap (parallel: true)
+- [x] 006.md - pg-boss queue & worker bootstrap (parallel: true)
 - [ ] 007.md - App shell, Project scoping & Settings/Vault UI (parallel: false)
-- [ ] 008.md - Dockerfile, compose & runtime image (parallel: true)
-- [ ] 009.md - E2E smoke & coverage gate (parallel: false)
+- [x] 008.md - Dockerfile, compose & runtime image (parallel: true)
+- [x] 009.md - E2E smoke & coverage gate (parallel: false)
+- [ ] 010.md - Audit log writes & viewer (parallel: true) — gap G10
+- [ ] 011.md - Seed & fixtures (default scan profiles + keywords) (parallel: true) — gap G16
 
-Total tasks: 9
-Parallel-capable: 001, 002, 003, 004, 006, 008 (subject to dependency gates)
+Total tasks: 11
+Parallel-capable: 001, 002, 003, 004, 006, 008, 010, 011 (subject to dependency gates)
 Sequential (dep-gated): 005, 007, 009
 Estimated total effort: ~88 jam (~1.5–2 minggu, 1 dev)
 Dependency order: 001 → {002,003,006,008} ; 003 → {004,006} ; {003,004} → 005 ;

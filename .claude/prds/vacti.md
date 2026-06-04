@@ -1,7 +1,7 @@
 ---
 name: vacti
 description: Lightweight modern recon + threat-intelligence platform — simplified VA pipeline (subfinder/httpx/naabu/nuclei), full Threat Intel, bilingual PDF reports, first-class API & integrations
-status: backlog
+status: in-progress
 created: 2026-06-03T19:04:06Z
 ---
 
@@ -213,3 +213,16 @@ Redis. The lightweight modern stack is finally low-risk.
 6. **dashboard-ui** — dashboards, data tables, charts, scan results UI, TI page, settings, dark mode.
 
 (Each becomes a ccpm epic under `.claude/epics/<name>/` with numbered tasks.)
+
+## Status & remaining backlog (2026-06-04)
+
+Foundation, recon engine, threat-intel, reports, and API/integrations are **implemented and CI-green**;
+reports reached component parity with ReNgGinaNg (incl. logo, signatures, CVSS/CVE/references, custom
+exec summary). A code-level audit reconciled `.claude/epics/` with reality (30 tasks closed; 12 open
+tasks carry a `## Status (2026-06-04)` note for remaining work).
+
+Remaining v1 backlog is tracked as **G1–G17** with task mapping in
+[docs/planning/06-GAP-ANALYSIS.md §J](../../docs/planning/06-GAP-ANALYSIS.md) and the addendum in
+[docs/planning/02-FEATURE-PARITY-CHECKLIST.md](../../docs/planning/02-FEATURE-PARITY-CHECKLIST.md).
+Top priority: **G1 RBAC enforcement** (roles/matrix exist but are not enforced server-side). Out of
+v1: proxy support, multi-org, WHOIS, in-app notification feed.
