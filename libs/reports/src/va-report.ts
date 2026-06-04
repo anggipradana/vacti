@@ -22,7 +22,7 @@ export function renderVaReport(d: VaReportData): string {
     {},
   );
 
-  const exec = `${section('Summary', l.executiveSummary, false)}
+  const exec = `${section('02', l.executiveSummary, false)}
     <p>This assessment of <strong>${escapeHtml(d.target.domain)}</strong> (scan ${escapeHtml(d.scan.status)}) identified
     <strong>${d.counts.endpoints}</strong> live endpoint(s), <strong>${d.counts.ports}</strong> open port(s), and
     <strong>${total}</strong> vulnerabilit${total === 1 ? 'y' : 'ies'}. <strong>${active}</strong> remain active;
@@ -37,7 +37,7 @@ export function renderVaReport(d: VaReportData): string {
     }`;
 
   const recon = showRecon
-    ? `${section('Reconnaissance', l.reconResults)}
+    ? `${section('03', l.reconResults)}
       <h3>${escapeHtml(l.endpoints)} (${d.endpoints.length})</h3>
       <table><thead><tr><th>URL</th><th>Status</th><th>Title</th><th>Tech</th></tr></thead><tbody>
       ${
@@ -62,7 +62,7 @@ export function renderVaReport(d: VaReportData): string {
       : '';
 
   const findings = showVuln
-    ? `${section('Findings', l.vulnerabilities)}
+    ? `${section('04', l.vulnerabilities)}
       ${
         d.vulns.length
           ? d.vulns
@@ -98,7 +98,7 @@ export function renderVaReport(d: VaReportData): string {
       },
     }) +
     approvalSheet(d.signatories, d.lang) +
-    section('Engagement', l.scope) +
+    section('01', l.scope) +
     kv([
       [l.project, d.target.domain],
       [l.status, d.scan.status],

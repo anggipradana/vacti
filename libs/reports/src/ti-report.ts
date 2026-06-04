@@ -23,7 +23,7 @@ export function renderTiReport(d: TiReportData): string {
   const tile = (n: number | string, label: string) =>
     `<div class="score total"><div class="num">${n}</div><div class="lbl">${escapeHtml(label)}</div></div>`;
 
-  const exec = `${section('Summary', l.executiveSummary, false)}
+  const exec = `${section('01', l.executiveSummary, false)}
     <p>Threat-intelligence assessment for <strong>${escapeHtml(d.project.name)}</strong>, drawing on
     ${d.totals.pulses} threat pulse(s), ${d.totals.malware} malware reference(s), and ${d.totals.leaks} leaked credential(s).</p>
     <div class="risk-wrap">
@@ -50,13 +50,13 @@ export function renderTiReport(d: TiReportData): string {
         : ''
     }`;
 
-  const ioc = `${section('Threat Data', l.iocTitle)}
+  const ioc = `${section('02', l.iocTitle)}
     <table><thead><tr><th>Indicator</th><th>Pulses</th><th>Malware</th><th>Reputation</th></tr></thead><tbody>
     ${d.otx.map((o) => `<tr><td class="mono">${escapeHtml(o.indicator)}</td><td>${o.pulses}</td><td>${o.malwareCount}</td><td>${o.reputation}</td></tr>`).join('') || `<tr><td colspan="4" class="muted">${escapeHtml(l.none)} — configure OTX_API_KEY to populate.</td></tr>`}
     </tbody></table>
     ${d.indicators.length ? `<h3>Manual indicators (${d.indicators.length})</h3><table><thead><tr><th>Type</th><th>Value</th></tr></thead><tbody>${d.indicators.map((i) => `<tr><td>${escapeHtml(i.type)}</td><td class="mono">${escapeHtml(i.value)}</td></tr>`).join('')}</tbody></table>` : ''}`;
 
-  const breach = `${section('Exposure', l.breachTitle)}
+  const breach = `${section('03', l.breachTitle)}
     <p class="muted">${d.leaks.length} leaked credential(s)${
       Object.keys(leakGroups).length
         ? ` — ${Object.entries(leakGroups)
@@ -78,7 +78,7 @@ export function renderTiReport(d: TiReportData): string {
         : `<div class="empty">${escapeHtml(l.none)} — configure LEAKCHECK_API_KEY to populate.</div>`
     }`;
 
-  const recs = `${section('Actions', l.recommendations)}
+  const recs = `${section('04', l.recommendations)}
     <ul>
       ${d.totals.leaks ? '<li>Force-reset and rotate exposed credentials; enforce MFA on affected accounts.</li>' : ''}
       ${d.totals.malware ? '<li>Investigate malware associations against affected hosts and block related IoCs.</li>' : ''}
