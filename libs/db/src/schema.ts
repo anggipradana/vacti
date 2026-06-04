@@ -10,6 +10,8 @@ export const users = pgTable('users', {
   email: text('email').notNull().unique(),
   passwordHash: text('password_hash').notNull(),
   isSysAdmin: boolean('is_sys_admin').notNull().default(false),
+  // Global RBAC role (RoleName from @vacti/core). Source of truth for permission checks.
+  role: text('role').notNull().default('PenetrationTester'),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 });

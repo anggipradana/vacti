@@ -33,7 +33,7 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
   return (
     <AppShell user={{ email: user.email, isSysAdmin: user.isSysAdmin }}>
       <PageHeader title="Settings" description="Webhook notifications, AI, and API docs." />
-      <SettingsTabs active="/settings/integrations" />
+      <SettingsTabs active="/settings/integrations" isSysAdmin={user.isSysAdmin} />
 
       <p className="mb-4 text-sm text-fg-muted">
         Public REST API docs:{' '}

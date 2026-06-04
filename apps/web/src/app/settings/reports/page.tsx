@@ -37,7 +37,7 @@ export default async function ReportSettingsPage({ searchParams }: { searchParam
     return (
       <AppShell user={{ email: user.email, isSysAdmin: user.isSysAdmin }}>
         <PageHeader title="Settings" />
-        <SettingsTabs active="/settings/reports" />
+        <SettingsTabs active="/settings/reports" isSysAdmin={user.isSysAdmin} />
         <p className="text-sm text-fg-muted">Create a project first.</p>
       </AppShell>
     );
@@ -166,7 +166,7 @@ export default async function ReportSettingsPage({ searchParams }: { searchParam
   return (
     <AppShell user={{ email: user.email, isSysAdmin: user.isSysAdmin }}>
       <PageHeader title="Settings" description="Report branding, signatories, and document control." />
-      <SettingsTabs active="/settings/reports" />
+      <SettingsTabs active="/settings/reports" isSysAdmin={user.isSysAdmin} />
       <div className="grid gap-4 lg:grid-cols-2">
         {brandingForm('va')}
         {brandingForm('ti')}

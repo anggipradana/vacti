@@ -2,7 +2,8 @@ import { Hono } from 'hono';
 import { desc, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { hashToken } from '@vacti/auth';
-import { isVulnStatus, isLeakStatus } from '@vacti/core';
+import { isVulnStatus, isLeakStatus, hasPermission, roleFromUser, Permission, type RoleName } from '@vacti/core';
+import type { Context } from 'hono';
 import { computeProjectRisk } from '@vacti/threat-intel';
 import { dispatchWebhook, type Channel } from '@vacti/integrations';
 import { openApiSpec, redocHtml } from './openapi';
@@ -33,7 +34,12 @@ export interface ApiDeps {
   enqueueTiRefresh: (projectId: string) => Promise<void>;
 }
 
-type Vars = { userId: string };
+type Vars = { userId: string; role: RoleName };
+
+/** Permission gate for mutating routes. Returns a 403 Response when denied, else null. */
+function guard(c: Context<{ Variables: Vars }>, permission: (typeof Permission)[keyof typeof Permission]) {
+  return hasPermission(c.get('role'), permission) ? null : c.json({ error: 'forbidden' }, 403);
+}
 
 const createTargetSchema = z.object({
   projectId: z.string().uuid(),
@@ -78,7 +84,9 @@ export function buildApi(deps: ApiDeps): Hono<{ Variables: Vars }> {
       .from(apiTokens)
       .where(eq(apiTokens.tokenHash, hashToken(token)));
     if (!row) return c.json({ error: 'invalid token' }, 401);
+    const [user] = await db.select().from(users).where(eq(users.id, row.userId));
     c.set('userId', row.userId);
+    c.set('role', roleFromUser(user));
     await next();
   });
 
@@ -99,6 +107,8 @@ export function buildApi(deps: ApiDeps): Hono<{ Variables: Vars }> {
     return c.json({ targets: rows });
   });
   app.post('/targets', async (c) => {
+    const g = guard(c, Permission.ModifyTargets);
+    if (g) return g;
     const parsed = createTargetSchema.safeParse(await c.req.json().catch(() => ({})));
     if (!parsed.success) return c.json({ error: parsed.error.issues }, 400);
     const [row] = await db
@@ -111,6 +121,8 @@ export function buildApi(deps: ApiDeps): Hono<{ Variables: Vars }> {
   // Scan profiles
   app.get('/profiles', async (c) => c.json({ profiles: await db.select().from(scanProfiles) }));
   app.post('/profiles', async (c) => {
+    const g = guard(c, Permission.ModifyScanConfig);
+    if (g) return g;
     const parsed = createProfileSchema.safeParse(await c.req.json().catch(() => ({})));
     if (!parsed.success) return c.json({ error: parsed.error.issues }, 400);
     const [row] = await db.insert(scanProfiles).values(parsed.data).returning();
@@ -119,6 +131,8 @@ export function buildApi(deps: ApiDeps): Hono<{ Variables: Vars }> {
 
   // Scans
   app.post('/scans', async (c) => {
+    const g = guard(c, Permission.InitiateScans);
+    if (g) return g;
     const parsed = createScanSchema.safeParse(await c.req.json().catch(() => ({})));
     if (!parsed.success) return c.json({ error: parsed.error.issues }, 400);
     const [target] = await db.select().from(targets).where(eq(targets.id, parsed.data.targetId));
@@ -208,6 +222,8 @@ export function buildApi(deps: ApiDeps): Hono<{ Variables: Vars }> {
   });
 
   app.post('/threat-intel/refresh', async (c) => {
+    const g = guard(c, Permission.InitiateScans);
+    if (g) return g;
     const body = z.object({ projectId: z.string().uuid() }).safeParse(await c.req.json().catch(() => ({})));
     if (!body.success) return c.json({ error: body.error.issues }, 400);
     await deps.enqueueTiRefresh(body.data.projectId);
@@ -222,6 +238,8 @@ export function buildApi(deps: ApiDeps): Hono<{ Variables: Vars }> {
     return c.json({ indicators: rows });
   });
   app.post('/indicators', async (c) => {
+    const g = guard(c, Permission.ModifyScanResults);
+    if (g) return g;
     const body = z
       .object({
         projectId: z.string().uuid(),
@@ -235,12 +253,16 @@ export function buildApi(deps: ApiDeps): Hono<{ Variables: Vars }> {
     return c.json({ indicator: row }, 201);
   });
   app.delete('/indicators/:id', async (c) => {
+    const g = guard(c, Permission.ModifyScanResults);
+    if (g) return g;
     await db.delete(manualIndicators).where(eq(manualIndicators.id, c.req.param('id')));
     return c.json({ status: 'deleted' });
   });
 
   // Finding triage status
   app.post('/vulnerabilities/:id/status', async (c) => {
+    const g = guard(c, Permission.ModifyScanResults);
+    if (g) return g;
     const body = z
       .object({ status: z.string(), note: z.string().optional() })
       .safeParse(await c.req.json().catch(() => ({})));
@@ -255,6 +277,8 @@ export function buildApi(deps: ApiDeps): Hono<{ Variables: Vars }> {
   });
 
   app.post('/leaks/:id/status', async (c) => {
+    const g = guard(c, Permission.ModifyScanResults);
+    if (g) return g;
     const body = z.object({ status: z.string() }).safeParse(await c.req.json().catch(() => ({})));
     if (!body.success || !isLeakStatus(body.data.status)) return c.json({ error: 'invalid status' }, 400);
     const [row] = await db
@@ -267,6 +291,8 @@ export function buildApi(deps: ApiDeps): Hono<{ Variables: Vars }> {
   });
 
   app.post('/leaks/:id/toggle', async (c) => {
+    const g = guard(c, Permission.ModifyScanResults);
+    if (g) return g;
     const id = c.req.param('id');
     const [row] = await db.select().from(leakcheckData).where(eq(leakcheckData.id, id));
     if (!row) return c.json({ error: 'not found' }, 404);
@@ -287,6 +313,8 @@ export function buildApi(deps: ApiDeps): Hono<{ Variables: Vars }> {
     return c.json({ webhooks: rows });
   });
   app.post('/webhooks', async (c) => {
+    const g = guard(c, Permission.ModifySystemConfig);
+    if (g) return g;
     const body = z
       .object({
         projectId: z.string().uuid(),
@@ -304,10 +332,14 @@ export function buildApi(deps: ApiDeps): Hono<{ Variables: Vars }> {
     return c.json({ webhook: row }, 201);
   });
   app.delete('/webhooks/:id', async (c) => {
+    const g = guard(c, Permission.ModifySystemConfig);
+    if (g) return g;
     await db.delete(webhooks).where(eq(webhooks.id, c.req.param('id')));
     return c.json({ status: 'deleted' });
   });
   app.post('/webhooks/:id/test', async (c) => {
+    const g = guard(c, Permission.ModifySystemConfig);
+    if (g) return g;
     const [w] = await db
       .select()
       .from(webhooks)

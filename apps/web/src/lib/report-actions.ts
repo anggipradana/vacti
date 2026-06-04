@@ -1,11 +1,11 @@
 'use server';
 
-import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { eq } from 'drizzle-orm';
+import { Permission } from '@vacti/core';
 import { reportSettings, reportSignatories } from '@vacti/db';
 import { getDb } from './db';
-import { getCurrentUser } from './session';
+import { requirePermission } from './authz';
 
 /** Convert an uploaded image to a data: URL (capped), or undefined if none/invalid. */
 async function imageToDataUrl(entry: FormDataEntryValue | null, maxBytes = 600_000): Promise<string | undefined> {
@@ -17,7 +17,7 @@ async function imageToDataUrl(entry: FormDataEntryValue | null, maxBytes = 600_0
 }
 
 export async function saveReportSettingsAction(formData: FormData) {
-  if (!(await getCurrentUser())) redirect('/login');
+  await requirePermission(Permission.ModifyReport);
   const projectId = String(formData.get('projectId') ?? '');
   const kind = String(formData.get('kind') ?? 'va') === 'ti' ? 'ti' : 'va';
   if (!projectId) return;
@@ -55,7 +55,7 @@ export async function saveReportSettingsAction(formData: FormData) {
 }
 
 export async function addSignatoryAction(formData: FormData) {
-  if (!(await getCurrentUser())) redirect('/login');
+  await requirePermission(Permission.ModifyReport);
   const projectId = String(formData.get('projectId') ?? '');
   const role = String(formData.get('role') ?? 'prepared');
   const name = String(formData.get('name') ?? '').trim();
@@ -68,7 +68,7 @@ export async function addSignatoryAction(formData: FormData) {
 }
 
 export async function deleteSignatoryAction(formData: FormData) {
-  if (!(await getCurrentUser())) redirect('/login');
+  await requirePermission(Permission.ModifyReport);
   const id = String(formData.get('id') ?? '');
   if (id) await getDb().delete(reportSignatories).where(eq(reportSignatories.id, id));
   revalidatePath('/settings/reports');
