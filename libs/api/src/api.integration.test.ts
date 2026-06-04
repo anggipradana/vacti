@@ -93,6 +93,22 @@ describe.skipIf(!url)('@vacti/api', () => {
     expect(again.status).toBe(200);
   });
 
+  it('paginates the scans list (limit/offset/total)', async () => {
+    const r = await app.request('/api/scans?limit=1&offset=0', { headers: auth() });
+    expect(r.status).toBe(200);
+    const body = (await r.json()) as { scans: unknown[]; total: number; limit: number; offset: number };
+    expect(body.limit).toBe(1);
+    expect(body.scans.length).toBeLessThanOrEqual(1);
+    expect(typeof body.total).toBe('number');
+  });
+
+  it('search returns categorised hits', async () => {
+    const r = await app.request('/api/search?q=example', { headers: auth() });
+    expect(r.status).toBe(200);
+    const body = (await r.json()) as { hits: { kind: string }[] };
+    expect(Array.isArray(body.hits)).toBe(true);
+  });
+
   it('rejects an invalid target payload', async () => {
     const r = await app.request('/api/targets', {
       method: 'POST',

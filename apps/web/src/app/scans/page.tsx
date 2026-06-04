@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { desc } from 'drizzle-orm';
+import { desc, count } from 'drizzle-orm';
 import { Radar } from 'lucide-react';
 import { AppShell } from '../../components/shell/app-shell';
 import { PageHeader } from '../../components/ui/page-header';
@@ -23,15 +23,23 @@ function rel(d: Date): string {
   return `${Math.floor(s / 86400)}d ago`;
 }
 
-export default async function ScansPage() {
+const PAGE_SIZE = 25;
+
+export default async function ScansPage({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
   const user = await getCurrentUser();
   if (!user) redirect('/login');
   const db = getDb();
-  const [scanRows, targetRows, profileRows] = await Promise.all([
-    db.select().from(scans).orderBy(desc(scans.createdAt)),
+  const { page: pageParam } = await searchParams;
+  const page = Math.max(1, Number(pageParam ?? 1) || 1);
+  const offset = (page - 1) * PAGE_SIZE;
+  const [scanRows, targetRows, profileRows, countRows] = await Promise.all([
+    db.select().from(scans).orderBy(desc(scans.createdAt)).limit(PAGE_SIZE).offset(offset),
     db.select().from(targets).orderBy(desc(targets.createdAt)),
     db.select().from(scanProfiles),
+    db.select({ n: count() }).from(scans),
   ]);
+  const totalScans = Number(countRows[0]?.n ?? 0);
+  const totalPages = Math.max(1, Math.ceil(totalScans / PAGE_SIZE));
   const targetById = new Map(targetRows.map((t) => [t.id, t]));
   return (
     <AppShell user={{ email: user.email, isSysAdmin: user.isSysAdmin }}>
@@ -91,6 +99,25 @@ export default async function ScansPage() {
               })}
             </TBody>
           </Table>
+          {totalPages > 1 ? (
+            <div className="mt-4 flex items-center justify-between text-sm">
+              <span className="text-fg-subtle">
+                Page {page} of {totalPages} · {totalScans} scans
+              </span>
+              <div className="flex gap-2">
+                <Button asChild variant="outline" size="sm" disabled={page <= 1}>
+                  <Link href={`/scans?page=${page - 1}`} aria-disabled={page <= 1}>
+                    Previous
+                  </Link>
+                </Button>
+                <Button asChild variant="outline" size="sm" disabled={page >= totalPages}>
+                  <Link href={`/scans?page=${page + 1}`} aria-disabled={page >= totalPages}>
+                    Next
+                  </Link>
+                </Button>
+              </div>
+            </div>
+          ) : null}
         </div>
       )}
     </AppShell>
