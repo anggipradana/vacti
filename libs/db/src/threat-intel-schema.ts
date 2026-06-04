@@ -39,7 +39,9 @@ export const leakcheckData = pgTable('leakcheck_data', {
   identifier: text('identifier'), // email/username (display)
   hashMd5: text('hash_md5').notNull(),
   type: text('type').notNull().default('domain'), // domain | origin (stealer log)
-  checked: boolean('checked').notNull().default(false),
+  checked: boolean('checked').notNull().default(false), // legacy; superseded by status
+  // Leak triage status (new|investigating|confirmed|remediated|false_positive|ignored).
+  status: text('status').notNull().default('new'),
   createdAt: createdAt(),
 });
 

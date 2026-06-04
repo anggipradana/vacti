@@ -12,10 +12,13 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../../components/ui
 import { Table, THead, TBody, TR, TH, TD } from '../../../components/ui/table';
 import { Badge } from '../../../components/ui/badge';
 import { Button } from '../../../components/ui/button';
-import type { SeverityValue } from '@vacti/core';
+import { Select } from '../../../components/ui/select';
+import { VulnStatusBadge } from '../../../components/ui/finding-status';
+import { VULN_STATUS_LABEL, type SeverityValue } from '@vacti/core';
 import { scans, targets, scanActivity, subdomains, endpoints, ports as portsTable, vulnerabilities } from '@vacti/db';
 import { getDb } from '../../../lib/db';
 import { getCurrentUser } from '../../../lib/session';
+import { setVulnStatusAction } from '../../../lib/status-actions';
 import AutoRefresh from './auto-refresh';
 
 export const dynamic = 'force-dynamic';
@@ -175,7 +178,8 @@ export default async function ScanDetail({ params }: { params: Promise<{ id: str
                 <TR>
                   <TH>Severity</TH>
                   <TH>Finding</TH>
-                  <TH>Matched at</TH>
+                  <TH>Status</TH>
+                  <TH>Change</TH>
                 </TR>
               </THead>
               <TBody>
@@ -184,8 +188,29 @@ export default async function ScanDetail({ params }: { params: Promise<{ id: str
                     <TD>
                       <SeverityBadge severity={v.severity as SeverityValue} />
                     </TD>
-                    <TD className="font-medium">{v.name}</TD>
-                    <TD className="font-mono text-xs text-fg-muted">{v.matchedAt}</TD>
+                    <TD>
+                      <div className="font-medium">{v.name}</div>
+                      <div className="font-mono text-xs text-fg-subtle">{v.matchedAt}</div>
+                    </TD>
+                    <TD>
+                      <VulnStatusBadge status={v.status} />
+                    </TD>
+                    <TD>
+                      <form action={setVulnStatusAction} className="flex items-center gap-1.5">
+                        <input type="hidden" name="id" value={v.id} />
+                        <input type="hidden" name="scanId" value={scan.id} />
+                        <Select name="status" defaultValue={v.status} className="h-8 w-40 text-xs">
+                          {Object.entries(VULN_STATUS_LABEL).map(([val, label]) => (
+                            <option key={val} value={val}>
+                              {label}
+                            </option>
+                          ))}
+                        </Select>
+                        <Button type="submit" size="sm" variant="ghost">
+                          Set
+                        </Button>
+                      </form>
+                    </TD>
                   </TR>
                 ))}
               </TBody>

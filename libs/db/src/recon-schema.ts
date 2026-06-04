@@ -124,6 +124,10 @@ export const vulnerabilities = pgTable('vulnerabilities', {
   tags: text('tags').array().notNull().default([]),
   request: text('request'),
   response: text('response'),
+  // Triage status (see docs/planning/05-FINDING-STATUS.md). Only active statuses feed the risk score.
+  status: text('status').notNull().default('open'),
+  statusNote: text('status_note'),
+  statusChangedAt: timestamp('status_changed_at', { withTimezone: true }),
   createdAt: createdAt(),
 });
 
