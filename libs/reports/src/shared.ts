@@ -22,21 +22,25 @@ export function cover(opts: {
   meta: Record<string, string>;
 }): string {
   const { kicker, title, target, settings: s, meta } = opts;
+  const initial = (s.companyName?.trim()?.[0] ?? 'V').toUpperCase();
   const cells = Object.entries(meta)
     .map(([k, v]) => `<div><div class="k">${escapeHtml(k)}</div><div class="v">${escapeHtml(v)}</div></div>`)
     .join('');
   return `<section class="cover">
-    ${s.classification ? `<div class="classif">${escapeHtml(s.classification)}</div>` : ''}
-    <div class="ckicker">${escapeHtml(kicker)}</div>
-    <h1>${escapeHtml(title)}</h1>
-    <div class="ctarget">${escapeHtml(target)}</div>
-    ${s.companyName ? `<div class="company">${escapeHtml(s.companyName)}</div>` : ''}
-    <div class="metagrid">${cells}</div>
+    <div class="topstrip"></div>
+    <div class="cbody">
+      ${s.classification ? `<div class="classif">${escapeHtml(s.classification)}</div>` : ''}
+      <div class="brand"><span class="mark">${escapeHtml(initial)}</span><span class="bn">${escapeHtml(s.companyName ?? 'vacti')}</span></div>
+      <div class="ckicker">${escapeHtml(kicker)}</div>
+      <h1>${escapeHtml(title)}</h1>
+      <div class="ctarget">${escapeHtml(target)}</div>
+      <div class="metawrap"><div class="metagrid">${cells}</div></div>
+    </div>
   </section>`;
 }
 
-export function section(kicker: string, title: string, pageBreak = true): string {
-  return `${pageBreak ? '<div class="page-break"></div>' : ''}<div class="secwrap"><p class="kicker">${escapeHtml(kicker)}</p><h2>${escapeHtml(title)}</h2></div>`;
+export function section(num: string, title: string, pageBreak = true): string {
+  return `${pageBreak ? '<div class="page-break"></div>' : ''}<div class="secwrap">${num ? `<span class="secnum">${escapeHtml(num)}</span>` : ''}<h2>${escapeHtml(title)}</h2></div>`;
 }
 
 export function kv(pairs: [string, string][]): string {
@@ -102,5 +106,5 @@ export function approvalSheet(signatories: Signatory[], lang: Lang): string {
         `<td><div class="sigline"><strong>${escapeHtml(s.name)}</strong><br/><span class="muted">${escapeHtml(s.position)}</span></div></td>`,
     )
     .join('');
-  return `${section(l.approvalSheet, l.approvalSheet)}<table class="approval"><thead><tr>${head}</tr></thead><tbody><tr>${sign}</tr><tr>${names}</tr></tbody></table>`;
+  return `${section('', l.approvalSheet)}<table class="approval"><thead><tr>${head}</tr></thead><tbody><tr>${sign}</tr><tr>${names}</tr></tbody></table>`;
 }
