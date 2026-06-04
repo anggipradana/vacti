@@ -10,12 +10,20 @@ import { Select } from '../../../components/ui/select';
 import { Button } from '../../../components/ui/button';
 import { Badge } from '../../../components/ui/badge';
 import { EmptyState } from '../../../components/ui/empty-state';
-import { ALL_EVENT_TYPES } from '@vacti/integrations';
+import { ALL_EVENT_TYPES, listProjectSecretNames } from '@vacti/integrations';
 import { projects, webhooks, aiSettings } from '@vacti/db';
 import { getDb } from '../../../lib/db';
 import { getCurrentUser } from '../../../lib/session';
 import { addWebhookAction, deleteWebhookAction, testWebhookAction } from '../../../lib/integration-actions';
 import { saveAiSettingsAction } from '../../../lib/ai-actions';
+import { saveProjectKeyAction, clearProjectKeyAction } from '../../../lib/vault-actions';
+
+const VAULT_KEYS: { name: string; label: string; hint: string }[] = [
+  { name: 'otx', label: 'OTX (AlienVault)', hint: 'Threat-intel pulses' },
+  { name: 'leakcheck', label: 'LeakCheck', hint: 'Leaked credentials' },
+  { name: 'anthropic', label: 'Anthropic (Claude)', hint: 'AI enrichment' },
+  { name: 'openai', label: 'OpenAI', hint: 'AI enrichment' },
+];
 
 export const dynamic = 'force-dynamic';
 
@@ -29,6 +37,7 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
 
   const hooks = projectId ? await db.select().from(webhooks).where(eq(webhooks.projectId, projectId)) : [];
   const [ai] = projectId ? await db.select().from(aiSettings).where(eq(aiSettings.projectId, projectId)) : [];
+  const setKeys = projectId ? new Set(await listProjectSecretNames(db, projectId)) : new Set<string>();
 
   return (
     <AppShell user={{ email: user.email, isSysAdmin: user.isSysAdmin }}>
@@ -165,6 +174,61 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
                 </div>
                 <Button type="submit">Save</Button>
               </form>
+            </CardContent>
+          </Card>
+        </div>
+      ) : null}
+
+      {projectId ? (
+        <div className="mt-8">
+          <h2 className="mb-3 font-display text-sm font-semibold uppercase tracking-wider text-fg-subtle">
+            API keys (encrypted vault)
+          </h2>
+          <Card className="max-w-2xl">
+            <CardContent className="space-y-3 pt-5">
+              <p className="text-sm text-fg-muted">
+                Per-project keys, encrypted at rest (AES-256-GCM). When set, they override the environment defaults.
+                Values are never displayed after saving.
+              </p>
+              {VAULT_KEYS.map((k) => (
+                <div
+                  key={k.name}
+                  className="flex items-end gap-2 border-t border-border pt-3 first:border-0 first:pt-0"
+                >
+                  <div className="flex-1 space-y-1">
+                    <Label htmlFor={`key-${k.name}`}>
+                      {k.label}{' '}
+                      {setKeys.has(k.name) ? (
+                        <Badge variant="success">set</Badge>
+                      ) : (
+                        <span className="text-xs text-fg-subtle">· {k.hint}</span>
+                      )}
+                    </Label>
+                    <form action={saveProjectKeyAction} className="flex items-center gap-2" id={`form-${k.name}`}>
+                      <input type="hidden" name="projectId" value={projectId} />
+                      <input type="hidden" name="name" value={k.name} />
+                      <Input
+                        id={`key-${k.name}`}
+                        name="value"
+                        type="password"
+                        placeholder={setKeys.has(k.name) ? '•••••••• (replace)' : 'Paste key…'}
+                      />
+                      <Button type="submit" variant="outline" size="sm">
+                        Save
+                      </Button>
+                    </form>
+                  </div>
+                  {setKeys.has(k.name) ? (
+                    <form action={clearProjectKeyAction}>
+                      <input type="hidden" name="projectId" value={projectId} />
+                      <input type="hidden" name="name" value={k.name} />
+                      <Button type="submit" variant="ghost" size="sm" className="text-danger hover:bg-danger/10">
+                        Clear
+                      </Button>
+                    </form>
+                  ) : null}
+                </div>
+              ))}
             </CardContent>
           </Card>
         </div>
