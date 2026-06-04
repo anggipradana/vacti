@@ -47,6 +47,10 @@ async function main(): Promise<void> {
           timeoutSec: p.timeoutSec ?? undefined,
         };
     }
+    // Sub-scan: a per-scan tool subset overrides the profile's tools.
+    if (scan.toolsOverride) {
+      profile = { ...profile, tools: scan.toolsOverride as ScanProfile['tools'] };
+    }
     console.log(`[worker] scan ${scanId} starting (${target.domain})`);
     // Poll the cancel flag and abort the in-flight run (kills child processes).
     const controller = new AbortController();
