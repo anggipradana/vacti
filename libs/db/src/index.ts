@@ -4,3 +4,4 @@ export * from './client';
 export * from './validators';
 export * from './migrate';
 export * from './threat-intel-schema';
+export * from './reports-schema';

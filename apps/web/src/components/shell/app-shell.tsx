@@ -24,10 +24,11 @@ const nav = [
   { label: 'Scans', href: '/scans' },
   { label: 'Threat Intel', href: '/threat' },
   { label: 'Projects', href: '/projects' },
-  { label: 'API Tokens', href: '/settings/tokens' },
+  { label: 'Settings', href: '/settings/tokens' },
 ];
 
 function isActive(pathname: string, href: string): boolean {
+  if (href.startsWith('/settings')) return pathname.startsWith('/settings');
   return pathname === href || pathname.startsWith(href + '/');
 }
 
