@@ -6,7 +6,7 @@ import { createDb, runMigrations, scans, targets, scanProfiles, scanSchedules } 
 import { createQueue } from '@vacti/queue';
 import { runScanPipeline, type ScanProfile } from '@vacti/recon';
 import { refreshThreatIntel } from '@vacti/threat-intel';
-import { sendProjectNotifications } from '@vacti/integrations';
+import { sendProjectNotifications, getProjectSecret } from '@vacti/integrations';
 
 const scanJobSchema = z.object({ scanId: z.string().uuid() });
 const tiJobSchema = z.object({ projectId: z.string().uuid() });
@@ -91,11 +91,14 @@ async function main(): Promise<void> {
 
   await queue.work('ti-refresh', tiJobSchema, async ({ projectId }) => {
     console.log(`[worker] threat-intel refresh ${projectId}`);
+    // Per-project vault keys override the environment defaults.
+    const otxKey = (await getProjectSecret(db, projectId, 'otx', env.ENCRYPTION_KEY)) ?? env.OTX_API_KEY;
+    const leakKey = (await getProjectSecret(db, projectId, 'leakcheck', env.ENCRYPTION_KEY)) ?? env.LEAKCHECK_API_KEY;
     await refreshThreatIntel({
       db,
       projectId,
-      otxKey: env.OTX_API_KEY,
-      leakKey: env.LEAKCHECK_API_KEY,
+      otxKey,
+      leakKey,
       onProgress: (p, msg) => console.log(`[ti ${projectId}] ${p}% ${msg}`),
     });
   });

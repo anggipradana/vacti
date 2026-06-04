@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { eq } from 'drizzle-orm';
 import { Permission } from '@vacti/core';
-import { makeProvider, enrichVulnerability, enrichmentHash } from '@vacti/integrations';
+import { makeProvider, enrichVulnerability, enrichmentHash, getProjectSecret } from '@vacti/integrations';
 import { vulnerabilities, scans, aiSettings, aiCache } from '@vacti/db';
 import { getDb, env } from './db';
 import { requirePermission } from './authz';
@@ -18,11 +18,14 @@ export async function enrichVulnAction(formData: FormData) {
   const [scan] = await db.select().from(scans).where(eq(scans.id, vuln.scanId));
   const [settings] = scan ? await db.select().from(aiSettings).where(eq(aiSettings.projectId, scan.projectId)) : [];
   const e = env();
+  const prov = (settings?.provider as 'anthropic' | 'openai' | 'ollama') ?? 'anthropic';
+  // Per-project vault key overrides the environment default for the chosen provider.
+  const vaultKey = scan ? await getProjectSecret(db, scan.projectId, prov, e.ENCRYPTION_KEY) : null;
   const provider = await makeProvider({
-    provider: (settings?.provider as 'anthropic' | 'openai' | 'ollama') ?? 'anthropic',
+    provider: prov,
     model: settings?.model ?? 'claude-sonnet-4-6',
-    anthropicKey: e.ANTHROPIC_API_KEY,
-    openaiKey: e.OPENAI_API_KEY,
+    anthropicKey: prov === 'anthropic' ? (vaultKey ?? e.ANTHROPIC_API_KEY) : e.ANTHROPIC_API_KEY,
+    openaiKey: prov === 'openai' ? (vaultKey ?? e.OPENAI_API_KEY) : e.OPENAI_API_KEY,
     ollamaBaseUrl: e.OLLAMA_BASE_URL,
   });
   if (!provider) {
