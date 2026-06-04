@@ -1,11 +1,15 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { Crosshair, Radar, Globe, ShieldAlert, ShieldCheck } from 'lucide-react';
+import { desc } from 'drizzle-orm';
+import { Crosshair, Radar, Globe, ShieldAlert, ShieldCheck, FileText, Plug, Radar as RadarIcon } from 'lucide-react';
 import { AppShell } from '../../components/shell/app-shell';
 import { PageHeader } from '../../components/ui/page-header';
 import { StatCard } from '../../components/ui/stat-card';
+import { ModuleCard } from '../../components/ui/module-card';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
+import { StatusPill } from '../../components/ui/status-pill';
+import { Table, THead, TBody, TR, TH, TD } from '../../components/ui/table';
 import { SeverityDonut } from '../../components/ui/severity-donut';
 import { TrendArea } from '../../components/ui/trend-area';
 import { Severity } from '@vacti/core';
@@ -21,10 +25,11 @@ export default async function Dashboard() {
   const db = getDb();
   const [targetRows, scanRows, endpointRows, vulnRows] = await Promise.all([
     db.select().from(targets),
-    db.select().from(scans),
+    db.select().from(scans).orderBy(desc(scans.createdAt)),
     db.select().from(endpoints),
     db.select().from(vulnerabilities),
   ]);
+  const targetById = new Map(targetRows.map((t) => [t.id, t]));
 
   const sev = (v: number) => vulnRows.filter((x) => x.severity === v).length;
   const severityCounts: [number, number, number, number, number] = [
@@ -35,7 +40,6 @@ export default async function Dashboard() {
     sev(Severity.Info),
   ];
 
-  // 7-day scan trend
   const days: { label: string; value: number }[] = [];
   for (let i = 6; i >= 0; i--) {
     const d = new Date();
@@ -43,15 +47,16 @@ export default async function Dashboard() {
     d.setDate(d.getDate() - i);
     const next = new Date(d);
     next.setDate(d.getDate() + 1);
-    const label = d.toLocaleDateString(undefined, { weekday: 'short' });
-    const value = scanRows.filter((s) => s.createdAt >= d && s.createdAt < next).length;
-    days.push({ label, value });
+    days.push({
+      label: d.toLocaleDateString(undefined, { weekday: 'short' }),
+      value: scanRows.filter((s) => s.createdAt >= d && s.createdAt < next).length,
+    });
   }
 
   return (
     <AppShell user={{ email: user.email, isSysAdmin: user.isSysAdmin }}>
       <PageHeader
-        title="Dashboard"
+        title="Overview"
         description={`Signed in as ${user.email}${user.isSysAdmin ? ' · SysAdmin' : ''}`}
         actions={
           <Button asChild>
@@ -60,6 +65,7 @@ export default async function Dashboard() {
         }
       />
 
+      {/* Metric tiles */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard label="Targets" value={targetRows.length} icon={<Crosshair />} />
         <StatCard label="Scans" value={scanRows.length} icon={<Radar />} />
@@ -67,7 +73,43 @@ export default async function Dashboard() {
         <StatCard label="Vulnerabilities" value={vulnRows.length} icon={<ShieldAlert />} />
       </div>
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-3">
+      {/* Modules */}
+      <h2 className="mb-3 mt-8 font-display text-sm font-semibold uppercase tracking-wider text-fg-subtle">Modules</h2>
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <ModuleCard
+          hue="204 90% 50%"
+          icon={<RadarIcon />}
+          title="Vulnerability Assessment"
+          description="subfinder · httpx · naabu · nuclei recon pipeline."
+          href="/scans"
+          status="live"
+        />
+        <ModuleCard
+          hue="262 70% 62%"
+          icon={<ShieldCheck />}
+          title="Threat Intelligence"
+          description="OTX, LeakCheck, indicators & unified risk score."
+          status="soon"
+        />
+        <ModuleCard
+          hue="160 70% 42%"
+          icon={<FileText />}
+          title="Reports"
+          description="Bilingual VA & TI PDF reports."
+          status="soon"
+        />
+        <ModuleCard
+          hue="35 92% 52%"
+          icon={<Plug />}
+          title="API & Integrations"
+          description="REST API tokens, webhooks & AI enrichment."
+          href="/settings/tokens"
+          status="live"
+        />
+      </div>
+
+      {/* Visualizations */}
+      <div className="mt-8 grid gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-1">
           <CardHeader>
             <CardTitle>Severity breakdown</CardTitle>
@@ -86,12 +128,51 @@ export default async function Dashboard() {
         </Card>
       </div>
 
-      <Card className="mt-6">
-        <CardContent className="flex items-center gap-3 py-5 text-sm text-fg-muted">
-          <ShieldCheck className="size-5 text-accent" />
-          Threat Intelligence (OTX · LeakCheck · risk score) and PDF reports arrive in upcoming releases.
-        </CardContent>
-      </Card>
+      {/* Recent scans */}
+      <h2 className="mb-3 mt-8 font-display text-sm font-semibold uppercase tracking-wider text-fg-subtle">
+        Recent scans
+      </h2>
+      {scanRows.length === 0 ? (
+        <Card>
+          <CardContent className="py-6 text-sm text-fg-muted">
+            No scans yet.{' '}
+            <Link href="/targets" className="text-accent hover:underline">
+              Add a target
+            </Link>{' '}
+            to begin.
+          </CardContent>
+        </Card>
+      ) : (
+        <Table>
+          <THead>
+            <TR>
+              <TH>Target</TH>
+              <TH>Status</TH>
+              <TH>Findings</TH>
+            </TR>
+          </THead>
+          <TBody>
+            {scanRows.slice(0, 6).map((s) => {
+              const c = (s.counts ?? {}) as Record<string, number>;
+              return (
+                <TR key={s.id}>
+                  <TD>
+                    <Link href={`/scans/${s.id}`} className="font-mono text-sm text-accent hover:underline">
+                      {targetById.get(s.targetId)?.domain ?? s.targetId.slice(0, 8)}
+                    </Link>
+                  </TD>
+                  <TD>
+                    <StatusPill status={s.status} />
+                  </TD>
+                  <TD className="tabular text-sm text-fg-muted">
+                    {c.endpoints ?? 0} endpoints · {c.ports ?? 0} ports · {c.vulnerabilities ?? 0} vulns
+                  </TD>
+                </TR>
+              );
+            })}
+          </TBody>
+        </Table>
+      )}
     </AppShell>
   );
 }

@@ -16,10 +16,10 @@
     --fg-muted: 218 11% 40%;
     --fg-subtle: 215 12% 59%;
 
-    --accent: 221 83% 53%;
-    --accent-hover: 224 76% 48%;
+    --accent: 204 90% 41%;
+    --accent-hover: 206 96% 33%;
     --accent-fg: 0 0% 100%;
-    --ring: 221 83% 53%;
+    --ring: 204 90% 41%;
 
     --sev-critical: 0 72% 51%;
     --sev-high: 21 90% 48%;
@@ -46,10 +46,10 @@
     --fg-muted: 215 16% 66%;
     --fg-subtle: 216 11% 47%;
 
-    --accent: 217 91% 60%;
-    --accent-hover: 213 94% 68%;
+    --accent: 200 88% 56%;
+    --accent-hover: 199 92% 64%;
     --accent-fg: 0 0% 100%;
-    --ring: 217 91% 60%;
+    --ring: 200 88% 56%;
 
     --sev-critical: 0 91% 71%;
     --sev-high: 27 96% 61%;
