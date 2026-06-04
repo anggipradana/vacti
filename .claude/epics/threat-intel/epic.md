@@ -98,3 +98,11 @@ Menutup baris Feature Parity Checklist: **2.1–2.8.**
 Total tasks: 6
 Estimated total effort: ~43 jam
 Dependency order: {001,002} → {003,004} → 005 → 006
+
+## Finding status (added 2026-06-04)
+
+Per-finding status applies **only to LeakCheck data-leak findings** (`leakcheck_data.status`:
+`new` · `investigating` · `confirmed` · `remediated` · `false_positive` · `ignored`), replacing the
+`checked` boolean. Unresolved statuses (`new`/`investigating`/`confirmed`) drive the credential-exposure
+component; triaging reduces the score. OTX / passive-DNS / URLs / manual-indicator lookups have **no**
+per-item status. Spec: docs/planning/05-FINDING-STATUS.md.

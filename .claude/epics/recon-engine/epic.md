@@ -113,3 +113,11 @@ Menutup baris Feature Parity Checklist: **1.1, 1.3, 1.4, 1.6, 1.7, 1.8, 1.15–1
 Total tasks: 9
 Estimated total effort: ~78 jam
 Dependency order: {001,002,008} → {003,004} → 005 → 006 → 007 → 009
+
+## Finding status (added 2026-06-04)
+
+Vulnerabilities carry a triage `status` — `open` · `in_progress` · `resolved` · `risk_accepted` ·
+`false_positive` · `no_impact` · `waf_handled` · `duplicate` · `out_of_scope` · `reopened`. Only active
+statuses (`open`/`in_progress`/`reopened`; `waf_handled` half-weight) feed the unified risk score.
+Adds `vulnerabilities.status` (+ note/changed-at/by), a status-change API (RBAC `modify_scan_results`),
+and a status pill + filter in the vulnerabilities table. Spec: docs/planning/05-FINDING-STATUS.md.

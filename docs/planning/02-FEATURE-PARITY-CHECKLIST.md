@@ -134,3 +134,12 @@
 - **DIBUANG (tidak boleh muncul sebagai task v1):** 1.2, 1.5, 1.9–1.14, 4.10, 5.7, 6.7.
 - Setiap epic harus menutup baris yang dipetakan ke kodenya. Definition-of-done epic = semua baris
   IKUT/SEDERHANAKAN miliknya punya task + lulus CI gate.
+
+## Addendum — Finding status (2026-06-04)
+
+- ➕ **VA finding status** (RE): each vulnerability has a triage status (Open / On Progress / Resolved /
+  Risk Accepted / False Positive / No Impact / WAF Handled / Duplicate / Out of Scope / Reopened);
+  only active statuses feed the risk score.
+- ➕ **Leak finding status** (TI): LeakCheck findings have a status (New / Investigating / Confirmed /
+  Remediated / False Positive / Ignored), replacing the checked toggle. Status applies to leaks only.
+- Full spec: [05-FINDING-STATUS.md](05-FINDING-STATUS.md).
