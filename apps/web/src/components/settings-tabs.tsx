@@ -4,6 +4,7 @@ import { cn } from '../lib/cn';
 const tabs = [
   { label: 'API Tokens', href: '/settings/tokens' },
   { label: 'Reports', href: '/settings/reports' },
+  { label: 'Integrations', href: '/settings/integrations' },
 ];
 
 export function SettingsTabs({ active }: { active: string }) {

@@ -6,6 +6,7 @@ export default defineConfig({
     './libs/db/src/recon-schema.ts',
     './libs/db/src/threat-intel-schema.ts',
     './libs/db/src/reports-schema.ts',
+    './libs/db/src/integrations-schema.ts',
   ],
   out: './drizzle',
   dialect: 'postgresql',

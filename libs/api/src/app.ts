@@ -4,6 +4,8 @@ import { z } from 'zod';
 import { hashToken } from '@vacti/auth';
 import { isVulnStatus, isLeakStatus } from '@vacti/core';
 import { computeProjectRisk } from '@vacti/threat-intel';
+import { dispatchWebhook, type Channel } from '@vacti/integrations';
+import { openApiSpec, redocHtml } from './openapi';
 import {
   apiTokens,
   users,
@@ -19,6 +21,7 @@ import {
   otxThreatData,
   leakcheckData,
   threatIntelStatus,
+  webhooks,
   type Database,
 } from '@vacti/db';
 
@@ -61,10 +64,12 @@ export function buildApi(deps: ApiDeps): Hono<{ Variables: Vars }> {
   const app = new Hono<{ Variables: Vars }>().basePath('/api');
 
   app.get('/health', (c) => c.json({ status: 'ok' }));
+  app.get('/openapi.json', (c) => c.json(openApiSpec()));
+  app.get('/docs', (c) => c.html(redocHtml()));
 
   // Bearer-token auth for everything except /health.
   app.use('/*', async (c, next) => {
-    if (c.req.path === '/api/health') return next();
+    if (['/api/health', '/api/openapi.json', '/api/docs'].includes(c.req.path)) return next();
     const auth = c.req.header('authorization');
     const token = auth?.startsWith('Bearer ') ? auth.slice(7) : undefined;
     if (!token) return c.json({ error: 'missing bearer token' }, 401);
@@ -271,6 +276,56 @@ export function buildApi(deps: ApiDeps): Hono<{ Variables: Vars }> {
       .where(eq(leakcheckData.id, id))
       .returning();
     return c.json({ leak: updated });
+  });
+
+  // ---- Webhooks / notifications ----
+  app.get('/webhooks', async (c) => {
+    const projectId = c.req.query('projectId');
+    const rows = projectId
+      ? await db.select().from(webhooks).where(eq(webhooks.projectId, projectId))
+      : await db.select().from(webhooks);
+    return c.json({ webhooks: rows });
+  });
+  app.post('/webhooks', async (c) => {
+    const body = z
+      .object({
+        projectId: z.string().uuid(),
+        channel: z.enum(['discord', 'slack', 'telegram', 'google_chat', 'generic']),
+        label: z.string().optional(),
+        url: z.string().url().optional(),
+        telegramToken: z.string().optional(),
+        telegramChatId: z.string().optional(),
+        events: z.array(z.string()).default([]),
+        enabled: z.boolean().default(true),
+      })
+      .safeParse(await c.req.json().catch(() => ({})));
+    if (!body.success) return c.json({ error: body.error.issues }, 400);
+    const [row] = await db.insert(webhooks).values(body.data).returning();
+    return c.json({ webhook: row }, 201);
+  });
+  app.delete('/webhooks/:id', async (c) => {
+    await db.delete(webhooks).where(eq(webhooks.id, c.req.param('id')));
+    return c.json({ status: 'deleted' });
+  });
+  app.post('/webhooks/:id/test', async (c) => {
+    const [w] = await db
+      .select()
+      .from(webhooks)
+      .where(eq(webhooks.id, c.req.param('id')));
+    if (!w) return c.json({ error: 'not found' }, 404);
+    const result = await dispatchWebhook({
+      url: w.url ?? '',
+      channel: w.channel as Channel,
+      event: {
+        type: 'test',
+        title: 'vacti test notification',
+        message: 'Your webhook is configured correctly.',
+        severity: 'info',
+      },
+      telegram:
+        w.channel === 'telegram' ? { botToken: w.telegramToken ?? '', chatId: w.telegramChatId ?? '' } : undefined,
+    });
+    return c.json({ result });
   });
 
   return app;
