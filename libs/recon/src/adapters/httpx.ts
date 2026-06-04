@@ -13,8 +13,10 @@ export interface HttpxResult {
   cdn?: boolean;
 }
 
-export function httpxArgs(): string[] {
-  return ['-json', '-silent', '-td', '-title', '-status-code', '-web-server', '-cdn', '-no-color'];
+export function httpxArgs(headers?: Record<string, string>): string[] {
+  const args = ['-json', '-silent', '-td', '-title', '-status-code', '-web-server', '-cdn', '-no-color'];
+  for (const [k, v] of Object.entries(headers ?? {})) args.push('-H', `${k}: ${v}`);
+  return args;
 }
 
 interface HttpxRaw {

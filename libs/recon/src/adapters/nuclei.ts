@@ -29,6 +29,8 @@ export interface NucleiOptions {
   tags?: string[];
   /** explicit template paths */
   templates?: string[];
+  /** custom request headers (per target) */
+  headers?: Record<string, string>;
 }
 
 export function nucleiArgs(opts: NucleiOptions = {}): string[] {
@@ -36,6 +38,7 @@ export function nucleiArgs(opts: NucleiOptions = {}): string[] {
   if (opts.severities?.length) args.push('-severity', opts.severities.join(','));
   if (opts.tags?.length) args.push('-tags', opts.tags.join(','));
   for (const t of opts.templates ?? []) args.push('-t', t);
+  for (const [k, v] of Object.entries(opts.headers ?? {})) args.push('-H', `${k}: ${v}`);
   return args;
 }
 

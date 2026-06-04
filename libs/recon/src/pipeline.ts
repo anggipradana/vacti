@@ -7,6 +7,7 @@ import { httpxArgs, parseHttpxLine } from './adapters/httpx';
 import { naabuArgs, parseNaabuLine } from './adapters/naabu';
 import { nucleiArgs, parseNucleiLine, type VulnResult } from './adapters/nuclei';
 import { isWordPress } from './wordpress';
+import { isInterestingEndpoint } from './keywords';
 
 export interface ScanProfile {
   tools: { subfinder?: boolean; httpx?: boolean; naabu?: boolean; nuclei?: boolean; wordfence?: boolean };
@@ -20,6 +21,8 @@ export interface ScanInput {
   domain: string;
   predefinedSubdomains?: string[];
   profile: ScanProfile;
+  /** Custom request headers (per target) passed to httpx + nuclei. */
+  customHeaders?: Record<string, string>;
   signal?: AbortSignal;
 }
 
@@ -106,7 +109,7 @@ export async function runScanPipeline(input: ScanInput, deps: PipelineDeps): Pro
     const live: { url: string; host: string; isWp: boolean }[] = [];
     if (input.profile.tools.httpx !== false) {
       await activity('httpx', 'running');
-      const args = httpxArgs();
+      const args = httpxArgs(input.customHeaders);
       const r = await runTool({ bin: 'httpx', args, input: hosts.join('\n') + '\n', timeoutMs, signal: input.signal });
       await record('httpx', args, r);
       const results = r.lines.map(parseHttpxLine).flatMap((x) => (x ? [x] : []));
@@ -124,6 +127,7 @@ export async function runScanPipeline(input: ScanInput, deps: PipelineDeps): Pro
             contentLength: h.contentLength,
             tech: h.tech,
             isWordpress: isWordPress(h) ? 1 : 0,
+            isInteresting: isInterestingEndpoint(h.url, h.title),
           })),
         );
       }

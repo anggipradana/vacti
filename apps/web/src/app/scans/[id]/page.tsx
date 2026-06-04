@@ -248,6 +248,7 @@ export default async function ScanDetail({
                   <TD className="max-w-xs truncate text-fg-muted">{e.title}</TD>
                   <TD>
                     <div className="flex flex-wrap gap-1">
+                      {e.isInteresting ? <Badge variant="danger">interesting</Badge> : null}
                       {e.isWordpress ? <Badge variant="accent">WordPress</Badge> : null}
                       {e.tech.slice(0, 3).map((t) => (
                         <Badge key={t} variant="outline">
