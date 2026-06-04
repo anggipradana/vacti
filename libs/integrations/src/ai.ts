@@ -103,3 +103,61 @@ export function enrichmentHash(v: VulnEnrichmentInput): string {
     .update(`${v.name}|${v.type ?? ''}`)
     .digest('hex');
 }
+
+// ---- Executive summary (VA report) ----
+
+export interface ExecSummaryInput {
+  target: string;
+  lang: 'en' | 'id';
+  counts: { subdomains: number; endpoints: number; ports: number; vulns: number; active: number };
+  severities: { critical: number; high: number; medium: number; low: number; info: number };
+  topFindings: string[];
+}
+
+export async function generateExecutiveSummary(input: ExecSummaryInput, provider: AiProvider): Promise<string> {
+  const system =
+    input.lang === 'id'
+      ? 'Anda penulis laporan keamanan senior. Tulis ringkasan eksekutif 2-4 kalimat dalam Bahasa Indonesia untuk pembaca manajemen. Faktual, ringkas, tanpa markdown.'
+      : 'You are a senior security report writer. Write a 2-4 sentence executive summary for a management audience. Factual, concise, no markdown.';
+  const prompt = [
+    `Target: ${input.target}`,
+    `Subdomains: ${input.counts.subdomains}, live endpoints: ${input.counts.endpoints}, open ports: ${input.counts.ports}`,
+    `Vulnerabilities: ${input.counts.vulns} (${input.counts.active} active) — crit ${input.severities.critical}, high ${input.severities.high}, med ${input.severities.medium}, low ${input.severities.low}, info ${input.severities.info}`,
+    input.topFindings.length ? `Notable findings: ${input.topFindings.slice(0, 5).join('; ')}` : '',
+  ]
+    .filter(Boolean)
+    .join('\n');
+  return (await provider.generate(system, prompt)).trim();
+}
+
+// ---- Threat-intelligence narrative (TI report / page) ----
+
+export interface ThreatNarrativeInput {
+  project: string;
+  lang: 'en' | 'id';
+  riskScore: number;
+  riskLevel: string;
+  totals: { pulses: number; malware: number; leaks: number };
+  components?: Record<string, number>;
+}
+
+export async function generateThreatNarrative(input: ThreatNarrativeInput, provider: AiProvider): Promise<string> {
+  const system =
+    input.lang === 'id'
+      ? 'Anda analis threat intelligence senior. Tulis narasi analisis risiko 3-5 kalimat dalam Bahasa Indonesia: jelaskan pendorong utama skor risiko dan rekomendasi prioritas. Faktual, tanpa markdown.'
+      : 'You are a senior threat-intelligence analyst. Write a 3-5 sentence risk-analysis narrative: explain the main drivers of the risk score and the priority recommendation. Factual, no markdown.';
+  const prompt = [
+    `Project: ${input.project}`,
+    `Unified risk score: ${input.riskScore}/100 (${input.riskLevel})`,
+    `Threat pulses: ${input.totals.pulses}, malware references: ${input.totals.malware}, leaked credentials: ${input.totals.leaks}`,
+    input.components
+      ? `Risk components: ${Object.entries(input.components)
+          .filter(([, v]) => v > 0)
+          .map(([k, v]) => `${k}=${Math.round(v)}`)
+          .join(', ')}`
+      : '',
+  ]
+    .filter(Boolean)
+    .join('\n');
+  return (await provider.generate(system, prompt)).trim();
+}

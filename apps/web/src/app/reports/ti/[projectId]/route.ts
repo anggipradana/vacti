@@ -8,7 +8,15 @@ import {
   type Signatory,
 } from '@vacti/reports';
 import { computeProjectRisk } from '@vacti/threat-intel';
-import { projects, otxThreatData, leakcheckData, manualIndicators, reportSettings, reportSignatories } from '@vacti/db';
+import {
+  projects,
+  otxThreatData,
+  leakcheckData,
+  manualIndicators,
+  reportSettings,
+  reportSignatories,
+  threatIntelStatus,
+} from '@vacti/db';
 import { getDb } from '../../../../lib/db';
 import { getCurrentUser } from '../../../../lib/session';
 
@@ -24,13 +32,14 @@ export async function GET(req: Request, ctx: { params: Promise<{ projectId: stri
   const [project] = await db.select().from(projects).where(eq(projects.id, projectId));
   if (!project) return new Response('Not found', { status: 404 });
 
-  const [risk, otx, leaks, indicators, settingRows, signRows] = await Promise.all([
+  const [risk, otx, leaks, indicators, settingRows, signRows, tiStatusRows] = await Promise.all([
     computeProjectRisk(db, projectId),
     db.select().from(otxThreatData).where(eq(otxThreatData.projectId, projectId)),
     db.select().from(leakcheckData).where(eq(leakcheckData.projectId, projectId)),
     db.select().from(manualIndicators).where(eq(manualIndicators.projectId, projectId)),
     db.select().from(reportSettings).where(eq(reportSettings.projectId, projectId)),
     db.select().from(reportSignatories).where(eq(reportSignatories.projectId, projectId)),
+    db.select().from(threatIntelStatus).where(eq(threatIntelStatus.projectId, projectId)),
   ]);
 
   const settingRow = settingRows.find((s) => s.kind === 'ti');
@@ -54,6 +63,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ projectId: stri
     signatories,
     project: { name: project.name },
     risk: { score: risk.score, color: risk.color, components: risk.components },
+    aiNarrative: tiStatusRows[0]?.aiNarrative ?? null,
     totals: {
       pulses: otx.reduce((a, o) => a + o.pulses, 0),
       malware: otx.reduce((a, o) => a + o.malwareCount, 0),

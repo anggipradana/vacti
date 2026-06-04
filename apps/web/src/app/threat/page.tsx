@@ -14,12 +14,13 @@ import { Badge } from '../../components/ui/badge';
 import { Table, THead, TBody, TR, TH, TD } from '../../components/ui/table';
 import { EmptyState } from '../../components/ui/empty-state';
 import { computeProjectRisk } from '@vacti/threat-intel';
-import { LEAK_STATUS_LABEL } from '@vacti/core';
+import { LEAK_STATUS_LABEL, userCan, Permission } from '@vacti/core';
 import { projects, otxThreatData, leakcheckData, manualIndicators, threatIntelStatus } from '@vacti/db';
 import { getDb } from '../../lib/db';
 import { getCurrentUser } from '../../lib/session';
 import { refreshTiAction, addIndicatorAction } from '../../lib/threat-actions';
 import { setLeakStatusAction } from '../../lib/status-actions';
+import { generateThreatNarrativeAction } from '../../lib/ai-actions';
 
 export const dynamic = 'force-dynamic';
 
@@ -52,6 +53,7 @@ export default async function ThreatPage({ searchParams }: { searchParams: Promi
     db.select().from(threatIntelStatus).where(eq(threatIntelStatus.projectId, projectId)),
   ]);
   const status = statusRows[0];
+  const canTriage = userCan(user, Permission.ModifyScanResults);
   const pulses = otx.reduce((a, o) => a + o.pulses, 0);
   const malware = otx.reduce((a, o) => a + o.malwareCount, 0);
   const unchecked = leaks.filter((l) => !l.checked).length;
@@ -121,6 +123,23 @@ export default async function ThreatPage({ searchParams }: { searchParams: Promi
           <StatCard label="Indicators" value={indicators.length} icon={<Plus />} />
         </div>
       </div>
+
+      <Card className="mt-4">
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle>AI risk analysis</CardTitle>
+          {canTriage ? (
+            <form action={generateThreatNarrativeAction}>
+              <input type="hidden" name="projectId" value={projectId} />
+              <Button type="submit" variant="outline" size="sm">
+                {status?.aiNarrative ? 'Regenerate' : 'Generate'}
+              </Button>
+            </form>
+          ) : null}
+        </CardHeader>
+        <CardContent className="pt-0 text-sm leading-relaxed text-fg-muted">
+          {status?.aiNarrative ? status.aiNarrative : <span className="text-fg-subtle">Not generated yet.</span>}
+        </CardContent>
+      </Card>
 
       <h2 className="mb-3 mt-8 font-display text-sm font-semibold uppercase tracking-wider text-fg-subtle">
         Leaked credentials

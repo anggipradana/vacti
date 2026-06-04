@@ -69,6 +69,8 @@ export interface TiReportData {
   signatories: Signatory[];
   project: { name: string };
   risk: { score: number; color: string; components?: Record<string, number> };
+  /** Optional AI-generated risk-analysis narrative (G8). */
+  aiNarrative?: string | null;
   totals: { pulses: number; malware: number; leaks: number };
   otx: { indicator: string; pulses: number; malwareCount: number; reputation: number }[];
   leaks: { identifier: string; source: string | null; status: string }[];

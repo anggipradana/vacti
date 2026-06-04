@@ -82,11 +82,13 @@ export function renderTiReport(d: TiReportData): string {
     numberedSection(lang, tnum(1), pri(lang, 'executiveSummary'), { pageBreak: true }),
     miniHead(pri(lang, 'aboutAssessment'), sec(lang, 'aboutAssessment')),
     note(
-      escapeHtml(
-        lang === 'id'
-          ? `Penilaian threat-intelligence untuk ${d.project.name}, berdasarkan ${d.totals.pulses} threat pulse, ${d.totals.malware} referensi malware, dan ${d.totals.leaks} kredensial bocor.`
-          : `Threat-intelligence assessment for ${d.project.name}, drawing on ${d.totals.pulses} threat pulses, ${d.totals.malware} malware references and ${d.totals.leaks} leaked credentials.`,
-      ),
+      d.aiNarrative?.trim()
+        ? escapeHtml(d.aiNarrative.trim())
+        : escapeHtml(
+            lang === 'id'
+              ? `Penilaian threat-intelligence untuk ${d.project.name}, berdasarkan ${d.totals.pulses} threat pulse, ${d.totals.malware} referensi malware, dan ${d.totals.leaks} kredensial bocor.`
+              : `Threat-intelligence assessment for ${d.project.name}, drawing on ${d.totals.pulses} threat pulses, ${d.totals.malware} malware references and ${d.totals.leaks} leaked credentials.`,
+          ),
     ),
     `<div class="risk-wrap">
       <div class="risk-num" style="color:${riskColor}">${score}</div>
