@@ -89,7 +89,8 @@ export default async function Dashboard() {
           icon={<ShieldCheck />}
           title="Threat Intelligence"
           description="OTX, LeakCheck, indicators & unified risk score."
-          status="soon"
+          href="/threat"
+          status="live"
         />
         <ModuleCard
           hue="160 70% 42%"
