@@ -22,7 +22,21 @@ test('foundation smoke: create admin → project → API token → logout', asyn
   await expect(page.getByTestId('new-token')).toContainText('vct_');
   await expect(page.getByTestId('token-list')).toContainText('ci-automation');
 
+  // Add a target (localhost — authorized; predefined sub skips subfinder).
+  await page.goto('/targets');
+  await page.getByTestId('target-domain').fill('127.0.0.1');
+  await page.getByTestId('target-subs').fill('127.0.0.1:8099');
+  await page.getByTestId('create-target').click();
+  await expect(page.getByTestId('target-list')).toContainText('127.0.0.1');
+
+  // Start a scan from the UI → lands on the scan detail page with a status.
+  await page.goto('/scans');
+  await page.getByTestId('start-scan').click();
+  await expect(page).toHaveURL(/\/scans\/[0-9a-f-]{36}/);
+  await expect(page.getByTestId('scan-status')).toBeVisible();
+
   // Logout.
+  await page.goto('/dashboard');
   await page.getByTestId('logout').click();
   await expect(page).toHaveURL(/\/login/);
 });

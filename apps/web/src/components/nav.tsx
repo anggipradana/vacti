@@ -6,6 +6,8 @@ export default function Nav({ email }: { email: string }) {
     <nav>
       <Link href="/dashboard">Dashboard</Link>
       <Link href="/projects">Projects</Link>
+      <Link href="/targets">Targets</Link>
+      <Link href="/scans">Scans</Link>
       <Link href="/settings/tokens">API Tokens</Link>
       <span style={{ marginLeft: 'auto' }} className="muted">
         {email}
