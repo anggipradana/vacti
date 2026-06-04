@@ -69,8 +69,10 @@ export default async function ScanDetail({ params }: { params: Promise<{ id: str
               <StatusPill status={scan.status} />
             </span>
           </div>
-          <Button variant="secondary" size="sm" disabled>
-            Generate report
+          <Button asChild variant="secondary" size="sm">
+            <a href={`/reports/va/${scan.id}?type=full`} target="_blank" rel="noopener noreferrer">
+              Generate report
+            </a>
           </Button>
         </div>
         {scan.error ? <p className="mt-2 text-sm text-danger">Error: {scan.error}</p> : null}

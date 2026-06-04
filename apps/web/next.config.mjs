@@ -10,6 +10,8 @@ const nextConfig = {
     '@vacti/queue',
     '@vacti/recon',
     '@vacti/api',
+    '@vacti/threat-intel',
+    '@vacti/reports',
   ],
   eslint: { ignoreDuringBuilds: true },
 };

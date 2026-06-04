@@ -1,0 +1,176 @@
+import { redirect } from 'next/navigation';
+import { desc, eq } from 'drizzle-orm';
+import { AppShell } from '../../../components/shell/app-shell';
+import { PageHeader } from '../../../components/ui/page-header';
+import { SettingsTabs } from '../../../components/settings-tabs';
+import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card';
+import { Input } from '../../../components/ui/input';
+import { Label } from '../../../components/ui/label';
+import { Select } from '../../../components/ui/select';
+import { Button } from '../../../components/ui/button';
+import { Badge } from '../../../components/ui/badge';
+import { projects, reportSettings, reportSignatories } from '@vacti/db';
+import { getDb } from '../../../lib/db';
+import { getCurrentUser } from '../../../lib/session';
+import { saveReportSettingsAction, addSignatoryAction, deleteSignatoryAction } from '../../../lib/report-actions';
+
+export const dynamic = 'force-dynamic';
+
+const FIELDS: { name: string; label: string }[] = [
+  { name: 'companyName', label: 'Company name' },
+  { name: 'companyWebsite', label: 'Website' },
+  { name: 'companyEmail', label: 'Email' },
+  { name: 'documentNumber', label: 'Document number' },
+];
+
+export default async function ReportSettingsPage({ searchParams }: { searchParams: Promise<{ project?: string }> }) {
+  const user = await getCurrentUser();
+  if (!user) redirect('/login');
+  const db = getDb();
+  const projectRows = await db.select().from(projects).orderBy(desc(projects.createdAt));
+  const sp = await searchParams;
+  const projectId = sp.project ?? projectRows[0]?.id;
+
+  if (!projectId) {
+    return (
+      <AppShell user={{ email: user.email, isSysAdmin: user.isSysAdmin }}>
+        <PageHeader title="Settings" />
+        <SettingsTabs active="/settings/reports" />
+        <p className="text-sm text-fg-muted">Create a project first.</p>
+      </AppShell>
+    );
+  }
+
+  const [allSettings, signatories] = await Promise.all([
+    db.select().from(reportSettings).where(eq(reportSettings.projectId, projectId)),
+    db.select().from(reportSignatories).where(eq(reportSignatories.projectId, projectId)),
+  ]);
+  const get = (kind: string) => allSettings.find((s) => s.kind === kind);
+
+  const brandingForm = (kind: 'va' | 'ti') => {
+    const s = get(kind);
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>{kind === 'va' ? 'VA report branding' : 'TI report branding'}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form action={saveReportSettingsAction} className="space-y-3">
+            <input type="hidden" name="projectId" value={projectId} />
+            <input type="hidden" name="kind" value={kind} />
+            {FIELDS.map((f) => (
+              <div key={f.name} className="space-y-1">
+                <Label htmlFor={`${kind}-${f.name}`}>{f.label}</Label>
+                <Input
+                  id={`${kind}-${f.name}`}
+                  name={f.name}
+                  defaultValue={(s?.[f.name as keyof typeof s] as string) ?? ''}
+                />
+              </div>
+            ))}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label htmlFor={`${kind}-primary`}>Primary color</Label>
+                <Input
+                  id={`${kind}-primary`}
+                  name="primaryColor"
+                  defaultValue={s?.primaryColor ?? (kind === 'ti' ? '#1a237e' : '#2563eb')}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor={`${kind}-lang`}>Language</Label>
+                <Select id={`${kind}-lang`} name="language" defaultValue={s?.language ?? 'en'}>
+                  <option value="en">English</option>
+                  <option value="id">Indonesia</option>
+                </Select>
+              </div>
+            </div>
+            {kind === 'ti' ? (
+              <div className="space-y-1">
+                <Label htmlFor="ti-classif">Classification</Label>
+                <Input
+                  id="ti-classif"
+                  name="classification"
+                  defaultValue={s?.classification ?? 'CONFIDENTIAL — FOR INTERNAL USE ONLY'}
+                />
+              </div>
+            ) : null}
+            <Button type="submit">Save</Button>
+          </form>
+        </CardContent>
+      </Card>
+    );
+  };
+
+  return (
+    <AppShell user={{ email: user.email, isSysAdmin: user.isSysAdmin }}>
+      <PageHeader title="Settings" description="Report branding, signatories, and document control." />
+      <SettingsTabs active="/settings/reports" />
+      <div className="grid gap-4 lg:grid-cols-2">
+        {brandingForm('va')}
+        {brandingForm('ti')}
+      </div>
+
+      <h2 className="mb-3 mt-8 font-display text-sm font-semibold uppercase tracking-wider text-fg-subtle">
+        Signatories (Prepared / Reviewed / Approved)
+      </h2>
+      <div className="grid gap-4 lg:grid-cols-[360px_1fr]">
+        <Card>
+          <CardContent className="pt-5">
+            <form action={addSignatoryAction} className="space-y-3">
+              <input type="hidden" name="projectId" value={projectId} />
+              <div className="space-y-1">
+                <Label htmlFor="role">Role</Label>
+                <Select id="role" name="role">
+                  <option value="prepared">Prepared By</option>
+                  <option value="reviewed">Reviewed By</option>
+                  <option value="approved">Approved By</option>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="signame">Name</Label>
+                <Input id="signame" name="name" required />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="sigpos">Position</Label>
+                <Input id="sigpos" name="position" />
+              </div>
+              <Button type="submit" className="w-full">
+                Add signatory
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+        <div className="space-y-2">
+          {signatories.length === 0 ? (
+            <Card>
+              <CardContent className="py-5 text-sm text-fg-muted">No signatories yet.</CardContent>
+            </Card>
+          ) : (
+            signatories
+              .sort((a, b) => a.sortOrder - b.sortOrder)
+              .map((s) => (
+                <Card key={s.id}>
+                  <CardContent className="flex items-center justify-between py-3">
+                    <div>
+                      <span className="font-medium">{s.name}</span>{' '}
+                      <span className="muted text-fg-subtle">{s.position}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="accent">{s.role}</Badge>
+                      <form action={deleteSignatoryAction}>
+                        <input type="hidden" name="id" value={s.id} />
+                        <Button type="submit" variant="ghost" size="sm" className="text-danger hover:bg-danger/10">
+                          Remove
+                        </Button>
+                      </form>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+          )}
+        </div>
+      </div>
+    </AppShell>
+  );
+}

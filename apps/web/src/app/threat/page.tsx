@@ -62,12 +62,19 @@ export default async function ThreatPage({ searchParams }: { searchParams: Promi
         title="Threat Intelligence"
         description="OTX AlienVault, leaked credentials, manual indicators & unified risk score."
         actions={
-          <form action={refreshTiAction}>
-            <input type="hidden" name="projectId" value={projectId} />
-            <Button type="submit" variant="secondary">
-              <RefreshCw /> Refresh
+          <div className="flex items-center gap-2">
+            <Button asChild variant="secondary">
+              <a href={`/reports/ti/${projectId}`} target="_blank" rel="noopener noreferrer">
+                Generate report
+              </a>
             </Button>
-          </form>
+            <form action={refreshTiAction}>
+              <input type="hidden" name="projectId" value={projectId} />
+              <Button type="submit">
+                <RefreshCw /> Refresh
+              </Button>
+            </form>
+          </div>
         }
       />
 
