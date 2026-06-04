@@ -144,10 +144,24 @@ export const vulnerabilities = pgTable('vulnerabilities', {
   createdAt: createdAt(),
 });
 
+/** Recurring scan schedules (lightweight pg-boss cron tick evaluates these). */
+export const scanSchedules = pgTable('scan_schedules', {
+  id: id(),
+  targetId: uuid('target_id')
+    .notNull()
+    .references(() => targets.id, { onDelete: 'cascade' }),
+  profileId: uuid('profile_id').references(() => scanProfiles.id, { onDelete: 'set null' }),
+  cron: text('cron').notNull(), // standard 5-field cron, local server time
+  enabled: boolean('enabled').notNull().default(true),
+  lastRunAt: timestamp('last_run_at', { withTimezone: true }),
+  createdAt: createdAt(),
+});
+
 export const reconSchema = {
   targets,
   scanProfiles,
   scans,
+  scanSchedules,
   scanActivity,
   commands,
   subdomains,

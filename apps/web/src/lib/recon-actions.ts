@@ -3,8 +3,8 @@
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
-import { Permission } from '@vacti/core';
-import { targets, scans } from '@vacti/db';
+import { Permission, isValidCron } from '@vacti/core';
+import { targets, scans, scanSchedules } from '@vacti/db';
 import { eq } from 'drizzle-orm';
 import { getDb } from './db';
 import { getQueue } from './queue';
@@ -56,4 +56,30 @@ export async function cancelScanAction(formData: FormData) {
     await db.update(scans).set({ cancelRequested: true }).where(eq(scans.id, id));
   }
   revalidatePath(`/scans/${id}`);
+}
+
+export async function createScheduleAction(formData: FormData) {
+  await requirePermission(Permission.InitiateScans);
+  const targetId = String(formData.get('targetId') ?? '');
+  const cron = String(formData.get('cron') ?? '').trim();
+  const profileId = String(formData.get('profileId') ?? '').trim() || null;
+  if (!targetId || !isValidCron(cron)) redirect('/schedules?error=invalid');
+  await getDb().insert(scanSchedules).values({ targetId, cron, profileId });
+  revalidatePath('/schedules');
+}
+
+export async function toggleScheduleAction(formData: FormData) {
+  await requirePermission(Permission.InitiateScans);
+  const id = String(formData.get('id') ?? '');
+  if (!id) return;
+  const [row] = await getDb().select().from(scanSchedules).where(eq(scanSchedules.id, id));
+  if (row) await getDb().update(scanSchedules).set({ enabled: !row.enabled }).where(eq(scanSchedules.id, id));
+  revalidatePath('/schedules');
+}
+
+export async function deleteScheduleAction(formData: FormData) {
+  await requirePermission(Permission.InitiateScans);
+  const id = String(formData.get('id') ?? '');
+  if (id) await getDb().delete(scanSchedules).where(eq(scanSchedules.id, id));
+  revalidatePath('/schedules');
 }

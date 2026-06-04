@@ -1,7 +1,8 @@
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { loadEnv } from '@vacti/config';
-import { createDb, runMigrations, scans, targets, scanProfiles } from '@vacti/db';
+import { cronMatches } from '@vacti/core';
+import { createDb, runMigrations, scans, targets, scanProfiles, scanSchedules } from '@vacti/db';
 import { createQueue } from '@vacti/queue';
 import { runScanPipeline, type ScanProfile } from '@vacti/recon';
 import { refreshThreatIntel } from '@vacti/threat-intel';
@@ -76,7 +77,7 @@ async function main(): Promise<void> {
       clearInterval(poll);
     }
     const [done] = await db.select().from(scans).where(eq(scans.id, scanId));
-    if (done) {
+    if (done && done.status !== 'cancelled') {
       const counts = (done.counts ?? {}) as Record<string, number>;
       await sendProjectNotifications(db, done.projectId, {
         type: done.status === 'completed' ? 'scan.completed' : 'scan.failed',
@@ -101,7 +102,29 @@ async function main(): Promise<void> {
 
   await queue.work('echo', z.object({ msg: z.string() }), async (p) => console.log(`[worker] echo: ${p.msg}`));
 
-  console.log('[worker] started; consuming scan + ti-refresh queues');
+  // Scheduled scans — a once-a-minute tick evaluates scan_schedules (lightweight cron, no Celery-beat).
+  await queue.work('schedule-tick', z.unknown(), async () => {
+    const now = new Date();
+    const minute = Math.floor(now.getTime() / 60000);
+    const rows = await db.select().from(scanSchedules).where(eq(scanSchedules.enabled, true));
+    for (const s of rows) {
+      if (!cronMatches(s.cron, now)) continue;
+      // Idempotent within a minute (the tick may fire slightly more than once).
+      if (s.lastRunAt && Math.floor(s.lastRunAt.getTime() / 60000) === minute) continue;
+      const [target] = await db.select().from(targets).where(eq(targets.id, s.targetId));
+      if (!target) continue;
+      const [scan] = await db
+        .insert(scans)
+        .values({ projectId: target.projectId, targetId: target.id, profileId: s.profileId ?? null })
+        .returning();
+      await queue.enqueue('scan', scanJobSchema, { scanId: scan!.id });
+      await db.update(scanSchedules).set({ lastRunAt: now }).where(eq(scanSchedules.id, s.id));
+      console.log(`[worker] scheduled scan ${scan!.id} for ${target.domain} (cron ${s.cron})`);
+    }
+  });
+  await queue.schedule('schedule-tick', '* * * * *');
+
+  console.log('[worker] started; consuming scan + ti-refresh + schedule-tick queues');
 
   const shutdown = async (signal: string): Promise<void> => {
     console.log(`[worker] ${signal} received, shutting down…`);

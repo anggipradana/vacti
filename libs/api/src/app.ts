@@ -2,7 +2,15 @@ import { Hono } from 'hono';
 import { desc, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { hashToken } from '@vacti/auth';
-import { isVulnStatus, isLeakStatus, hasPermission, roleFromUser, Permission, type RoleName } from '@vacti/core';
+import {
+  isVulnStatus,
+  isLeakStatus,
+  hasPermission,
+  roleFromUser,
+  Permission,
+  isValidCron,
+  type RoleName,
+} from '@vacti/core';
 import type { Context } from 'hono';
 import { computeProjectRisk } from '@vacti/threat-intel';
 import { dispatchWebhook, type Channel } from '@vacti/integrations';
@@ -23,6 +31,7 @@ import {
   leakcheckData,
   threatIntelStatus,
   webhooks,
+  scanSchedules,
   type Database,
 } from '@vacti/db';
 
@@ -225,6 +234,25 @@ export function buildApi(deps: ApiDeps): Hono<{ Variables: Vars }> {
     }
     const [row] = await db.update(scans).set({ cancelRequested: true }).where(eq(scans.id, id)).returning();
     return c.json({ scan: row }, 202);
+  });
+
+  // ---- Scheduled scans ----
+  app.get('/schedules', async (c) => c.json({ schedules: await db.select().from(scanSchedules) }));
+  app.post('/schedules', async (c) => {
+    const g = guard(c, Permission.InitiateScans);
+    if (g) return g;
+    const body = z
+      .object({ targetId: z.string().uuid(), cron: z.string(), profileId: z.string().uuid().optional() })
+      .safeParse(await c.req.json().catch(() => ({})));
+    if (!body.success || !isValidCron(body.data.cron)) return c.json({ error: 'invalid schedule' }, 400);
+    const [row] = await db.insert(scanSchedules).values(body.data).returning();
+    return c.json({ schedule: row }, 201);
+  });
+  app.delete('/schedules/:id', async (c) => {
+    const g = guard(c, Permission.InitiateScans);
+    if (g) return g;
+    await db.delete(scanSchedules).where(eq(scanSchedules.id, c.req.param('id')));
+    return c.json({ status: 'deleted' });
   });
 
   // ---- Threat Intelligence ----
