@@ -4,6 +4,15 @@
 > missed or under-specified. Legend: ✅ have · 🟡 partial · ❌ missing. Action: **ADD** (do soon) ·
 > _improve_ · later · skip (out of scope).
 
+**STATUS 2026-06-04** — Priority items 1–3 below (finding status, reports, integrations) are
+**SHIPPED**. A code-level audit reconciled the planning with reality: recon, threat-intel, reports,
+AI/webhooks and REST/OpenAPI are implemented and CI-green; report parity is component-complete
+(logo, signatures, TOC, donut/bars, vuln-summary, CVSS/CVE/refs, custom exec summary). The remaining
+backlog is catalogued as **G1–G17** in
+[02-FEATURE-PARITY-CHECKLIST.md](02-FEATURE-PARITY-CHECKLIST.md) and mapped to ccpm tasks (see §J).
+Epic/task statuses in `.claude/epics/` were synced (30 tasks closed; 12 open carry a
+`## Status (2026-06-04)` note describing remaining work).
+
 ## A. Findings / vulnerabilities
 
 | Feature                                                      | vacti                      | Action                                     |
@@ -130,12 +139,40 @@ false-positive from counts), download + inline.
 - **Scheduled jobs** — TI refresh (cron) + nuclei-templates update (cron).
 - skip: HackerOne sync, in-app notification center (later).
 
-## J. Priority for the upcoming work
+## J. Priority — status & remaining backlog (updated 2026-06-04)
 
-1. **Finding status** (A triage) — implement now.
-2. **Reports** — VA + TI templates (Playwright) with all sections above + settings + signatories.
-3. **Integrations** — webhook notifiers + AI enrichment + vault UI + OpenAPI + notification settings.
-4. **Quick adds folded into the above**: vuln `references`/`curl_command`/`extracted_results`/
-   `matcher_name`; dashboard "most vulnerable" + "most common vuln"; `initiated_by`/`aborted_by`;
-   per-project notification settings; proxy setting; recon notes; profile `tags`/`templates`/`threads`.
-5. **Later**: subscan/diff UI, scheduled scans, universal search, organizations, WHOIS, in-app feed.
+**Shipped:**
+
+1. ✅ **Finding status** (A triage) — VA + leak status, risk-score-aware.
+2. ✅ **Reports** — VA + TI (Playwright), all sections + settings + signatories + parity additions
+   (logo, signature images, CVSS/CVE/references, custom exec summary, TOC, donut/bars,
+   subdomain-inventory + status pills, vuln-summary). See reports epic 001–007.
+3. ✅ **Integrations** — 5-channel webhooks (per-project, per-event), AI enrichment + cache, AI provider
+   abstraction (Anthropic/OpenAI/Ollama), REST + OpenAPI/Redoc.
+4. ✅ **Folded quick-adds done**: vuln `references`/CVSS/CVE; dashboard "most common vuln" +
+   "top targets by active findings".
+
+**Remaining backlog (G1–G17 → ccpm task):**
+
+| Gap | Item                                        | Task                                          |
+| --- | ------------------------------------------- | --------------------------------------------- |
+| G1  | RBAC enforcement (server-side) — _priority_ | platform-foundation #005                      |
+| G2  | Scan cancel UI + API route                  | recon-engine #007 + dashboard-ui #004         |
+| G3  | Scheduled scans (pg-boss cron)              | recon-engine #009                             |
+| G4  | Scan diff / compare                         | recon-engine #005 + dashboard-ui #004         |
+| G5  | Sub-scan / partial rescan                   | recon-engine #007                             |
+| G6  | API key vault UI (per-project)              | platform-foundation #007 + api-and-integ #005 |
+| G7  | AI executive summary (auto-generate)        | api-and-integrations #004                     |
+| G8  | AI threat-analysis narrative                | api-and-integrations #004                     |
+| G9  | argon2id password hashing                   | platform-foundation #004                      |
+| G10 | Audit-log writes + viewer                   | platform-foundation #010 (new)                |
+| G11 | Server-side datatables                      | dashboard-ui #002                             |
+| G12 | Wire custom request headers into httpx      | recon-engine #008                             |
+| G13 | Universal search                            | dashboard-ui #006                             |
+| G14 | Recon notes / todos                         | recon-engine #008                             |
+| G15 | Interesting keywords                        | recon-engine #008                             |
+| G16 | Seed / fixtures                             | platform-foundation #011 (new)                |
+| G17 | Onboarding walkthrough                      | dashboard-ui #007 (new)                       |
+
+Suggested order: **G1 → G2 → G3 → G6 → G4/G5 → rest.** Out of v1: proxy support, multi-org, WHOIS,
+in-app notification feed.
