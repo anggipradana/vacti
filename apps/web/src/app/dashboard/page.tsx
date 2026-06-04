@@ -12,7 +12,9 @@ import { StatusPill } from '../../components/ui/status-pill';
 import { Table, THead, TBody, TR, TH, TD } from '../../components/ui/table';
 import { SeverityDonut } from '../../components/ui/severity-donut';
 import { TrendArea } from '../../components/ui/trend-area';
-import { Severity } from '@vacti/core';
+import { Severity, VULN_ACTIVE_STATUSES } from '@vacti/core';
+import { SeverityBadge } from '../../components/ui/severity-badge';
+import type { SeverityValue } from '@vacti/core';
 import { targets, scans, endpoints, vulnerabilities } from '@vacti/db';
 import { getDb } from '../../lib/db';
 import { getCurrentUser } from '../../lib/session';
@@ -39,6 +41,29 @@ export default async function Dashboard() {
     sev(Severity.Low),
     sev(Severity.Info),
   ];
+
+  // Most common vulnerabilities (by name), top 5.
+  const byName = vulnRows.reduce<Map<string, { count: number; severity: number }>>((m, v) => {
+    const cur = m.get(v.name) ?? { count: 0, severity: v.severity };
+    m.set(v.name, { count: cur.count + 1, severity: Math.max(cur.severity, v.severity) });
+    return m;
+  }, new Map());
+  const mostCommon = [...byName.entries()].sort((a, b) => b[1].count - a[1].count).slice(0, 5);
+
+  // Top targets by active findings, top 5.
+  const activeSet = new Set<string>(VULN_ACTIVE_STATUSES);
+  const scanToTarget = new Map(scanRows.map((s) => [s.id, s.targetId]));
+  const byTarget = vulnRows.reduce<Map<string, number>>((m, v) => {
+    if (!activeSet.has(v.status)) return m;
+    const tid = scanToTarget.get(v.scanId);
+    if (!tid) return m;
+    m.set(tid, (m.get(tid) ?? 0) + 1);
+    return m;
+  }, new Map());
+  const topTargets = [...byTarget.entries()]
+    .map(([tid, count]) => ({ domain: targetById.get(tid)?.domain ?? tid.slice(0, 8), count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 5);
 
   const days: { label: string; value: number }[] = [];
   for (let i = 6; i >= 0; i--) {
@@ -128,6 +153,66 @@ export default async function Dashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Data-relevant analytics */}
+      {vulnRows.length > 0 ? (
+        <div className="mt-6 grid gap-4 lg:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <CardTitle>Most common vulnerabilities</CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <Table>
+                <THead>
+                  <TR>
+                    <TH>Finding</TH>
+                    <TH>Severity</TH>
+                    <TH className="text-right">Count</TH>
+                  </TR>
+                </THead>
+                <TBody>
+                  {mostCommon.map(([name, info]) => (
+                    <TR key={name}>
+                      <TD className="font-medium">{name}</TD>
+                      <TD>
+                        <SeverityBadge severity={info.severity as SeverityValue} />
+                      </TD>
+                      <TD className="text-right tabular">{info.count}</TD>
+                    </TR>
+                  ))}
+                </TBody>
+              </Table>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>Top targets by active findings</CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              {topTargets.length ? (
+                <Table>
+                  <THead>
+                    <TR>
+                      <TH>Target</TH>
+                      <TH className="text-right">Active findings</TH>
+                    </TR>
+                  </THead>
+                  <TBody>
+                    {topTargets.map((t) => (
+                      <TR key={t.domain}>
+                        <TD className="font-mono text-sm">{t.domain}</TD>
+                        <TD className="text-right tabular">{t.count}</TD>
+                      </TR>
+                    ))}
+                  </TBody>
+                </Table>
+              ) : (
+                <p className="py-4 text-sm text-fg-muted">No active findings.</p>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      ) : null}
 
       {/* Recent scans */}
       <h2 className="mb-3 mt-8 font-display text-sm font-semibold uppercase tracking-wider text-fg-subtle">
