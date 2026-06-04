@@ -4,29 +4,29 @@
 
 @layer base {
   :root {
-    --radius: 0.75rem;
+    --radius: 0.625rem;
 
-    /* Claude-style warm ivory light theme */
-    --bg: 45 33% 97%;
+    /* Clean, white-first professional light theme */
+    --bg: 0 0% 100%;
     --surface: 0 0% 100%;
-    --surface-2: 44 24% 93%;
-    --surface-3: 44 22% 89%;
-    --border: 43 22% 87%;
-    --border-strong: 44 23% 79%;
-    --fg: 48 11% 9%;
-    --fg-muted: 43 11% 38%;
-    --fg-subtle: 45 11% 54%;
+    --surface-2: 210 20% 98%;
+    --surface-3: 214 20% 94%;
+    --border: 214 20% 91%;
+    --border-strong: 214 16% 83%;
+    --fg: 222 47% 11%;
+    --fg-muted: 215 16% 42%;
+    --fg-subtle: 215 14% 60%;
 
-    --accent: 13 53% 52%; /* terracotta / Claude coral */
-    --accent-hover: 15 58% 44%;
+    --accent: 243 75% 59%; /* refined indigo */
+    --accent-hover: 245 58% 51%;
     --accent-fg: 0 0% 100%;
-    --ring: 13 53% 52%;
+    --ring: 243 75% 59%;
 
     --sev-critical: 0 72% 51%;
     --sev-high: 21 90% 48%;
     --sev-medium: 32 94% 36%;
     --sev-low: 41 96% 33%;
-    --sev-info: 200 80% 40%;
+    --sev-info: 217 80% 48%;
 
     --risk-green: 152 55% 36%;
     --risk-amber: 32 94% 44%;
@@ -37,27 +37,27 @@
   }
 
   .dark {
-    /* Warm charcoal dark theme */
-    --bg: 45 6% 11%;
-    --surface: 40 5% 15%;
-    --surface-2: 36 7% 18%;
-    --surface-3: 38 7% 22%;
-    --border: 43 7% 21%;
-    --border-strong: 40 8% 27%;
-    --fg: 42 25% 90%;
-    --fg-muted: 40 14% 65%;
-    --fg-subtle: 41 9% 47%;
+    /* Clean cool-neutral dark */
+    --bg: 222 47% 6%;
+    --surface: 222 40% 9%;
+    --surface-2: 220 30% 13%;
+    --surface-3: 220 26% 17%;
+    --border: 220 22% 19%;
+    --border-strong: 220 18% 27%;
+    --fg: 210 40% 96%;
+    --fg-muted: 215 18% 66%;
+    --fg-subtle: 215 14% 48%;
 
-    --accent: 16 64% 65%;
-    --accent-hover: 17 67% 71%;
-    --accent-fg: 20 30% 12%;
-    --ring: 16 64% 65%;
+    --accent: 239 84% 71%;
+    --accent-hover: 235 89% 77%;
+    --accent-fg: 222 47% 11%;
+    --ring: 239 84% 71%;
 
     --sev-critical: 0 91% 71%;
     --sev-high: 27 96% 61%;
     --sev-medium: 43 96% 56%;
     --sev-low: 48 96% 53%;
-    --sev-info: 199 80% 62%;
+    --sev-info: 213 90% 68%;
 
     --risk-green: 152 50% 55%;
     --risk-amber: 43 96% 56%;
@@ -82,10 +82,10 @@
   h2,
   h3,
   .font-display {
-    letter-spacing: -0.01em;
+    letter-spacing: -0.02em;
   }
   ::selection {
-    background-color: hsl(var(--accent) / 0.22);
+    background-color: hsl(var(--accent) / 0.18);
   }
   .tabular {
     font-variant-numeric: tabular-nums;
