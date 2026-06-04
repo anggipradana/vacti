@@ -46,7 +46,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ projectId: stri
     settings,
     signatories,
     project: { name: project.name },
-    risk: { score: risk.score, color: risk.color },
+    risk: { score: risk.score, color: risk.color, components: risk.components },
     totals: {
       pulses: otx.reduce((a, o) => a + o.pulses, 0),
       malware: otx.reduce((a, o) => a + o.malwareCount, 0),

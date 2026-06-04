@@ -1,5 +1,4 @@
 import { eq } from 'drizzle-orm';
-import { Severity, VULN_ACTIVE_STATUSES } from '@vacti/core';
 import {
   renderVaReport,
   renderPdf,
@@ -24,8 +23,6 @@ import { getCurrentUser } from '../../../../lib/session';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const active = new Set<string>(VULN_ACTIVE_STATUSES);
-
 export async function GET(req: Request, ctx: { params: Promise<{ scanId: string }> }) {
   if (!(await getCurrentUser())) return new Response('Unauthorized', { status: 401 });
   const { scanId } = await ctx.params;
@@ -47,7 +44,6 @@ export async function GET(req: Request, ctx: { params: Promise<{ scanId: string 
     db.select().from(reportSignatories).where(eq(reportSignatories.projectId, scan.projectId)),
   ]);
 
-  const sevCount = (sv: number) => vulns.filter((v) => v.severity === sv && active.has(v.status)).length;
   const settingRow = settingRows.find((s) => s.kind === 'va');
   const settings: ReportSettings = settingRow
     ? { ...DEFAULT_VA_SETTINGS, ...stripNulls(settingRow) }
@@ -64,20 +60,26 @@ export async function GET(req: Request, ctx: { params: Promise<{ scanId: string 
     target: { domain: target?.domain ?? scan.targetId },
     scan: { status: scan.status, startedAt: scan.startedAt, finishedAt: scan.finishedAt },
     counts: { subdomains: subs.length, endpoints: eps.length, ports: prt.length },
-    severityCounts: [
-      sevCount(Severity.Critical),
-      sevCount(Severity.High),
-      sevCount(Severity.Medium),
-      sevCount(Severity.Low),
-      sevCount(Severity.Info),
-    ],
-    endpoints: eps.map((e) => ({ url: e.url, statusCode: e.statusCode, title: e.title })),
+    endpoints: eps.map((e) => ({
+      url: e.url,
+      statusCode: e.statusCode,
+      title: e.title,
+      tech: e.tech,
+      isWordpress: e.isWordpress === 1,
+    })),
+    ports: prt.map((p) => ({ ip: p.ip, port: p.port })),
+    subdomains: subs.map((sd) => sd.host),
     vulns: vulns.map((v) => ({
       name: v.name,
       severity: v.severity,
       status: v.status,
       matchedAt: v.matchedAt,
+      url: v.url,
       type: v.type,
+      isAiEnriched: v.isAiEnriched,
+      aiDescription: v.aiDescription,
+      aiImpact: v.aiImpact,
+      aiRemediation: v.aiRemediation,
     })),
   });
   const pdf = await renderPdf(html);

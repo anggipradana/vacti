@@ -12,35 +12,45 @@ describe('VA report html', () => {
     target: { domain: 'example.com' },
     scan: { status: 'completed', startedAt: new Date(), finishedAt: new Date() },
     counts: { subdomains: 2, endpoints: 5, ports: 3 },
-    severityCounts: [1, 2, 0, 1, 4],
-    endpoints: [{ url: 'http://example.com', statusCode: 200, title: 'Home' }],
-    vulns: [{ name: 'XSS', severity: 3, status: 'open', matchedAt: 'http://example.com/?q=' }],
+    endpoints: [{ url: 'http://example.com', statusCode: 200, title: 'Home', tech: ['nginx'] }],
+    ports: [{ ip: '1.1.1.1', port: 443 }],
+    subdomains: ['a.example.com'],
+    vulns: [
+      {
+        name: 'XSS',
+        severity: 3,
+        status: 'open',
+        matchedAt: 'http://example.com/?q=',
+        isAiEnriched: true,
+        aiRemediation: 'Encode output.',
+      },
+    ],
   });
-  it('contains cover, approval, summary, vulnerabilities', () => {
+  it('contains cover, approval, executive summary, vulnerabilities + AI detail', () => {
     expect(html).toContain('Vulnerability Assessment Report');
     expect(html).toContain('example.com');
     expect(html).toContain('Approval Sheet');
-    expect(html).toContain('Summary of Findings');
+    expect(html).toContain('Executive Summary');
     expect(html).toContain('XSS');
+    expect(html).toContain('Encode output.'); // AI remediation rendered
     expect(html.startsWith('<!doctype html>')).toBe(true);
   });
   it('honors Indonesian + report type', () => {
     const recon = renderVaReport({
-      ...{
-        lang: 'id' as const,
-        type: 'recon' as const,
-        settings: DEFAULT_VA_SETTINGS,
-        signatories: [],
-        target: { domain: 'x.id' },
-        scan: { status: 'completed' },
-        counts: { subdomains: 0, endpoints: 0, ports: 0 },
-        severityCounts: [0, 0, 0, 0, 0] as [number, number, number, number, number],
-        endpoints: [],
-        vulns: [],
-      },
+      lang: 'id',
+      type: 'recon',
+      settings: DEFAULT_VA_SETTINGS,
+      signatories: [],
+      target: { domain: 'x.id' },
+      scan: { status: 'completed' },
+      counts: { subdomains: 0, endpoints: 0, ports: 0 },
+      endpoints: [],
+      ports: [],
+      subdomains: [],
+      vulns: [],
     });
     expect(recon).toContain('Laporan Vulnerability Assessment');
-    expect(recon).not.toContain('<h2>Vulnerabilities</h2>');
+    expect(recon).toContain('Hasil Reconnaissance'); // recon section present for recon type
   });
 });
 

@@ -26,9 +26,27 @@ export interface VaReportData {
   target: { domain: string };
   scan: { status: string; startedAt?: Date | null; finishedAt?: Date | null };
   counts: { subdomains: number; endpoints: number; ports: number };
-  severityCounts: [number, number, number, number, number]; // crit, high, med, low, info
-  endpoints: { url: string; statusCode?: number | null; title?: string | null }[];
-  vulns: { name: string; severity: number; status: string; matchedAt?: string | null; type?: string | null }[];
+  endpoints: {
+    url: string;
+    statusCode?: number | null;
+    title?: string | null;
+    tech?: string[];
+    isWordpress?: boolean;
+  }[];
+  ports: { ip: string; port: number }[];
+  subdomains: string[];
+  vulns: {
+    name: string;
+    severity: number;
+    status: string;
+    matchedAt?: string | null;
+    url?: string | null;
+    type?: string | null;
+    isAiEnriched?: boolean;
+    aiDescription?: string | null;
+    aiImpact?: string | null;
+    aiRemediation?: string | null;
+  }[];
 }
 
 export interface TiReportData {
@@ -36,7 +54,7 @@ export interface TiReportData {
   settings: ReportSettings;
   signatories: Signatory[];
   project: { name: string };
-  risk: { score: number; color: string };
+  risk: { score: number; color: string; components?: Record<string, number> };
   totals: { pulses: number; malware: number; leaks: number };
   otx: { indicator: string; pulses: number; malwareCount: number; reputation: number }[];
   leaks: { identifier: string; source: string | null; status: string }[];
