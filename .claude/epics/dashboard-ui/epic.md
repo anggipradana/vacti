@@ -1,9 +1,9 @@
 ---
 name: dashboard-ui
-status: in-progress
+status: completed
 created: 2026-06-03T19:09:19Z
-updated: 2026-06-04T16:00:00Z
-progress: 43%
+updated: 2026-06-05T02:30:00Z
+progress: 100%
 prd: .claude/prds/vacti.md
 github: (will be set on sync)
 ---
@@ -92,12 +92,12 @@ Menutup baris Feature Parity Checklist: **7.1–7.7, 6.6 (tabel), 4.6/4.7/4.9/4.
 ## Tasks Created
 
 - [x] 001.md - Design system, charts & dark mode (parallel: true)
-- [ ] 002.md - Server-side DataTable + recon result views (parallel: false)
+- [x] 002.md - Server-side DataTable + recon result views (parallel: false)
 - [x] 003.md - Main dashboard + analytics (parallel: false)
-- [ ] 004.md - Scan management UI (SSE, history, diff) (parallel: false)
+- [x] 004.md - Scan management UI (SSE, history, diff) (parallel: false)
 - [x] 005.md - Threat Intel page + indicators + leak toggle (parallel: false)
-- [ ] 006.md - Reports UI + Settings/Integrations + search + e2e (parallel: false)
-- [ ] 007.md - Onboarding (first-run walkthrough) (parallel: true) — gap G17
+- [x] 006.md - Reports UI + Settings/Integrations + search + e2e (parallel: false)
+- [x] 007.md - Onboarding (first-run walkthrough) (parallel: true) — gap G17
 
 Total tasks: 7
 Estimated total effort: ~64 jam

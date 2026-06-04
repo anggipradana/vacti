@@ -2,7 +2,7 @@
 name: threat-intel
 status: completed
 created: 2026-06-03T19:09:19Z
-updated: 2026-06-04T16:00:00Z
+updated: 2026-06-05T02:30:00Z
 progress: 100%
 prd: .claude/prds/vacti.md
 github: (will be set on sync)

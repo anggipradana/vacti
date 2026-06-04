@@ -1,7 +1,7 @@
 ---
 name: vacti
 description: Lightweight modern recon + threat-intelligence platform — simplified VA pipeline (subfinder/httpx/naabu/nuclei), full Threat Intel, bilingual PDF reports, first-class API & integrations
-status: in-progress
+status: completed
 created: 2026-06-03T19:04:06Z
 ---
 
