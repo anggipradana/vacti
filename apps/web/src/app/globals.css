@@ -6,62 +6,64 @@
   :root {
     --radius: 0.75rem;
 
-    --bg: 220 16% 98%;
+    /* Claude-style warm ivory light theme */
+    --bg: 45 33% 97%;
     --surface: 0 0% 100%;
-    --surface-2: 220 16% 96%;
-    --surface-3: 220 14% 92%;
-    --border: 220 16% 91%;
-    --border-strong: 218 16% 84%;
-    --fg: 222 47% 7%;
-    --fg-muted: 218 11% 40%;
-    --fg-subtle: 215 12% 59%;
+    --surface-2: 44 24% 93%;
+    --surface-3: 44 22% 89%;
+    --border: 43 22% 87%;
+    --border-strong: 44 23% 79%;
+    --fg: 48 11% 9%;
+    --fg-muted: 43 11% 38%;
+    --fg-subtle: 45 11% 54%;
 
-    --accent: 204 90% 41%;
-    --accent-hover: 206 96% 33%;
+    --accent: 13 53% 52%; /* terracotta / Claude coral */
+    --accent-hover: 15 58% 44%;
     --accent-fg: 0 0% 100%;
-    --ring: 204 90% 41%;
+    --ring: 13 53% 52%;
 
     --sev-critical: 0 72% 51%;
     --sev-high: 21 90% 48%;
     --sev-medium: 32 94% 36%;
     --sev-low: 41 96% 33%;
-    --sev-info: 200 98% 39%;
+    --sev-info: 200 80% 40%;
 
-    --risk-green: 160 84% 31%;
+    --risk-green: 152 55% 36%;
     --risk-amber: 32 94% 44%;
     --risk-red: 0 72% 51%;
 
-    --success: 160 84% 31%;
+    --success: 152 55% 36%;
     --danger: 0 72% 51%;
   }
 
   .dark {
-    --bg: 222 27% 5%;
-    --surface: 220 28% 8%;
-    --surface-2: 218 24% 12%;
-    --surface-3: 218 22% 16%;
-    --border: 218 23% 18%;
-    --border-strong: 216 22% 23%;
-    --fg: 210 33% 96%;
-    --fg-muted: 215 16% 66%;
-    --fg-subtle: 216 11% 47%;
+    /* Warm charcoal dark theme */
+    --bg: 45 6% 11%;
+    --surface: 40 5% 15%;
+    --surface-2: 36 7% 18%;
+    --surface-3: 38 7% 22%;
+    --border: 43 7% 21%;
+    --border-strong: 40 8% 27%;
+    --fg: 42 25% 90%;
+    --fg-muted: 40 14% 65%;
+    --fg-subtle: 41 9% 47%;
 
-    --accent: 200 88% 56%;
-    --accent-hover: 199 92% 64%;
-    --accent-fg: 0 0% 100%;
-    --ring: 200 88% 56%;
+    --accent: 16 64% 65%;
+    --accent-hover: 17 67% 71%;
+    --accent-fg: 20 30% 12%;
+    --ring: 16 64% 65%;
 
     --sev-critical: 0 91% 71%;
     --sev-high: 27 96% 61%;
     --sev-medium: 43 96% 56%;
     --sev-low: 48 96% 53%;
-    --sev-info: 199 89% 60%;
+    --sev-info: 199 80% 62%;
 
-    --risk-green: 158 64% 52%;
+    --risk-green: 152 50% 55%;
     --risk-amber: 43 96% 56%;
     --risk-red: 0 91% 71%;
 
-    --success: 158 64% 52%;
+    --success: 152 50% 55%;
     --danger: 0 91% 71%;
   }
 
@@ -74,17 +76,20 @@
   body {
     background-color: hsl(var(--bg));
     color: hsl(var(--fg));
-    font-feature-settings: 'cv11', 'ss01';
     -webkit-font-smoothing: antialiased;
   }
-  ::selection {
-    background-color: hsl(var(--accent) / 0.25);
+  h1,
+  h2,
+  h3,
+  .font-display {
+    letter-spacing: -0.01em;
   }
-  /* Tabular numerals for data */
+  ::selection {
+    background-color: hsl(var(--accent) / 0.22);
+  }
   .tabular {
     font-variant-numeric: tabular-nums;
   }
-  /* Refined scrollbars */
   * {
     scrollbar-width: thin;
     scrollbar-color: hsl(var(--border-strong)) transparent;
