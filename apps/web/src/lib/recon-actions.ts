@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { Permission, isValidCron } from '@vacti/core';
-import { targets, scans, scanSchedules } from '@vacti/db';
+import { targets, scans, scanSchedules, reconNotes } from '@vacti/db';
 import { eq } from 'drizzle-orm';
 import { getDb } from './db';
 import { getQueue } from './queue';
@@ -12,11 +12,25 @@ import { requirePermission } from './authz';
 
 const scanJob = z.object({ scanId: z.string().uuid() });
 
+/** Parse "Key: value" lines into a headers object (ignores blank/malformed lines). */
+function parseHeaders(raw: string): Record<string, string> | null {
+  const out: Record<string, string> = {};
+  for (const line of raw.split('\n')) {
+    const idx = line.indexOf(':');
+    if (idx <= 0) continue;
+    const k = line.slice(0, idx).trim();
+    const v = line.slice(idx + 1).trim();
+    if (k && v) out[k] = v;
+  }
+  return Object.keys(out).length ? out : null;
+}
+
 export async function createTargetAction(formData: FormData) {
   await requirePermission(Permission.ModifyTargets);
   const projectId = String(formData.get('projectId') ?? '');
   const domain = String(formData.get('domain') ?? '').trim();
   const subsRaw = String(formData.get('predefinedSubdomains') ?? '').trim();
+  const headersRaw = String(formData.get('customHeaders') ?? '').trim();
   if (!projectId || !domain) redirect('/targets?error=invalid');
   const predefinedSubdomains = subsRaw
     ? subsRaw
@@ -24,7 +38,8 @@ export async function createTargetAction(formData: FormData) {
         .map((s) => s.trim())
         .filter(Boolean)
     : [];
-  await getDb().insert(targets).values({ projectId, domain, predefinedSubdomains });
+  const customHeaders = headersRaw ? parseHeaders(headersRaw) : null;
+  await getDb().insert(targets).values({ projectId, domain, predefinedSubdomains, customHeaders });
   revalidatePath('/targets');
 }
 
@@ -104,4 +119,32 @@ export async function deleteScheduleAction(formData: FormData) {
   const id = String(formData.get('id') ?? '');
   if (id) await getDb().delete(scanSchedules).where(eq(scanSchedules.id, id));
   revalidatePath('/schedules');
+}
+
+// ---- Recon notes / TODOs (per target) ----
+export async function addNoteAction(formData: FormData) {
+  await requirePermission(Permission.ModifyTargets);
+  const targetId = String(formData.get('targetId') ?? '');
+  const body = String(formData.get('body') ?? '').trim();
+  if (!targetId || !body) return;
+  await getDb().insert(reconNotes).values({ targetId, body });
+  revalidatePath(`/targets/${targetId}`);
+}
+
+export async function toggleNoteAction(formData: FormData) {
+  await requirePermission(Permission.ModifyTargets);
+  const id = String(formData.get('id') ?? '');
+  const targetId = String(formData.get('targetId') ?? '');
+  if (!id) return;
+  const [row] = await getDb().select().from(reconNotes).where(eq(reconNotes.id, id));
+  if (row) await getDb().update(reconNotes).set({ done: !row.done }).where(eq(reconNotes.id, id));
+  if (targetId) revalidatePath(`/targets/${targetId}`);
+}
+
+export async function deleteNoteAction(formData: FormData) {
+  await requirePermission(Permission.ModifyTargets);
+  const id = String(formData.get('id') ?? '');
+  const targetId = String(formData.get('targetId') ?? '');
+  if (id) await getDb().delete(reconNotes).where(eq(reconNotes.id, id));
+  if (targetId) revalidatePath(`/targets/${targetId}`);
 }

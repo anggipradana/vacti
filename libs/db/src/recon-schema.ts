@@ -98,6 +98,19 @@ export const endpoints = pgTable('endpoints', {
   contentLength: integer('content_length'),
   tech: text('tech').array().notNull().default([]),
   isWordpress: integer('is_wordpress').notNull().default(0),
+  // Flagged when the host/url/title matches an interesting keyword (admin/ftp/cpanel/…).
+  isInteresting: boolean('is_interesting').notNull().default(false),
+  createdAt: createdAt(),
+});
+
+/** Per-target recon notes / TODOs. */
+export const reconNotes = pgTable('recon_notes', {
+  id: id(),
+  targetId: uuid('target_id')
+    .notNull()
+    .references(() => targets.id, { onDelete: 'cascade' }),
+  body: text('body').notNull(),
+  done: boolean('done').notNull().default(false),
   createdAt: createdAt(),
 });
 
@@ -164,6 +177,7 @@ export const reconSchema = {
   scanProfiles,
   scans,
   scanSchedules,
+  reconNotes,
   scanActivity,
   commands,
   subdomains,

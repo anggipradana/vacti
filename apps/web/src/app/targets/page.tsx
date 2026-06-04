@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { desc } from 'drizzle-orm';
 import { Crosshair } from 'lucide-react';
@@ -5,6 +6,7 @@ import { AppShell } from '../../components/shell/app-shell';
 import { PageHeader } from '../../components/ui/page-header';
 import { Card, CardContent } from '../../components/ui/card';
 import { Input } from '../../components/ui/input';
+import { Textarea } from '../../components/ui/textarea';
 import { Label } from '../../components/ui/label';
 import { Button } from '../../components/ui/button';
 import { Select } from '../../components/ui/select';
@@ -59,6 +61,18 @@ export default async function TargetsPage() {
                 />
                 <p className="text-xs text-fg-subtle">Space or comma separated. Skips subfinder when set.</p>
               </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="headers">Custom request headers</Label>
+                <Textarea
+                  id="headers"
+                  name="customHeaders"
+                  rows={3}
+                  placeholder={'Authorization: Bearer …\nX-Api-Key: …'}
+                />
+                <p className="text-xs text-fg-subtle">
+                  One per line as &quot;Key: value&quot;. Sent by httpx &amp; nuclei.
+                </p>
+              </div>
               <Button type="submit" data-testid="create-target" className="w-full">
                 Add target
               </Button>
@@ -72,12 +86,17 @@ export default async function TargetsPage() {
             targetRows.map((t) => (
               <Card key={t.id}>
                 <CardContent className="flex items-center justify-between py-4">
-                  <div className="font-mono text-sm">{t.domain}</div>
-                  <Badge variant={t.predefinedSubdomains.length ? 'accent' : 'neutral'}>
-                    {t.predefinedSubdomains.length
-                      ? `${t.predefinedSubdomains.length} predefined subs`
-                      : 'discovery on'}
-                  </Badge>
+                  <Link href={`/targets/${t.id}`} className="font-mono text-sm text-accent hover:underline">
+                    {t.domain}
+                  </Link>
+                  <div className="flex items-center gap-2">
+                    {t.customHeaders ? <Badge variant="neutral">custom headers</Badge> : null}
+                    <Badge variant={t.predefinedSubdomains.length ? 'accent' : 'neutral'}>
+                      {t.predefinedSubdomains.length
+                        ? `${t.predefinedSubdomains.length} predefined subs`
+                        : 'discovery on'}
+                    </Badge>
+                  </div>
                 </CardContent>
               </Card>
             ))

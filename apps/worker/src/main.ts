@@ -73,6 +73,7 @@ async function main(): Promise<void> {
           domain: target.domain,
           predefinedSubdomains: target.predefinedSubdomains,
           profile,
+          customHeaders: (target.customHeaders as Record<string, string> | null) ?? undefined,
           signal: controller.signal,
         },
         { db, onProgress: (stage, msg) => console.log(`[scan ${scanId}] ${stage}: ${msg}`) },
