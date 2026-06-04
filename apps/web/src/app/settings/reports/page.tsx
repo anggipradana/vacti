@@ -5,6 +5,7 @@ import { PageHeader } from '../../../components/ui/page-header';
 import { SettingsTabs } from '../../../components/settings-tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card';
 import { Input } from '../../../components/ui/input';
+import { Textarea } from '../../../components/ui/textarea';
 import { Label } from '../../../components/ui/label';
 import { Select } from '../../../components/ui/select';
 import { Button } from '../../../components/ui/button';
@@ -110,6 +111,51 @@ export default async function ReportSettingsPage({ searchParams }: { searchParam
               <Label htmlFor={`${kind}-footer`}>Footer text</Label>
               <Input id={`${kind}-footer`} name="footerText" defaultValue={s?.footerText ?? 'CONFIDENTIAL'} />
             </div>
+            <div className="space-y-1">
+              <Label htmlFor={`${kind}-logo`}>Company logo (cover)</Label>
+              {s?.companyLogo ? (
+                <div className="flex items-center gap-3">
+                  <img
+                    src={s.companyLogo}
+                    alt="logo"
+                    className="h-9 max-w-[120px] rounded border border-border object-contain"
+                  />
+                  <label className="flex items-center gap-1.5 text-xs text-fg-muted">
+                    <input type="checkbox" name="removeLogo" /> Remove
+                  </label>
+                </div>
+              ) : null}
+              <Input id={`${kind}-logo`} name="companyLogoFile" type="file" accept="image/*" className="h-9 py-1.5" />
+              <p className="text-xs text-fg-subtle">PNG/SVG/JPG, ≤ 600 KB. Falls back to a monogram.</p>
+            </div>
+            {kind === 'va' ? (
+              <div className="space-y-2 rounded-md border border-border p-3">
+                <label className="flex items-center gap-2 text-sm font-medium">
+                  <input
+                    type="checkbox"
+                    name="showExecutiveSummary"
+                    defaultChecked={s?.showExecutiveSummary ?? false}
+                  />
+                  Use custom executive summary
+                </label>
+                <p className="text-xs text-fg-subtle">
+                  Placeholders: {'{company_name}'} {'{target_name}'} {'{subdomain_count}'} {'{vulnerability_count}'}{' '}
+                  {'{critical_count}'} {'{high_count}'} {'{active_count}'} {'{scan_date}'}
+                </p>
+                <Textarea
+                  name="executiveSummary"
+                  rows={4}
+                  placeholder="Executive summary (English)…"
+                  defaultValue={s?.executiveSummary ?? ''}
+                />
+                <Textarea
+                  name="executiveSummaryId"
+                  rows={4}
+                  placeholder="Ringkasan eksekutif (Indonesia)…"
+                  defaultValue={s?.executiveSummaryId ?? ''}
+                />
+              </div>
+            ) : null}
             <Button type="submit">Save</Button>
           </form>
         </CardContent>
@@ -150,6 +196,10 @@ export default async function ReportSettingsPage({ searchParams }: { searchParam
                 <Label htmlFor="sigpos">Position</Label>
                 <Input id="sigpos" name="position" />
               </div>
+              <div className="space-y-1">
+                <Label htmlFor="sigimg">Signature image</Label>
+                <Input id="sigimg" name="signatureImageFile" type="file" accept="image/*" className="h-9 py-1.5" />
+              </div>
               <Button type="submit" className="w-full">
                 Add signatory
               </Button>
@@ -167,9 +217,14 @@ export default async function ReportSettingsPage({ searchParams }: { searchParam
               .map((s) => (
                 <Card key={s.id}>
                   <CardContent className="flex items-center justify-between py-3">
-                    <div>
-                      <span className="font-medium">{s.name}</span>{' '}
-                      <span className="muted text-fg-subtle">{s.position}</span>
+                    <div className="flex items-center gap-3">
+                      {s.signatureImage ? (
+                        <img src={s.signatureImage} alt="" className="h-8 max-w-[80px] object-contain" />
+                      ) : null}
+                      <div>
+                        <span className="font-medium">{s.name}</span>{' '}
+                        <span className="muted text-fg-subtle">{s.position}</span>
+                      </div>
                     </div>
                     <div className="flex items-center gap-2">
                       <Badge variant="accent">{s.role}</Badge>

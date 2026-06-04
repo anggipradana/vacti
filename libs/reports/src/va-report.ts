@@ -165,16 +165,34 @@ export function renderVaReport(d: VaReportData): string {
   const next = () => tnum(++sn);
 
   // ---- 01 Executive summary ----
+  // Analyst-authored summary (with {placeholders}) overrides the auto-generated one when enabled.
+  const customText = lang === 'id' ? (s.executiveSummaryId ?? s.executiveSummary) : s.executiveSummary;
+  const placeholders: Record<string, string | number> = {
+    scan_date: new Date().toISOString().slice(0, 10),
+    company_name: company,
+    target_name: d.target.domain,
+    subdomain_count: subRows.length,
+    endpoint_count: d.counts.endpoints,
+    port_count: d.counts.ports,
+    vulnerability_count: total,
+    critical_count: counts.crit,
+    high_count: counts.high,
+    medium_count: counts.med,
+    low_count: counts.low,
+    info_count: counts.info,
+    active_count: active,
+  };
+  const fill = (tpl: string) =>
+    escapeHtml(tpl.replace(/\{(\w+)\}/g, (m, k) => String(placeholders[k] ?? m))).replace(/\n/g, '<br>');
+  const autoSummary =
+    lang === 'id'
+      ? `Penilaian keamanan terhadap ${d.target.domain} (scan ${d.scan.status}) menemukan ${subRows.length} subdomain, ${d.counts.endpoints} endpoint aktif, ${d.counts.ports} port terbuka, dan ${total} kerentanan (${active} masih aktif).`
+      : `Security assessment of ${d.target.domain} (scan ${d.scan.status}) discovered ${subRows.length} subdomains, ${d.counts.endpoints} live endpoints, ${d.counts.ports} open ports and ${total} vulnerabilities (${active} still active).`;
+  const summaryHtml = s.showExecutiveSummary && customText?.trim() ? fill(customText) : escapeHtml(autoSummary);
   body.push(
     numberedSection(lang, next(), pri(lang, 'executiveSummary'), { pageBreak: true }),
     miniHead(pri(lang, 'aboutAssessment'), sec(lang, 'aboutAssessment')),
-    note(
-      `${escapeHtml(
-        lang === 'id'
-          ? `Penilaian keamanan terhadap ${d.target.domain} (scan ${d.scan.status}) menemukan ${subRows.length} subdomain, ${d.counts.endpoints} endpoint aktif, ${d.counts.ports} port terbuka, dan ${total} kerentanan (${active} masih aktif).`
-          : `Security assessment of ${d.target.domain} (scan ${d.scan.status}) discovered ${subRows.length} subdomains, ${d.counts.endpoints} live endpoints, ${d.counts.ports} open ports and ${total} vulnerabilities (${active} still active).`,
-      )}`,
-    ),
+    note(summaryHtml),
     statRow([
       {
         value: subRows.length,

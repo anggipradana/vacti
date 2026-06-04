@@ -35,11 +35,16 @@ export function cover(opts: {
   const cells = Object.entries(meta)
     .map(([k, v]) => `<div><div class="mk">${escapeHtml(k)}</div><div class="mv">${escapeHtml(v)}</div></div>`)
     .join('');
+  // Logo image when provided, else a monogram tile.
+  const mark = s.companyLogo
+    ? `<div class="mark"><img class="logo" src="${escapeHtml(s.companyLogo)}" alt=""><span class="nm">${escapeHtml(s.companyName ?? 'vacti')}</span></div>`
+    : `<div class="mark"><span class="m">${escapeHtml(initial)}</span><span class="nm">${escapeHtml(s.companyName ?? 'vacti')}</span></div>`;
+  const pill = (s.classification ?? '').trim() || 'Confidential';
   return `<section class="cover">
     <div class="grid-bg"></div><div class="glow"></div>
     <div class="cover-top">
-      <div class="mark"><span class="m">${escapeHtml(initial)}</span><span class="nm">${escapeHtml(s.companyName ?? 'vacti')}</span></div>
-      <span class="conf-pill">Confidential</span>
+      ${mark}
+      <span class="conf-pill">${escapeHtml(pill.length > 28 ? 'Confidential' : pill)}</span>
     </div>
     <div class="cover-mid">
       <div class="kicker">${escapeHtml(kicker)}</div>
@@ -259,7 +264,7 @@ export function approvalCards(signatories: Signatory[], lang: Lang): string {
   const cards = sorted
     .map(
       (s) =>
-        `<div class="approve-card"><div class="acrole">${escapeHtml(roleLabel[s.role] ?? s.role)}</div><div class="acsig"></div><div class="acname">${escapeHtml(s.name)}</div><div class="acpos">${escapeHtml(s.position)}</div></div>`,
+        `<div class="approve-card"><div class="acrole">${escapeHtml(roleLabel[s.role] ?? s.role)}</div><div class="acsig">${s.signatureImage ? `<img class="acsigimg" src="${escapeHtml(s.signatureImage)}" alt="">` : ''}</div><div class="acname">${escapeHtml(s.name)}</div><div class="acpos">${escapeHtml(s.position)}</div></div>`,
     )
     .join('');
   return `<div class="approve-grid">${cards}</div>`;

@@ -1,4 +1,4 @@
-import { integer, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import { boolean, integer, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 import { projects } from './schema';
 
 const id = () => uuid('id').primaryKey().defaultRandom();
@@ -22,6 +22,12 @@ export const reportSettings = pgTable(
     classification: text('classification'),
     footerText: text('footer_text'),
     language: text('language').notNull().default('en'),
+    // Company logo embedded on the cover, stored as a data: URL (no object storage needed).
+    companyLogo: text('company_logo'),
+    // Optional analyst-authored executive summary (overrides the auto-generated one).
+    showExecutiveSummary: boolean('show_executive_summary').notNull().default(false),
+    executiveSummary: text('executive_summary'),
+    executiveSummaryId: text('executive_summary_id'),
     createdAt: createdAt(),
   },
   (t) => ({ uniqKind: uniqueIndex('report_settings_project_kind_uniq').on(t.projectId, t.kind) }),
@@ -35,6 +41,8 @@ export const reportSignatories = pgTable('report_signatories', {
   role: text('role').notNull(), // prepared | reviewed | approved
   name: text('name').notNull(),
   position: text('position').notNull().default(''),
+  // Optional signature image embedded on the approval sheet, stored as a data: URL.
+  signatureImage: text('signature_image'),
   sortOrder: integer('sort_order').notNull().default(0),
   createdAt: createdAt(),
 });
