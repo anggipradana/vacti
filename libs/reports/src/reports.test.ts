@@ -30,7 +30,10 @@ describe('VA report html', () => {
     expect(html).toContain('Vulnerability Assessment Report');
     expect(html).toContain('example.com');
     expect(html).toContain('Approval Sheet');
+    expect(html).toContain('Table of Contents'); // bilingual TOC
     expect(html).toContain('Executive Summary');
+    expect(html).toContain('Vulnerability Summary'); // aggregated summary table
+    expect(html).toContain('Affected URLs'); // url chips per finding
     expect(html).toContain('XSS');
     expect(html).toContain('Encode output.'); // AI remediation rendered
     expect(html.startsWith('<!doctype html>')).toBe(true);
@@ -50,7 +53,8 @@ describe('VA report html', () => {
       vulns: [],
     });
     expect(recon).toContain('Laporan Vulnerability Assessment');
-    expect(recon).toContain('Hasil Reconnaissance'); // recon section present for recon type
+    expect(recon).toContain('Daftar Isi'); // bilingual TOC present
+    expect(recon).toContain('Inventaris Subdomain'); // subdomain inventory section present for recon type
   });
 });
 

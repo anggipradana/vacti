@@ -1,6 +1,8 @@
 import { escapeHtml, SEV_KEYS, SEV_HEX } from './styles';
-import { labels, type Lang } from './i18n';
+import { labels, bi, biText, pri, sec, type Lang } from './i18n';
 import type { ReportSettings, Signatory } from './types';
+
+const SEV_VAR = ['--sev-info', '--sev-low', '--sev-medium', '--sev-high', '--sev-critical'];
 
 export function sevClass(sev: number): string {
   return SEV_KEYS[Math.max(0, Math.min(4, sev))] ?? 'info';
@@ -37,7 +39,7 @@ export function cover(opts: {
     <div class="grid-bg"></div><div class="glow"></div>
     <div class="cover-top">
       <div class="mark"><span class="m">${escapeHtml(initial)}</span><span class="nm">${escapeHtml(s.companyName ?? 'vacti')}</span></div>
-      <span class="conf-pill">${escapeHtml(s.classification ? 'Confidential' : 'Confidential')}</span>
+      <span class="conf-pill">Confidential</span>
     </div>
     <div class="cover-mid">
       <div class="kicker">${escapeHtml(kicker)}</div>
@@ -49,6 +51,7 @@ export function cover(opts: {
   </section>`;
 }
 
+/** Section head: eyebrow (bilingual) + numbered title (primary language). */
 export function section(
   num: string,
   title: string,
@@ -62,47 +65,154 @@ export function section(
   </div>`;
 }
 
+/** Numbered section (01..NN) with "Bagian NN / Section NN" eyebrow. */
+export function numberedSection(lang: Lang, num: string, title: string, opts?: { pageBreak?: boolean }): string {
+  return section(num, title, biText(lang, `Bagian ${num}`, `Section ${num}`), opts);
+}
+
+export function miniHead(primary: string, secondary: string): string {
+  return `<div class="minihead"><span class="ic"></span><span class="mt">${escapeHtml(primary)} <span class="en">/ ${escapeHtml(secondary)}</span></span></div>`;
+}
+
 export function kv(pairs: [string, string][]): string {
   return `<div class="kv">${pairs
     .map(([k, v]) => `<div class="k">${escapeHtml(k)}</div><div class="v">${escapeHtml(v)}</div>`)
     .join('')}</div>`;
 }
 
-export function statRow(items: { value: number | string; label: string }[]): string {
+export function note(html: string): string {
+  return `<div class="note">${html}</div>`;
+}
+
+/** Bilingual stat cards (primary bold + secondary muted). */
+export function statRow(items: { value: number | string; primary: string; secondary: string }[]): string {
   return `<div class="stat-row">${items
     .map(
       (i) =>
-        `<div class="stat"><div class="sv">${escapeHtml(i.value)}</div><div class="sl">${escapeHtml(i.label)}</div></div>`,
+        `<div class="stat"><div class="sv">${escapeHtml(i.value)}</div><div class="sl"><b>${escapeHtml(i.primary)}</b><br>${escapeHtml(i.secondary)}</div></div>`,
     )
     .join('')}</div>`;
 }
 
-export function sevBarLegend(
-  counts: { crit: number; high: number; med: number; low: number; info: number },
-  lang: Lang,
-): string {
+type Counts = { crit: number; high: number; med: number; low: number; info: number };
+
+function sevOrder(counts: Counts, lang: Lang) {
   const l = labels(lang);
-  const order = [
-    { n: counts.crit, hex: SEV_HEX[4]!, name: l.critical },
-    { n: counts.high, hex: SEV_HEX[3]!, name: l.high },
-    { n: counts.med, hex: SEV_HEX[2]!, name: l.medium },
-    { n: counts.low, hex: SEV_HEX[1]!, name: l.low },
-    { n: counts.info, hex: SEV_HEX[0]!, name: l.info },
+  return [
+    { n: counts.crit, idx: 4, name: l.critical },
+    { n: counts.high, idx: 3, name: l.high },
+    { n: counts.med, idx: 2, name: l.medium },
+    { n: counts.low, idx: 1, name: l.low },
+    { n: counts.info, idx: 0, name: l.info },
   ];
+}
+
+export function sevBarLegend(counts: Counts, lang: Lang): string {
+  const order = sevOrder(counts, lang);
   const total = order.reduce((a, b) => a + b.n, 0);
   const bar = total
     ? `<div class="sevbar">${order
         .filter((o) => o.n > 0)
-        .map((o) => `<div class="seg" style="flex:${o.n};background:${o.hex}">${o.n}</div>`)
+        .map((o) => `<div class="seg" style="flex:${o.n};background:${SEV_HEX[o.idx]}">${o.n}</div>`)
         .join('')}</div>`
     : '';
-  const legend = `<div class="sev-legend">${order
+  return bar + sevLegend(counts, lang);
+}
+
+export function sevLegend(counts: Counts, lang: Lang): string {
+  const order = sevOrder(counts, lang);
+  return `<div class="sev-legend">${order
     .map(
       (o) =>
-        `<div class="sev-item"><span class="sw" style="background:${o.hex}"></span><span class="nm">${escapeHtml(o.name)}</span><span class="ct">${o.n}</span></div>`,
+        `<div class="sev-item"><span class="sw" style="background:${SEV_HEX[o.idx]}"></span><span class="nm">${escapeHtml(o.name)}</span><span class="ct">${o.n}</span></div>`,
     )
     .join('')}</div>`;
-  return bar + legend;
+}
+
+/** Severity donut (CSS conic-gradient) + centred total, beside the legend. */
+export function donut(counts: Counts, lang: Lang): string {
+  const order = sevOrder(counts, lang);
+  const total = order.reduce((a, b) => a + b.n, 0);
+  let acc = 0;
+  const stops = total
+    ? order
+        .filter((o) => o.n > 0)
+        .map((o) => {
+          const start = (acc / total) * 360;
+          acc += o.n;
+          const end = (acc / total) * 360;
+          return `var(${SEV_VAR[o.idx]}) ${start}deg ${end}deg`;
+        })
+        .join(',')
+    : 'var(--line) 0deg 360deg';
+  return `<div class="donut-wrap">
+    <div class="donut" style="background:conic-gradient(${stops})"><div class="dc"><div class="dn">${total}</div><div class="dl">${escapeHtml(labels(lang).findingsWord)}</div></div></div>
+    ${sevLegend(counts, lang)}
+  </div>`;
+}
+
+/** Horizontal bar chart. rows: {label, value, color?}. */
+export function barChart(rows: { label: string; value: number; color?: string }[]): string {
+  const max = Math.max(1, ...rows.map((r) => r.value));
+  return `<div class="bars">${rows
+    .map(
+      (r) =>
+        `<div class="barrow"><span class="bl">${escapeHtml(r.label)}</span><span class="bt"><span class="bf" style="width:${((r.value / max) * 100).toFixed(2)}%;background:${r.color ?? 'var(--teal)'}"></span></span><span class="bv">${r.value}</span></div>`,
+    )
+    .join('')}</div>`;
+}
+
+export function statusPill(code: number | null | undefined, lang: Lang): string {
+  if (code == null) return `<span class="status-pill st-none">${escapeHtml(labels(lang).noResponse)}</span>`;
+  const cls = code >= 500 ? 'st-5xx' : code >= 400 ? 'st-4xx' : code >= 300 ? 'st-3xx' : 'st-2xx';
+  return `<span class="status-pill ${cls}">${code}</span>`;
+}
+
+/** Subdomain inventory table (# | subdomain | HTTP status), split into 2 columns when long. */
+export function subdomainTable(rows: { host: string; status: number | null }[], lang: Lang): string {
+  const l = labels(lang);
+  if (!rows.length) return `<div class="empty">${escapeHtml(l.none)}</div>`;
+  const head = `<thead><tr><th style="width:34px">#</th><th>${escapeHtml(l.subdomain)}</th><th>${escapeHtml(l.status)}</th></tr></thead>`;
+  const row = (r: { host: string; status: number | null }, i: number) =>
+    `<tr><td class="idx">${i + 1}</td><td class="mono">${escapeHtml(r.host)}</td><td>${statusPill(r.status, lang)}</td></tr>`;
+  if (rows.length <= 18) {
+    return `<table>${head}<tbody>${rows.map(row).join('')}</tbody></table>`;
+  }
+  const mid = Math.ceil(rows.length / 2);
+  const col = (slice: { host: string; status: number | null }[], offset: number) =>
+    `<table>${head}<tbody>${slice.map((r, i) => row(r, i + offset)).join('')}</tbody></table>`;
+  return `<div class="subgrid">${col(rows.slice(0, mid), 0)}${col(rows.slice(mid), mid)}</div>`;
+}
+
+/** Vulnerability summary table aggregated by name (# | name | count | severity). */
+export function vulnSummaryTable(rows: { name: string; count: number; severity: number }[], lang: Lang): string {
+  const l = labels(lang);
+  if (!rows.length) return `<div class="empty">No vulnerabilities identified.</div>`;
+  return `<table class="vt"><thead><tr><th style="width:34px">#</th><th>${escapeHtml(l.vulnerabilityName)}</th><th style="width:80px">${escapeHtml(l.count)}</th><th style="width:130px">${escapeHtml(l.severity)}</th></tr></thead><tbody>
+    ${rows
+      .map(
+        (r, i) =>
+          `<tr><td class="idx">${i + 1}</td><td class="vname">${escapeHtml(r.name)}</td><td class="vcount">${r.count}</td><td><span class="badge" style="background:${sevHex(r.severity)}">${escapeHtml(sevLabel(r.severity, lang))}</span></td></tr>`,
+      )
+      .join('')}
+    </tbody></table>`;
+}
+
+export function urlChips(urls: string[], max = 14): string {
+  const shown = urls.slice(0, max);
+  const extra = urls.length - shown.length;
+  return `<div class="url-chips">${shown
+    .map((u) => `<span class="url-chip"><span class="dotg"></span>${escapeHtml(u)}</span>`)
+    .join('')}${extra > 0 ? `<span class="url-chip more">+${extra}</span>` : ''}</div>`;
+}
+
+export function tocList(items: { num: string; primary: string; secondary: string; page: string }[]): string {
+  return `<div class="toc-list">${items
+    .map(
+      (i) =>
+        `<div class="toc-item"><span class="tnum">${escapeHtml(i.num)}</span><span class="ttext"><span class="tt">${escapeHtml(i.primary)}</span><div class="te">${escapeHtml(i.secondary)}</div></span>${i.page ? `<span class="tpg">${escapeHtml(i.page)}</span>` : ''}</div>`,
+    )
+    .join('')}</div>`;
 }
 
 export function findingCard(opts: {
@@ -112,9 +222,11 @@ export function findingCard(opts: {
   title: string;
   tags: string[];
   blocks: { label: string; text: string }[];
+  urls?: string[];
 }): string {
   const cls = sevClass(opts.severity);
   const hex = sevHex(opts.severity);
+  const l = labels(opts.lang);
   const tags = opts.tags.map((t) => `<span class="tag">${escapeHtml(t)}</span>`).join('');
   const blocks = opts.blocks
     .filter((b) => b.text)
@@ -122,6 +234,11 @@ export function findingCard(opts: {
       (b) => `<div class="fblock"><div class="flabel">${escapeHtml(b.label)}</div><p>${escapeHtml(b.text)}</p></div>`,
     )
     .join('');
+  const urlsBlock =
+    opts.urls && opts.urls.length
+      ? `<div class="fblock"><div class="flabel">${escapeHtml(bi(opts.lang, 'affectedUrls'))}</div>${urlChips(opts.urls)}</div>`
+      : '';
+  void l;
   return `<div class="finding f-${cls}">
     <div class="finding-head">
       <span class="fid" style="background:${hex}">${opts.index}</span>
@@ -129,7 +246,7 @@ export function findingCard(opts: {
         <div class="fmeta"><span class="badge" style="background:${hex}">${escapeHtml(sevLabel(opts.severity, opts.lang))}</span>${tags}</div>
       </div>
     </div>
-    ${blocks ? `<div class="finding-body">${blocks}</div>` : ''}
+    ${blocks || urlsBlock ? `<div class="finding-body">${blocks}${urlsBlock}</div>` : ''}
   </div>`;
 }
 
@@ -145,5 +262,19 @@ export function approvalCards(signatories: Signatory[], lang: Lang): string {
         `<div class="approve-card"><div class="acrole">${escapeHtml(roleLabel[s.role] ?? s.role)}</div><div class="acsig"></div><div class="acname">${escapeHtml(s.name)}</div><div class="acpos">${escapeHtml(s.position)}</div></div>`,
     )
     .join('');
-  return `${section('', l.approvalSheet, 'Sign-off')}<div class="approve-grid">${cards}</div>`;
+  return `<div class="approve-grid">${cards}</div>`;
+}
+
+/** Bilingual CONFIDENTIAL classification note. */
+export function classificationNote(lang: Lang, company: string): string {
+  const conf = (lang === 'id' ? 'RAHASIA' : 'CONFIDENTIAL').toString();
+  const idText = `Laporan ini diklasifikasikan sebagai <b>${conf}</b>. Informasi di dalamnya ditujukan khusus untuk keperluan internal ${escapeHtml(company)} dan tidak boleh didistribusikan kepada pihak ketiga tanpa izin tertulis.`;
+  const enText = `This report is classified as <b>CONFIDENTIAL</b> and intended for internal use of ${escapeHtml(company)} only; do not distribute to third parties without written permission.`;
+  void pri;
+  void sec;
+  return note(
+    lang === 'id'
+      ? `${idText}<br><br><i style="color:#7a8e96">${enText}</i>`
+      : `${enText}<br><br><i style="color:#7a8e96">${idText}</i>`,
+  );
 }

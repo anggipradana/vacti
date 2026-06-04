@@ -41,6 +41,7 @@ export function reportCss(primary: string, secondary: string, footer: string, cl
   ul { margin: 8px 0 0; padding-left: 18px; }
   li { font-size: 11.5px; line-height: 1.6; margin: 5px 0; color: #334a54; }
   .mono { font-family: 'IBM Plex Mono', monospace; }
+  .en { color: var(--muted); font-weight: 400; }
 
   /* ---------- Cover ---------- */
   .cover { height: 297mm; background: var(--navy); color: #eaf4f7; position: relative; overflow: hidden; display: flex; flex-direction: column; padding: 60px 60px 70px; }
@@ -87,6 +88,46 @@ export function reportCss(primary: string, secondary: string, footer: string, cl
   tbody td { padding: 8px 12px; border-bottom: 1px solid var(--line-2); vertical-align: middle; }
   tbody tr:nth-child(even) { background: var(--soft); }
   .idx { color: #9bafb7; font-family:'IBM Plex Mono'; font-size: 10px; }
+  .vt td { padding: 11px 14px; }
+  .vt .vname { font-weight: 600; color: var(--ink); font-size: 12px; }
+  .vt .vcount { font-family:'Space Grotesk'; font-weight: 700; font-size: 16px; }
+  .status-pill { font-family:'IBM Plex Mono'; font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 3px; white-space: nowrap; }
+  .st-2xx { background: #e7f6ec; color: #1a7f43; }
+  .st-3xx { background: #e8f0fe; color: #1a56c4; }
+  .st-4xx, .st-403 { background: #fef0e6; color: #b3490a; }
+  .st-5xx { background: #fdeaea; color: #c0392b; }
+  .st-none { background: #eef1f2; color: #7a8e96; }
+  .subgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 28px; }
+  .subgrid table { font-size: 10.5px; } .subgrid tbody td { padding: 5.5px 10px; }
+
+  /* ---------- Donut + bars ---------- */
+  .donut-wrap { display: flex; align-items: center; gap: 30px; margin: 6px 0; }
+  .donut { width: 170px; height: 170px; border-radius: 50%; position: relative; flex: none; }
+  .donut::after { content: ''; position: absolute; inset: 30px; background: var(--paper); border-radius: 50%; box-shadow: inset 0 0 0 1px var(--line-2); }
+  .donut .dc { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 2; }
+  .donut .dc .dn { font-family:'Space Grotesk'; font-size: 40px; font-weight: 700; line-height: 1; }
+  .donut .dc .dl { font-size: 9.5px; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); margin-top: 4px; font-family:'IBM Plex Mono'; }
+  .bars { display: flex; flex-direction: column; gap: 13px; flex: 1; }
+  .barrow { display: grid; grid-template-columns: 168px 1fr 44px; align-items: center; gap: 12px; font-size: 11.5px; }
+  .barrow .bl { color: var(--ink); font-weight: 500; }
+  .barrow .bt { display: block; height: 18px; background: var(--soft); border-radius: 3px; overflow: hidden; }
+  .barrow .bf { display: block; height: 100%; border-radius: 3px; }
+  .barrow .bv { font-family:'IBM Plex Mono'; font-weight: 600; text-align: right; color: var(--ink); }
+
+  /* ---------- TOC ---------- */
+  .toc-list { display: flex; flex-direction: column; gap: 2px; margin-top: 8px; }
+  .toc-item { display: flex; align-items: center; gap: 14px; padding: 15px 4px; border-bottom: 1px solid var(--line); }
+  .toc-item .tnum { font-family:'IBM Plex Mono'; font-size: 12px; color: var(--teal); width: 30px; font-weight: 600; }
+  .toc-item .ttext { flex: 1; }
+  .toc-item .ttext .tt { font-family:'Space Grotesk'; font-size: 16px; font-weight: 600; color: var(--ink); }
+  .toc-item .ttext .te { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .toc-item .tpg { font-family:'IBM Plex Mono'; font-size: 13px; color: var(--muted); font-weight: 500; }
+
+  /* ---------- URL chips ---------- */
+  .url-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .url-chip { font-family:'IBM Plex Mono'; font-size: 10px; color: var(--ink); background: var(--soft); border: 1px solid var(--line); border-radius: 4px; padding: 4px 9px; display: inline-flex; align-items: center; gap: 6px; }
+  .url-chip .dotg { width: 5px; height: 5px; border-radius: 50%; background: var(--teal); flex: none; }
+  .url-chip .more { color: var(--muted); }
 
   /* ---------- Finding card ---------- */
   .finding { border: 1px solid var(--line); border-radius: 9px; overflow: hidden; margin-bottom: 18px; break-inside: avoid; }

@@ -35,6 +35,37 @@ const dict = {
     medium: 'Medium',
     low: 'Low',
     info: 'Info',
+    tableOfContents: 'Table of Contents',
+    findingsOverview: 'Findings Overview',
+    subdomainInventory: 'Subdomain Inventory',
+    vulnerabilitySummary: 'Vulnerability Summary',
+    identifiedVulnerabilities: 'Identified Vulnerabilities',
+    documentClassification: 'Document Classification',
+    aboutAssessment: 'About this assessment',
+    affectedUrls: 'Affected URLs',
+    severityDistribution: 'Severity Distribution',
+    bySeverity: 'by Severity',
+    byType: 'by Type',
+    byHttpStatus: 'by HTTP status',
+    description: 'Description',
+    impact: 'Impact',
+    remediation: 'Remediation',
+    location: 'Location',
+    vulnerabilityName: 'Vulnerability',
+    count: 'Count',
+    subdomain: 'Subdomain',
+    noResponse: 'No response',
+    subdomainsDiscovered: 'Subdomains discovered',
+    totalVulnerabilities: 'Total vulnerabilities',
+    vulnerabilityTypes: 'Vulnerability types',
+    activeFindings: 'Active findings',
+    findingsWord: 'Findings',
+    securityAssessment: 'Security Assessment',
+    threatIntelligence: 'Threat Intelligence',
+    engagement: 'Engagement',
+    overview: 'Overview',
+    signOff: 'Sign-off',
+    confidential: 'Confidential',
   },
   id: {
     vaTitle: 'Laporan Vulnerability Assessment',
@@ -70,6 +101,37 @@ const dict = {
     medium: 'Sedang',
     low: 'Rendah',
     info: 'Info',
+    tableOfContents: 'Daftar Isi',
+    findingsOverview: 'Ringkasan Temuan',
+    subdomainInventory: 'Inventaris Subdomain',
+    vulnerabilitySummary: 'Ringkasan Kerentanan',
+    identifiedVulnerabilities: 'Kerentanan yang Ditemukan',
+    documentClassification: 'Klasifikasi Dokumen',
+    aboutAssessment: 'Tentang Penilaian',
+    affectedUrls: 'URL Terdampak',
+    severityDistribution: 'Distribusi Tingkat Keparahan',
+    bySeverity: 'menurut Keparahan',
+    byType: 'menurut Jenis',
+    byHttpStatus: 'menurut Status HTTP',
+    description: 'Deskripsi',
+    impact: 'Dampak',
+    remediation: 'Remediasi',
+    location: 'Lokasi',
+    vulnerabilityName: 'Nama Kerentanan',
+    count: 'Jumlah',
+    subdomain: 'Subdomain',
+    noResponse: 'Tidak ada respons',
+    subdomainsDiscovered: 'Subdomain ditemukan',
+    totalVulnerabilities: 'Total kerentanan',
+    vulnerabilityTypes: 'Jenis kerentanan',
+    activeFindings: 'Temuan aktif',
+    findingsWord: 'Temuan',
+    securityAssessment: 'Penilaian Keamanan',
+    threatIntelligence: 'Threat Intelligence',
+    engagement: 'Ruang Lingkup',
+    overview: 'Ikhtisar',
+    signOff: 'Pengesahan',
+    confidential: 'Rahasia',
   },
 } as const;
 
@@ -77,4 +139,22 @@ export type ReportLabels = Record<keyof (typeof dict)['en'], string>;
 
 export function labels(lang: Lang): ReportLabels {
   return (dict[lang] ?? dict.en) as ReportLabels;
+}
+
+type Key = keyof (typeof dict)['en'];
+/** "Primary / Secondary" bilingual label, ordered by the report's primary language. */
+export function bi(lang: Lang, key: Key): string {
+  return lang === 'id' ? `${dict.id[key]} / ${dict.en[key]}` : `${dict.en[key]} / ${dict.id[key]}`;
+}
+/** Free-text bilingual pair (no dictionary key). */
+export function biText(lang: Lang, idStr: string, enStr: string): string {
+  return lang === 'id' ? `${idStr} / ${enStr}` : `${enStr} / ${idStr}`;
+}
+/** Primary-language value for a key. */
+export function pri(lang: Lang, key: Key): string {
+  return dict[lang][key];
+}
+/** Secondary-language value for a key. */
+export function sec(lang: Lang, key: Key): string {
+  return dict[lang === 'id' ? 'en' : 'id'][key];
 }
