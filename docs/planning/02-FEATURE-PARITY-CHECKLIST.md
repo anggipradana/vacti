@@ -49,14 +49,20 @@
 
 ## 3. Reports (DIDESAIN ULANG)
 
-| #   | Fitur ReNgGinaNg                                                             | Status | Epic | Catatan                                                            |
-| --- | ---------------------------------------------------------------------------- | ------ | ---- | ------------------------------------------------------------------ |
-| 3.1 | VA Report PDF                                                                | ✅➕   | RP   | Desain baru, ringkasan vuln + severity + temuan                    |
-| 3.2 | Threat Intel Report PDF (cover, exec summary, IoC, CVE, breach, rekomendasi) | ✅➕   | RP   | Desain baru                                                        |
-| 3.3 | Dwibahasa EN/ID                                                              | ✅     | RP   |                                                                    |
-| 3.4 | Branding per-project (logo, warna, no dok, klasifikasi, signatory)           | ✅     | RP   | `ThreatIntelReportSetting` → setting vacti                         |
-| 3.5 | Engine render                                                                | ➕     | RP   | **Playwright HTML/CSS → PDF** (alternatif Typst), bukan WeasyPrint |
-| 3.6 | Lembar pengesahan/signatory                                                  | ✅     | RP   |                                                                    |
+| #    | Fitur ReNgGinaNg                                                             | Status | Epic | Catatan                                                                       |
+| ---- | ---------------------------------------------------------------------------- | ------ | ---- | ----------------------------------------------------------------------------- |
+| 3.1  | VA Report PDF                                                                | ✅➕   | RP   | Desain baru, ringkasan vuln + severity + temuan                               |
+| 3.2  | Threat Intel Report PDF (cover, exec summary, IoC, CVE, breach, rekomendasi) | ✅➕   | RP   | Desain baru                                                                   |
+| 3.3  | Dwibahasa EN/ID                                                              | ✅     | RP   |                                                                               |
+| 3.4  | Branding per-project (logo, warna, no dok, klasifikasi, signatory)           | ✅     | RP   | `ThreatIntelReportSetting` → setting vacti                                    |
+| 3.5  | Engine render                                                                | ➕     | RP   | **Playwright HTML/CSS → PDF** (alternatif Typst), bukan WeasyPrint            |
+| 3.6  | Lembar pengesahan/signatory                                                  | ✅     | RP   |                                                                               |
+| 3.7  | Logo perusahaan di cover (upload → data URL, fallback monogram)              | ✅➕   | RP   | Branding cover; tanda tangan signatory juga image (data URL)                  |
+| 3.8  | Daftar isi (TOC) dwibahasa                                                   | ✅➕   | RP   | Nomor halaman dilewati (layout mengalir; perlu render 2-pass)                 |
+| 3.9  | Komponen visual: donut severity, bar chart (per-severity/jenis/status HTTP)  | ✅➕   | RP   | CSS conic + bar; inventaris subdomain jadi tabel + status pill                |
+| 3.10 | Ringkasan kerentanan (agregasi per-nama) + finding URL chips                 | ✅➕   | RP   | Finding di-agregasi per nama; daftar URL terdampak                            |
+| 3.11 | Detail finding: CVSS, CVE ID, References                                     | ✅➕   | RP   | Ditangkap dari template nuclei (info.classification/reference) → migrasi 0009 |
+| 3.12 | Executive summary custom (EN/ID) + placeholder, klasifikasi di cover         | ✅➕   | RP   | Toggle pakai custom; fallback auto-generate                                   |
 
 ## 4. Manajemen Project & Target
 
@@ -143,3 +149,70 @@
 - ➕ **Leak finding status** (TI): LeakCheck findings have a status (New / Investigating / Confirmed /
   Remediated / False Positive / Ignored), replacing the checked toggle. Status applies to leaks only.
 - Full spec: [05-FINDING-STATUS.md](05-FINDING-STATUS.md).
+
+## Addendum — Report parity selesai (2026-06-04)
+
+Hasil audit ulang menyeluruh template/model/form report ReNgGinaNg (`templates/report/default.html`,
+`modern.html`, `threatIntel/report_banking.html`, `VulnerabilityReportSetting`,
+`ThreatIntelReportSetting`, `ReportSignatory`). Semua komponen sudah ada di vacti:
+
+- ➕ Cover navy bertekstur + **logo** (data URL, fallback monogram) + klasifikasi di pill.
+- ➕ **Daftar isi** dwibahasa; eyebrow + section bernomor; **dwibahasa (ID/EN)** di semua
+  judul/minihead/label/stat/TOC.
+- ➕ Blok **Klasifikasi Dokumen** + note RAHASIA/CONFIDENTIAL; note "Tentang Penilaian".
+- ➕ **Donut** severity + **bar chart** (per-severity / per-jenis / subdomain per-status HTTP).
+- ➕ **Inventaris subdomain** sebagai tabel + **status pill** HTTP (join subdomain ↔ status endpoint).
+- ➕ **Ringkasan kerentanan** (agregasi per-nama: nama | jumlah | tingkat).
+- ➕ **Finding** di-agregasi per nama + **URL terdampak** (chips) + tag jumlah/jenis/status.
+- ➕ Detail finding **CVSS / CVE / References** — ditangkap dari template nuclei
+  (`info.classification`, `info.reference`); deskripsi/remediasi template jadi fallback non-AI.
+- ➕ **Tanda tangan** (signature image) per signatory di lembar pengesahan.
+- ➕ **Executive summary custom** (EN/ID) dengan placeholder (`{company_name}`, `{target_name}`,
+  `{vulnerability_count}`, `{critical_count}`, `{active_count}`, `{scan_date}`, dll).
+- Migrasi DB: 0007 (default teal/navy), 0008 (logo/signature/exec-summary), 0009 (cvss/cve/refs).
+- Catatan: nomor halaman TOC dilewati (layout mengalir untuk data dinamis; butuh render 2-pass).
+
+## Addendum — Status implementasi & sisa gap (2026-06-04)
+
+Checklist di atas adalah **kontrak cakupan** (keputusan IKUT/SEDERHANAKAN/BUANG), bukan status build.
+Berikut status **implementasi nyata** hasil audit kode. Baris ✅ = sudah jalan; ⬜ = belum dibangun.
+
+### Sudah terimplementasi (✅)
+
+- Recon penuh: subfinder → httpx → naabu → nuclei + WordPress kondisional; idempotent completion;
+  Command capture; ScanActivity timeline + SSE; predefined subs; scan profiles.
+- Threat Intel penuh: OTX, LeakCheck, manual indicators, `computeProjectRisk` (konsisten
+  dashboard/TI/report), refresh + progress, leak finding status, VA finding status.
+- Reports: VA + TI PDF lengkap (lihat addendum di atas).
+- Integrasi: webhook 5 kanal (Discord/Slack/Telegram/Google Chat/generic) + per-event + UI;
+  AI enrichment vuln (cache `ai_cache`) + UI; AI provider abstraction (Vercel AI SDK
+  Anthropic/OpenAI/Ollama) + UI; API key vault terenkripsi AES-256-GCM (`libs/auth/vault.ts`).
+- API: Hono REST semua resource + OpenAPI (`/api/docs`) + token API (`vct_`) + UI token; SSE.
+- Auth: session cookie + API token; password hashing (scrypt sementara).
+- UI: dashboard (counts/severity/tren + analytics), TI page, charts (recharts), dark mode,
+  settings (tokens/integrations/reports).
+
+### Belum dibangun / sisa gap (⬜) — backlog v1
+
+| #   | Gap                               | Epic  | Catatan / rencana                                                                                                                                |
+| --- | --------------------------------- | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| G1  | **RBAC enforcement server-side**  | PF    | Role + matrix permission sudah ada (`libs/core/rbac.ts`) tapi BELUM dienforce di API/web. Auditor read-only belum aktif. **Prioritas keamanan.** |
+| G2  | **Scan cancellation UI + API**    | RE    | Backend AbortSignal + kill sudah ada; belum ada route `POST /scans/:id/cancel` + tombol UI                                                       |
+| G3  | **Scheduled scans (cron)**        | RE    | Belum ada tabel jadwal + dispatcher pg-boss cron + UI                                                                                            |
+| G4  | **Scan diff/perbandingan**        | RE/UI | Bandingkan 2 scan (endpoint/port/vuln baru-hilang) — belum ada                                                                                   |
+| G5  | **Sub-scan / rescan sebagian**    | RE    | Jalankan ulang subset tahap — belum ada                                                                                                          |
+| G6  | **API key vault UI (per-proyek)** | AI/PF | Enkripsi + tabel `apiKeys` ada, tapi OTX/LeakCheck/AI masih dari `.env`; belum ada UI kelola key per-proyek                                      |
+| G7  | **AI executive summary (auto)**   | AI    | Saat ini exec summary manual/template; belum ada generate AI otomatis                                                                            |
+| G8  | **AI threat analysis (narasi)**   | AI    | Risk score algoritmik sudah ada; narasi/ringkasan TI berbasis LLM belum                                                                          |
+| G9  | **argon2id password hashing**     | PF    | Sekarang scrypt (portabel sementara); target produksi argon2id                                                                                   |
+| G10 | **Audit log tulis + viewer**      | PF    | Tabel `auditLog` ada tapi tidak pernah ditulis & tak ada UI                                                                                      |
+| G11 | **Datatables server-side**        | UI/AI | Filter/sort/paginate server-side; sekarang fetch penuh                                                                                           |
+| G12 | **Custom request headers**        | RE    | Kolom `targets.customHeaders` ada tapi belum disuntik ke httpx                                                                                   |
+| G13 | **Universal search**              | UI    | Pencarian global lintas resource — belum ada                                                                                                     |
+| G14 | **Recon notes/todo per target**   | UI    | Catatan per target — belum ada                                                                                                                   |
+| G15 | **Interesting keywords/lookup**   | RE    | Penanda endpoint menarik (admin/ftp/cpanel) — belum ada                                                                                          |
+| G16 | **Seed/fixtures**                 | PF/RE | Profil scan default + keyword sebagai seed — belum ada (DEFAULT_PROFILE hardcoded di worker)                                                     |
+| G17 | **Onboarding ringkas**            | UI    | Walkthrough pertama kali — belum ada                                                                                                             |
+
+**Urutan saran:** G1 (RBAC, keamanan) → G2 (scan cancel UI) → G3 (scheduled) → G6 (key vault UI) →
+G4/G5 (diff/sub-scan) → sisanya. Proxy support & multi-org tetap di luar v1.
