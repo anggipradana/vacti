@@ -6,6 +6,7 @@ const tabs = [
   { label: 'Reports', href: '/settings/reports' },
   { label: 'Integrations', href: '/settings/integrations' },
   { label: 'Users', href: '/settings/users', sysAdminOnly: true },
+  { label: 'Audit log', href: '/settings/audit', sysAdminOnly: true },
 ];
 
 export function SettingsTabs({ active, isSysAdmin = true }: { active: string; isSysAdmin?: boolean }) {
