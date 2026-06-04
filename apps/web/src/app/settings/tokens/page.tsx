@@ -26,7 +26,7 @@ export default async function TokensPage() {
   return (
     <AppShell user={{ email: user.email, isSysAdmin: user.isSysAdmin }}>
       <PageHeader title="Settings" description="Manage API tokens, report branding, and signatories." />
-      <SettingsTabs active="/settings/tokens" />
+      <SettingsTabs active="/settings/tokens" isSysAdmin={user.isSysAdmin} />
       <div className="space-y-6">
         <CreateToken />
         <div data-testid="token-list">

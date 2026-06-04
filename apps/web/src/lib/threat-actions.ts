@@ -1,18 +1,18 @@
 'use server';
 
-import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
+import { Permission } from '@vacti/core';
 import { manualIndicators, leakcheckData } from '@vacti/db';
 import { getDb } from './db';
 import { getQueue } from './queue';
-import { getCurrentUser } from './session';
+import { requirePermission } from './authz';
 
 const tiJob = z.object({ projectId: z.string().uuid() });
 
 export async function refreshTiAction(formData: FormData) {
-  if (!(await getCurrentUser())) redirect('/login');
+  await requirePermission(Permission.InitiateScans);
   const projectId = String(formData.get('projectId') ?? '');
   if (!projectId) return;
   const q = await getQueue();
@@ -21,7 +21,7 @@ export async function refreshTiAction(formData: FormData) {
 }
 
 export async function addIndicatorAction(formData: FormData) {
-  if (!(await getCurrentUser())) redirect('/login');
+  await requirePermission(Permission.ModifyScanResults);
   const projectId = String(formData.get('projectId') ?? '');
   const type = String(formData.get('type') ?? 'domain');
   const value = String(formData.get('value') ?? '').trim();
@@ -32,7 +32,7 @@ export async function addIndicatorAction(formData: FormData) {
 }
 
 export async function toggleLeakAction(formData: FormData) {
-  if (!(await getCurrentUser())) redirect('/login');
+  await requirePermission(Permission.ModifyScanResults);
   const id = String(formData.get('id') ?? '');
   const [row] = await getDb().select().from(leakcheckData).where(eq(leakcheckData.id, id));
   if (row) await getDb().update(leakcheckData).set({ checked: !row.checked }).where(eq(leakcheckData.id, id));

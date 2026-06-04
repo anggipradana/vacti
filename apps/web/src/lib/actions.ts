@@ -4,10 +4,11 @@ import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { and, eq } from 'drizzle-orm';
 import { hashPassword, verifyPassword, generateApiToken } from '@vacti/auth';
-import { Role } from '@vacti/core';
+import { Role, Permission, isRoleName } from '@vacti/core';
 import { users, projects, projectMembers, apiTokens } from '@vacti/db';
 import { getDb } from './db';
 import { createSession, destroySession, getCurrentUser, userCount } from './session';
+import { requirePermission } from './authz';
 
 export async function createAdminAction(formData: FormData) {
   if ((await userCount()) > 0) redirect('/login');
@@ -16,7 +17,7 @@ export async function createAdminAction(formData: FormData) {
   if (!email || password.length < 8) redirect('/login?error=weak');
   const [user] = await getDb()
     .insert(users)
-    .values({ email, passwordHash: await hashPassword(password), isSysAdmin: true })
+    .values({ email, passwordHash: await hashPassword(password), isSysAdmin: true, role: Role.SysAdmin })
     .returning();
   await createSession(user!.id);
   redirect('/dashboard');
@@ -39,8 +40,7 @@ export async function logoutAction() {
 }
 
 export async function createProjectAction(formData: FormData) {
-  const user = await getCurrentUser();
-  if (!user) redirect('/login');
+  const user = await requirePermission(Permission.ModifyTargets);
   const name = String(formData.get('name') ?? '').trim();
   const slug = String(formData.get('slug') ?? '').trim();
   if (!name || !/^[a-z][a-z0-9-]*$/.test(slug)) redirect('/projects?error=invalid');
@@ -68,4 +68,22 @@ export async function revokeTokenAction(formData: FormData) {
     .delete(apiTokens)
     .where(and(eq(apiTokens.id, id), eq(apiTokens.userId, user!.id)));
   revalidatePath('/settings/tokens');
+}
+
+/** SysAdmin-only: change a user's global RBAC role. */
+export async function changeUserRoleAction(formData: FormData) {
+  const actor = await requirePermission(Permission.ModifySystemConfig);
+  const id = String(formData.get('id') ?? '');
+  const role = String(formData.get('role') ?? '');
+  if (!id || !isRoleName(role)) return;
+  // Don't let an admin demote themselves out of the last SysAdmin seat.
+  if (id === actor.id && role !== Role.SysAdmin) {
+    const admins = (await getDb().select().from(users).where(eq(users.role, Role.SysAdmin))).length;
+    if (admins <= 1) return;
+  }
+  await getDb()
+    .update(users)
+    .set({ role, isSysAdmin: role === Role.SysAdmin, updatedAt: new Date() })
+    .where(eq(users.id, id));
+  revalidatePath('/settings/users');
 }

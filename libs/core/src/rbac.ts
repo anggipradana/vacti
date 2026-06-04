@@ -33,3 +33,29 @@ export const ROLE_PERMISSIONS: Record<RoleName, ReadonlySet<PermissionName>> = {
 export function hasPermission(role: RoleName, permission: PermissionName): boolean {
   return ROLE_PERMISSIONS[role]?.has(permission) ?? false;
 }
+
+export function isRoleName(s: unknown): s is RoleName {
+  return typeof s === 'string' && (Object.values(Role) as string[]).includes(s);
+}
+
+/** Resolve a user's effective global role: explicit `role` wins, else legacy `isSysAdmin`. */
+export function roleFromUser(user: { role?: string | null; isSysAdmin?: boolean | null } | null | undefined): RoleName {
+  if (user && isRoleName(user.role)) return user.role;
+  return user?.isSysAdmin ? Role.SysAdmin : Role.PenetrationTester;
+}
+
+/** Does this user hold a permission? */
+export function userCan(
+  user: { role?: string | null; isSysAdmin?: boolean | null } | null | undefined,
+  permission: PermissionName,
+): boolean {
+  if (!user) return false;
+  return hasPermission(roleFromUser(user), permission);
+}
+
+/** Human labels for the UI. */
+export const ROLE_LABEL: Record<RoleName, string> = {
+  [Role.SysAdmin]: 'System Admin',
+  [Role.PenetrationTester]: 'Penetration Tester',
+  [Role.Auditor]: 'Auditor (read-only)',
+};

@@ -1,15 +1,15 @@
 'use server';
 
-import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { eq } from 'drizzle-orm';
+import { Permission } from '@vacti/core';
 import { makeProvider, enrichVulnerability, enrichmentHash } from '@vacti/integrations';
 import { vulnerabilities, scans, aiSettings, aiCache } from '@vacti/db';
 import { getDb, env } from './db';
-import { getCurrentUser } from './session';
+import { requirePermission } from './authz';
 
 export async function enrichVulnAction(formData: FormData) {
-  if (!(await getCurrentUser())) redirect('/login');
+  await requirePermission(Permission.ModifyScanResults);
   const id = String(formData.get('id') ?? '');
   const scanId = String(formData.get('scanId') ?? '');
   const db = getDb();
@@ -56,7 +56,7 @@ export async function enrichVulnAction(formData: FormData) {
 }
 
 export async function saveAiSettingsAction(formData: FormData) {
-  if (!(await getCurrentUser())) redirect('/login');
+  await requirePermission(Permission.ModifySystemConfig);
   const projectId = String(formData.get('projectId') ?? '');
   const provider = String(formData.get('provider') ?? 'anthropic');
   const model = String(formData.get('model') ?? '').trim() || 'claude-sonnet-4-6';

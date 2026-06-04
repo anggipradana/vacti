@@ -1,17 +1,15 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { redirect } from 'next/navigation';
 import { eq } from 'drizzle-orm';
-import { isVulnStatus, isLeakStatus } from '@vacti/core';
+import { isVulnStatus, isLeakStatus, Permission } from '@vacti/core';
 import { vulnerabilities, leakcheckData } from '@vacti/db';
 import { getDb } from './db';
-import { getCurrentUser } from './session';
+import { requirePermission } from './authz';
 
-// NOTE: finding-status changes correspond to `modify_scan_results`; full RBAC enforcement (Auditor
-// read-only) is layered with the RBAC middleware. Session presence is checked here.
+// Finding-status changes require `modify_scan_results` (Auditor is read-only).
 export async function setVulnStatusAction(formData: FormData) {
-  if (!(await getCurrentUser())) redirect('/login');
+  await requirePermission(Permission.ModifyScanResults);
   const id = String(formData.get('id') ?? '');
   const status = String(formData.get('status') ?? '');
   const scanId = String(formData.get('scanId') ?? '');
@@ -21,7 +19,7 @@ export async function setVulnStatusAction(formData: FormData) {
 }
 
 export async function setLeakStatusAction(formData: FormData) {
-  if (!(await getCurrentUser())) redirect('/login');
+  await requirePermission(Permission.ModifyScanResults);
   const id = String(formData.get('id') ?? '');
   const status = String(formData.get('status') ?? '');
   if (!id || !isLeakStatus(status)) return;

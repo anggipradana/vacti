@@ -1,15 +1,15 @@
 'use server';
 
-import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { eq } from 'drizzle-orm';
+import { Permission } from '@vacti/core';
 import { webhooks } from '@vacti/db';
 import { dispatchWebhook, type Channel } from '@vacti/integrations';
 import { getDb } from './db';
-import { getCurrentUser } from './session';
+import { requirePermission } from './authz';
 
 export async function addWebhookAction(formData: FormData) {
-  if (!(await getCurrentUser())) redirect('/login');
+  await requirePermission(Permission.ModifySystemConfig);
   const projectId = String(formData.get('projectId') ?? '');
   const channel = String(formData.get('channel') ?? 'discord');
   if (!projectId || !['discord', 'slack', 'telegram', 'google_chat', 'generic'].includes(channel)) return;
@@ -33,14 +33,14 @@ export async function addWebhookAction(formData: FormData) {
 }
 
 export async function deleteWebhookAction(formData: FormData) {
-  if (!(await getCurrentUser())) redirect('/login');
+  await requirePermission(Permission.ModifySystemConfig);
   const id = String(formData.get('id') ?? '');
   if (id) await getDb().delete(webhooks).where(eq(webhooks.id, id));
   revalidatePath('/settings/integrations');
 }
 
 export async function testWebhookAction(formData: FormData) {
-  if (!(await getCurrentUser())) redirect('/login');
+  await requirePermission(Permission.ModifySystemConfig);
   const id = String(formData.get('id') ?? '');
   const [w] = await getDb().select().from(webhooks).where(eq(webhooks.id, id));
   if (!w) return;

@@ -80,4 +80,55 @@ describe.skipIf(!url)('@vacti/api', () => {
     });
     expect(r.status).toBe(400);
   });
+
+  describe('RBAC enforcement', () => {
+    // Mint a token for a given role and return an auth header factory.
+    const tokenFor = async (role: string) => {
+      const db = handle.db;
+      const [u] = await db
+        .insert(users)
+        .values({ email: `${role}${Date.now()}@x.com`, passwordHash: 'x', role })
+        .returning();
+      const t = generateApiToken();
+      await db.insert(apiTokens).values({ userId: u!.id, label: role, tokenHash: t.hash });
+      return () => ({ Authorization: `Bearer ${t.plaintext}`, 'content-type': 'application/json' });
+    };
+
+    it('Auditor can read but not mutate', async () => {
+      const aud = await tokenFor('Auditor');
+      expect((await app.request('/api/scans', { headers: aud() })).status).toBe(200); // read OK
+      const post = await app.request('/api/scans', {
+        method: 'POST',
+        headers: aud(),
+        body: JSON.stringify({ targetId: '00000000-0000-0000-0000-000000000000' }),
+      });
+      expect(post.status).toBe(403); // initiate_scans denied
+      const tg = await app.request('/api/targets', {
+        method: 'POST',
+        headers: aud(),
+        body: JSON.stringify({ projectId, domain: 'denied.com' }),
+      });
+      expect(tg.status).toBe(403); // modify_targets denied
+    });
+
+    it('PenetrationTester is denied system config (webhooks)', async () => {
+      const pt = await tokenFor('PenetrationTester');
+      const wh = await app.request('/api/webhooks', {
+        method: 'POST',
+        headers: pt(),
+        body: JSON.stringify({ projectId, channel: 'generic', url: 'https://example.com/hook' }),
+      });
+      expect(wh.status).toBe(403);
+    });
+
+    it('SysAdmin can do system config', async () => {
+      const sa = await tokenFor('SysAdmin');
+      const wh = await app.request('/api/webhooks', {
+        method: 'POST',
+        headers: sa(),
+        body: JSON.stringify({ projectId, channel: 'generic', url: 'https://example.com/hook' }),
+      });
+      expect(wh.status).toBe(201);
+    });
+  });
 });
