@@ -62,14 +62,14 @@ export interface TiReportData {
 }
 
 export const DEFAULT_VA_SETTINGS: ReportSettings = {
-  primaryColor: '#4f46e5',
-  secondaryColor: '#0f172a',
-  classification: null,
-  footerText: null,
+  primaryColor: '#069ec6',
+  secondaryColor: '#08222b',
+  classification: 'CONFIDENTIAL — FOR INTERNAL USE ONLY',
+  footerText: 'CONFIDENTIAL',
 };
 export const DEFAULT_TI_SETTINGS: ReportSettings = {
-  primaryColor: '#4f46e5',
-  secondaryColor: '#0b1220',
+  primaryColor: '#069ec6',
+  secondaryColor: '#08222b',
   classification: 'CONFIDENTIAL — FOR INTERNAL USE ONLY',
   footerText: 'CONFIDENTIAL',
 };
