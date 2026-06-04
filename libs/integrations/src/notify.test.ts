@@ -63,3 +63,23 @@ describe('dispatchWebhook', () => {
     expect(r.attempts).toBe(1);
   });
 });
+
+import { parseEnrichment, enrichVulnerability, buildVulnPrompt, enrichmentHash } from './ai';
+
+describe('AI enrichment', () => {
+  it('parses three sections', () => {
+    const out = parseEnrichment('Description:\nXSS in q param.\nImpact:\nSession theft.\nRemediation:\nEncode output.');
+    expect(out.description).toContain('XSS');
+    expect(out.impact).toContain('Session');
+    expect(out.remediation).toContain('Encode');
+  });
+  it('enriches via a stub provider', async () => {
+    const provider = { generate: async () => 'Description:\nD\nImpact:\nI\nRemediation:\nR' };
+    const e = await enrichVulnerability({ name: 'XSS', type: 'xss' }, provider);
+    expect(e).toEqual({ description: 'D', impact: 'I', remediation: 'R' });
+  });
+  it('builds a prompt and a stable hash', () => {
+    expect(buildVulnPrompt({ name: 'XSS', type: 'xss', severity: 3 })).toContain('Finding: XSS');
+    expect(enrichmentHash({ name: 'XSS', type: 'xss' })).toBe(enrichmentHash({ name: 'XSS', type: 'xss' }));
+  });
+});
