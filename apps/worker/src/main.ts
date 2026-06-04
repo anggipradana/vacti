@@ -4,8 +4,10 @@ import { loadEnv } from '@vacti/config';
 import { createDb, runMigrations, scans, targets, scanProfiles } from '@vacti/db';
 import { createQueue } from '@vacti/queue';
 import { runScanPipeline, type ScanProfile } from '@vacti/recon';
+import { refreshThreatIntel } from '@vacti/threat-intel';
 
 const scanJobSchema = z.object({ scanId: z.string().uuid() });
+const tiJobSchema = z.object({ projectId: z.string().uuid() });
 
 const DEFAULT_PROFILE: ScanProfile = {
   tools: { subfinder: true, httpx: true, naabu: true, nuclei: true, wordfence: true },
@@ -27,36 +29,38 @@ async function main(): Promise<void> {
     if (!scan) return;
     const [target] = await db.select().from(targets).where(eq(targets.id, scan.targetId));
     if (!target) return;
-
     let profile = DEFAULT_PROFILE;
     if (scan.profileId) {
       const [p] = await db.select().from(scanProfiles).where(eq(scanProfiles.id, scan.profileId));
-      if (p) {
+      if (p)
         profile = {
           tools: p.tools as ScanProfile['tools'],
           ports: p.ports,
           severities: p.severities,
           timeoutSec: p.timeoutSec ?? undefined,
         };
-      }
     }
-
     console.log(`[worker] scan ${scanId} starting (${target.domain})`);
     await runScanPipeline(
-      {
-        scanId,
-        domain: target.domain,
-        predefinedSubdomains: target.predefinedSubdomains,
-        profile,
-      },
+      { scanId, domain: target.domain, predefinedSubdomains: target.predefinedSubdomains, profile },
       { db, onProgress: (stage, msg) => console.log(`[scan ${scanId}] ${stage}: ${msg}`) },
     );
   });
 
-  // Placeholder echo job retained for health checks.
+  await queue.work('ti-refresh', tiJobSchema, async ({ projectId }) => {
+    console.log(`[worker] threat-intel refresh ${projectId}`);
+    await refreshThreatIntel({
+      db,
+      projectId,
+      otxKey: env.OTX_API_KEY,
+      leakKey: env.LEAKCHECK_API_KEY,
+      onProgress: (p, msg) => console.log(`[ti ${projectId}] ${p}% ${msg}`),
+    });
+  });
+
   await queue.work('echo', z.object({ msg: z.string() }), async (p) => console.log(`[worker] echo: ${p.msg}`));
 
-  console.log('[worker] started; consuming scan + echo queues');
+  console.log('[worker] started; consuming scan + ti-refresh queues');
 
   const shutdown = async (signal: string): Promise<void> => {
     console.log(`[worker] ${signal} received, shutting down…`);

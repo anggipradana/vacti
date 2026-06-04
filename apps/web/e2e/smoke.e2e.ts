@@ -23,6 +23,13 @@ test('foundation smoke: create admin → project → API token → logout', asyn
   await expect(page.getByTestId('new-token')).toContainText('vct_');
   await expect(page.getByTestId('token-list')).toContainText('ci-automation');
 
+  // Threat Intel: page loads (risk score) and a manual indicator can be added.
+  await page.goto('/threat');
+  await expect(page.getByRole('heading', { name: 'Threat Intelligence' })).toBeVisible();
+  await page.getByLabel('Value').fill('evil.example.com');
+  await page.getByRole('button', { name: 'Add indicator' }).click();
+  await expect(page.getByText('evil.example.com')).toBeVisible();
+
   // Add a target (localhost — authorized; predefined sub skips subfinder).
   await page.goto('/targets');
   await page.getByTestId('target-domain').fill('127.0.0.1');

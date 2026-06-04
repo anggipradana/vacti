@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { desc, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { hashToken } from '@vacti/auth';
+import { computeProjectRisk } from '@vacti/threat-intel';
 import {
   apiTokens,
   users,
@@ -13,6 +14,10 @@ import {
   endpoints,
   ports as portsTable,
   vulnerabilities,
+  manualIndicators,
+  otxThreatData,
+  leakcheckData,
+  threatIntelStatus,
   type Database,
 } from '@vacti/db';
 
@@ -20,6 +25,8 @@ export interface ApiDeps {
   db: Database;
   /** Enqueue a scan job for the worker to process. Injected so the API stays queue-agnostic. */
   enqueueScan: (scanId: string) => Promise<void>;
+  /** Enqueue a Threat-Intel refresh job for a project. */
+  enqueueTiRefresh: (projectId: string) => Promise<void>;
 }
 
 type Vars = { userId: string };
@@ -178,6 +185,64 @@ export function buildApi(deps: ApiDeps): Hono<{ Variables: Vars }> {
     return new Response(stream, {
       headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' },
     });
+  });
+
+  // ---- Threat Intelligence ----
+  app.get('/threat-intel', async (c) => {
+    const projectId = c.req.query('projectId');
+    if (!projectId) return c.json({ error: 'projectId required' }, 400);
+    const [risk, otx, leaks, indicators, status] = await Promise.all([
+      computeProjectRisk(db, projectId),
+      db.select().from(otxThreatData).where(eq(otxThreatData.projectId, projectId)),
+      db.select().from(leakcheckData).where(eq(leakcheckData.projectId, projectId)),
+      db.select().from(manualIndicators).where(eq(manualIndicators.projectId, projectId)),
+      db.select().from(threatIntelStatus).where(eq(threatIntelStatus.projectId, projectId)),
+    ]);
+    return c.json({ risk, otx, leaks, indicators, status: status[0] ?? null });
+  });
+
+  app.post('/threat-intel/refresh', async (c) => {
+    const body = z.object({ projectId: z.string().uuid() }).safeParse(await c.req.json().catch(() => ({})));
+    if (!body.success) return c.json({ error: body.error.issues }, 400);
+    await deps.enqueueTiRefresh(body.data.projectId);
+    return c.json({ status: 'queued' }, 202);
+  });
+
+  app.get('/indicators', async (c) => {
+    const projectId = c.req.query('projectId');
+    const rows = projectId
+      ? await db.select().from(manualIndicators).where(eq(manualIndicators.projectId, projectId))
+      : await db.select().from(manualIndicators);
+    return c.json({ indicators: rows });
+  });
+  app.post('/indicators', async (c) => {
+    const body = z
+      .object({
+        projectId: z.string().uuid(),
+        type: z.enum(['domain', 'subdomain', 'ip']),
+        value: z.string().min(1),
+        note: z.string().optional(),
+      })
+      .safeParse(await c.req.json().catch(() => ({})));
+    if (!body.success) return c.json({ error: body.error.issues }, 400);
+    const [row] = await db.insert(manualIndicators).values(body.data).returning();
+    return c.json({ indicator: row }, 201);
+  });
+  app.delete('/indicators/:id', async (c) => {
+    await db.delete(manualIndicators).where(eq(manualIndicators.id, c.req.param('id')));
+    return c.json({ status: 'deleted' });
+  });
+
+  app.post('/leaks/:id/toggle', async (c) => {
+    const id = c.req.param('id');
+    const [row] = await db.select().from(leakcheckData).where(eq(leakcheckData.id, id));
+    if (!row) return c.json({ error: 'not found' }, 404);
+    const [updated] = await db
+      .update(leakcheckData)
+      .set({ checked: !row.checked })
+      .where(eq(leakcheckData.id, id))
+      .returning();
+    return c.json({ leak: updated });
   });
 
   return app;

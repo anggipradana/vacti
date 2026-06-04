@@ -28,7 +28,7 @@ describe.skipIf(!url)('@vacti/api', () => {
       .values({ slug: `api${Date.now()}`, name: 'API' })
       .returning();
     projectId = p!.id;
-    app = buildApi({ db, enqueueScan: async (id) => void enqueued.push(id) });
+    app = buildApi({ db, enqueueScan: async (id) => void enqueued.push(id), enqueueTiRefresh: async () => {} });
   });
   afterAll(() => handle?.close());
 

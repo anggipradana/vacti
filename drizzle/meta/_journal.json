@@ -15,6 +15,13 @@
       "when": 1780532830130,
       "tag": "0001_recon",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1780537423298,
+      "tag": "0002_threat_intel",
+      "breakpoints": true
     }
   ]
 }
