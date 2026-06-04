@@ -87,6 +87,11 @@ export async function GET(req: Request, ctx: { params: Promise<{ scanId: string 
       aiDescription: v.aiDescription,
       aiImpact: v.aiImpact,
       aiRemediation: v.aiRemediation,
+      cvss: v.cvss,
+      cveIds: v.cveIds,
+      references: v.references,
+      description: v.description,
+      remediation: v.remediation,
     })),
   });
   const pdf = await renderPdf(html);

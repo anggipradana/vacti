@@ -48,6 +48,18 @@ describe('nuclei parser', () => {
     expect(r.templateId).toBe('tech-detect');
     expect(r.severity).toBe(Severity.Info);
     expect(r.tags).toContain('tech');
+    expect(r.cveIds).toEqual([]);
+    expect(r.references).toEqual([]);
+  });
+  it('extracts cvss, cve, references and template prose', () => {
+    const enriched =
+      '{"template-id":"CVE-2021-1234","info":{"name":"Some RCE","severity":"critical","description":"A bug.","remediation":"Patch it.","reference":["https://a.test","https://b.test"],"classification":{"cvss-score":9.8,"cve-id":"CVE-2021-1234","cwe-id":["CWE-79"]}},"type":"http","url":"http://x"}';
+    const r = parseNucleiLine(enriched)!;
+    expect(r.cvss).toBe(9.8);
+    expect(r.cveIds).toEqual(['CVE-2021-1234']); // string normalised to array
+    expect(r.references).toEqual(['https://a.test', 'https://b.test']);
+    expect(r.description).toBe('A bug.');
+    expect(r.remediation).toBe('Patch it.');
   });
 });
 

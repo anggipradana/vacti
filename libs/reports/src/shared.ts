@@ -228,10 +228,19 @@ export function findingCard(opts: {
   tags: string[];
   blocks: { label: string; text: string }[];
   urls?: string[];
+  cvss?: number | null;
+  cves?: string[];
+  references?: string[];
 }): string {
   const cls = sevClass(opts.severity);
   const hex = sevHex(opts.severity);
-  const l = labels(opts.lang);
+  // CVSS + CVE badges sit alongside the severity badge; other tags follow.
+  const cvssBadge =
+    opts.cvss != null ? `<span class="badge" style="background:var(--ink)">CVSS ${escapeHtml(opts.cvss)}</span>` : '';
+  const cveTags = (opts.cves ?? [])
+    .slice(0, 4)
+    .map((c) => `<span class="tag">${escapeHtml(c)}</span>`)
+    .join('');
   const tags = opts.tags.map((t) => `<span class="tag">${escapeHtml(t)}</span>`).join('');
   const blocks = opts.blocks
     .filter((b) => b.text)
@@ -243,15 +252,20 @@ export function findingCard(opts: {
     opts.urls && opts.urls.length
       ? `<div class="fblock"><div class="flabel">${escapeHtml(bi(opts.lang, 'affectedUrls'))}</div>${urlChips(opts.urls)}</div>`
       : '';
-  void l;
+  const refs = (opts.references ?? []).slice(0, 12);
+  const refsBlock = refs.length
+    ? `<div class="fblock"><div class="flabel">${escapeHtml(biText(opts.lang, 'Referensi', 'References'))}</div><ul class="refs">${refs
+        .map((r) => `<li class="mono">${escapeHtml(r)}</li>`)
+        .join('')}</ul></div>`
+    : '';
   return `<div class="finding f-${cls}">
     <div class="finding-head">
       <span class="fid" style="background:${hex}">${opts.index}</span>
       <div class="fttl"><div class="fn">${escapeHtml(opts.title)}</div>
-        <div class="fmeta"><span class="badge" style="background:${hex}">${escapeHtml(sevLabel(opts.severity, opts.lang))}</span>${tags}</div>
+        <div class="fmeta"><span class="badge" style="background:${hex}">${escapeHtml(sevLabel(opts.severity, opts.lang))}</span>${cvssBadge}${cveTags}${tags}</div>
       </div>
     </div>
-    ${blocks || urlsBlock ? `<div class="finding-body">${blocks}${urlsBlock}</div>` : ''}
+    ${blocks || urlsBlock || refsBlock ? `<div class="finding-body">${blocks}${urlsBlock}${refsBlock}</div>` : ''}
   </div>`;
 }
 

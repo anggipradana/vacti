@@ -144,6 +144,8 @@ export function reportCss(primary: string, secondary: string, footer: string, cl
   .fblock .flabel { font-family:'IBM Plex Mono'; font-size: 9px; letter-spacing: .16em; text-transform: uppercase; color: var(--teal-deep); font-weight: 600; margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
   .fblock .flabel::after { content: ''; flex: 1; height: 1px; background: var(--line); }
   .fblock p { font-size: 11.5px; color: #334a54; margin: 0; line-height: 1.62; }
+  .fblock ul.refs { margin: 0; padding-left: 16px; }
+  .fblock ul.refs li { font-size: 10px; color: #4a6470; line-height: 1.5; margin: 2px 0; word-break: break-all; }
 
   /* ---------- Approval ---------- */
   .approve-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; margin-top: 10px; }

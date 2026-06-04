@@ -64,6 +64,13 @@
       "when": 1780568299562,
       "tag": "0008_report_logo_signature_execsummary",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1780568799100,
+      "tag": "0009_vuln_cvss_cve_references",
+      "breakpoints": true
     }
   ]
 }

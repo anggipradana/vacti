@@ -62,6 +62,11 @@ export async function runScanPipeline(input: ScanInput, deps: PipelineDeps): Pro
         tags: v.tags,
         request: v.request,
         response: v.response,
+        description: v.description,
+        remediation: v.remediation,
+        cvss: v.cvss,
+        cveIds: v.cveIds,
+        references: v.references,
       })),
     );
     counts.vulnerabilities += vulns.length;
