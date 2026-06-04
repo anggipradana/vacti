@@ -1,12 +1,15 @@
 import type { ReactNode } from 'react';
-import { IBM_Plex_Sans, IBM_Plex_Mono, Fraunces } from 'next/font/google';
+import { Plus_Jakarta_Sans, IBM_Plex_Mono } from 'next/font/google';
 import { Toaster } from 'sonner';
 import { ThemeProvider } from '../components/theme-provider';
 import './globals.css';
 
-const sans = IBM_Plex_Sans({ subsets: ['latin'], weight: ['400', '500', '600', '700'], variable: '--font-sans' });
-const mono = IBM_Plex_Mono({ subsets: ['latin'], weight: ['400', '500', '600'], variable: '--font-mono' });
-const display = Fraunces({ subsets: ['latin'], weight: ['400', '500', '600', '700'], variable: '--font-display' });
+const sans = Plus_Jakarta_Sans({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700', '800'],
+  variable: '--font-sans',
+});
+const mono = IBM_Plex_Mono({ subsets: ['latin'], weight: ['400', '500'], variable: '--font-mono' });
 
 export const metadata = {
   title: 'vacti',
@@ -15,7 +18,7 @@ export const metadata = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning className={`${sans.variable} ${mono.variable} ${display.variable}`}>
+    <html lang="en" suppressHydrationWarning className={`${sans.variable} ${mono.variable}`}>
       <body className="min-h-screen bg-bg font-sans text-fg antialiased">
         <ThemeProvider>
           {children}
