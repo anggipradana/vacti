@@ -1,11 +1,18 @@
 import { redirect } from 'next/navigation';
 import { desc, eq } from 'drizzle-orm';
-import Nav from '../../../components/nav';
+import { KeyRound } from 'lucide-react';
+import { AppShell } from '../../../components/shell/app-shell';
+import { PageHeader } from '../../../components/ui/page-header';
+import { Table, THead, TBody, TR, TH, TD } from '../../../components/ui/table';
+import { Button } from '../../../components/ui/button';
+import { EmptyState } from '../../../components/ui/empty-state';
 import { apiTokens } from '@vacti/db';
 import { getDb } from '../../../lib/db';
 import { getCurrentUser } from '../../../lib/session';
 import { revokeTokenAction } from '../../../lib/actions';
 import CreateToken from './create-token';
+
+export const dynamic = 'force-dynamic';
 
 export default async function TokensPage() {
   const user = await getCurrentUser();
@@ -16,23 +23,45 @@ export default async function TokensPage() {
     .where(eq(apiTokens.userId, user.id))
     .orderBy(desc(apiTokens.createdAt));
   return (
-    <>
-      <Nav email={user.email} />
-      <main>
-        <h1>API Tokens</h1>
+    <AppShell user={{ email: user.email, isSysAdmin: user.isSysAdmin }}>
+      <PageHeader
+        title="API Tokens"
+        description="Bearer tokens for the REST API — automation, CI, and tool integration."
+      />
+      <div className="space-y-6">
         <CreateToken />
-        <ul data-testid="token-list">
-          {rows.map((t) => (
-            <li key={t.id}>
-              <strong>{t.label}</strong> <span className="muted">{t.createdAt.toISOString()}</span>
-              <form action={revokeTokenAction} style={{ display: 'inline', marginLeft: '0.5rem' }}>
-                <input type="hidden" name="id" value={t.id} />
-                <button type="submit">Revoke</button>
-              </form>
-            </li>
-          ))}
-        </ul>
-      </main>
-    </>
+        <div data-testid="token-list">
+          {rows.length === 0 ? (
+            <EmptyState icon={<KeyRound />} title="No tokens yet" description="Create a token to call the vacti API." />
+          ) : (
+            <Table>
+              <THead>
+                <TR>
+                  <TH>Label</TH>
+                  <TH>Created</TH>
+                  <TH className="text-right">Actions</TH>
+                </TR>
+              </THead>
+              <TBody>
+                {rows.map((t) => (
+                  <TR key={t.id}>
+                    <TD className="font-medium">{t.label}</TD>
+                    <TD className="text-sm text-fg-subtle">{t.createdAt.toISOString().slice(0, 10)}</TD>
+                    <TD className="text-right">
+                      <form action={revokeTokenAction} className="inline">
+                        <input type="hidden" name="id" value={t.id} />
+                        <Button type="submit" variant="ghost" size="sm" className="text-danger hover:bg-danger/10">
+                          Revoke
+                        </Button>
+                      </form>
+                    </TD>
+                  </TR>
+                ))}
+              </TBody>
+            </Table>
+          )}
+        </div>
+      </div>
+    </AppShell>
   );
 }

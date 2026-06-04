@@ -1,15 +1,26 @@
+import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { eq } from 'drizzle-orm';
-import Nav from '../../../components/nav';
-import { SEVERITY_LABEL, type SeverityValue } from '@vacti/core';
+import { ArrowLeft, Globe, Network, Server, ShieldAlert } from 'lucide-react';
+import { AppShell } from '../../../components/shell/app-shell';
+import { StatusPill } from '../../../components/ui/status-pill';
+import { StageStepper, type StageState } from '../../../components/ui/stage-stepper';
+import { Timeline } from '../../../components/ui/timeline';
+import { SeverityBadge } from '../../../components/ui/severity-badge';
+import { Card, CardContent } from '../../../components/ui/card';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../../components/ui/tabs';
+import { Table, THead, TBody, TR, TH, TD } from '../../../components/ui/table';
+import { Badge } from '../../../components/ui/badge';
+import { Button } from '../../../components/ui/button';
+import type { SeverityValue } from '@vacti/core';
 import { scans, targets, scanActivity, subdomains, endpoints, ports as portsTable, vulnerabilities } from '@vacti/db';
 import { getDb } from '../../../lib/db';
 import { getCurrentUser } from '../../../lib/session';
 import AutoRefresh from './auto-refresh';
 
 export const dynamic = 'force-dynamic';
-
 const TERMINAL = ['completed', 'failed', 'cancelled'];
+const STAGES = ['subfinder', 'httpx', 'naabu', 'nuclei', 'wordfence'];
 
 export default async function ScanDetail({ params }: { params: Promise<{ id: string }> }) {
   const user = await getCurrentUser();
@@ -28,58 +39,162 @@ export default async function ScanDetail({ params }: { params: Promise<{ id: str
   ]);
   const terminal = TERMINAL.includes(scan.status);
 
+  const stageState = (name: string): StageState => {
+    const acts = activity.filter((a) => a.stage === name);
+    const last = acts[acts.length - 1];
+    if (!last) return 'pending';
+    if (last.status === 'completed') return 'completed';
+    if (last.status === 'skipped') return 'skipped';
+    if (last.status === 'failed') return 'failed';
+    return 'running';
+  };
+  const stages = STAGES.map((s) => ({ label: s, state: stageState(s) }));
+
   return (
-    <>
-      <Nav email={user.email} />
+    <AppShell user={{ email: user.email, isSysAdmin: user.isSysAdmin }}>
       <AutoRefresh terminal={terminal} />
-      <main>
-        <h1>Scan · {target?.domain ?? scan.targetId}</h1>
-        <p>
-          Status: <strong data-testid="scan-status">{scan.status}</strong>
-          {scan.stage ? <span className="muted"> · stage: {scan.stage}</span> : null}
-          {!terminal ? <span className="muted"> · live ⟳</span> : null}
-        </p>
-        {scan.error ? <p style={{ color: '#ff6b6b' }}>Error: {scan.error}</p> : null}
+      <div className="mb-6">
+        <Link href="/scans" className="mb-3 inline-flex items-center gap-1 text-sm text-fg-muted hover:text-fg">
+          <ArrowLeft className="size-4" /> Scans
+        </Link>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <h1 className="font-mono text-2xl font-semibold tracking-tight">
+              {target?.domain ?? scan.targetId.slice(0, 8)}
+            </h1>
+            <span data-testid="scan-status">
+              <StatusPill status={scan.status} />
+            </span>
+          </div>
+          <Button variant="secondary" size="sm" disabled>
+            Generate report
+          </Button>
+        </div>
+        {scan.error ? <p className="mt-2 text-sm text-danger">Error: {scan.error}</p> : null}
+      </div>
 
-        <h2>Activity</h2>
-        <ul data-testid="activity">
-          {activity.map((a) => (
-            <li key={a.id} className="muted">
-              {a.stage}: {a.status}
-              {a.message ? ` — ${a.message}` : ''}
-            </li>
-          ))}
-        </ul>
+      <Card className="mb-6">
+        <CardContent className="space-y-4 pt-5">
+          <StageStepper stages={stages} />
+          <Timeline items={activity.map((a) => ({ stage: a.stage, status: a.status, message: a.message }))} />
+        </CardContent>
+      </Card>
 
-        <h2>Endpoints ({eps.length})</h2>
-        <ul>
-          {eps.map((e) => (
-            <li key={e.id}>
-              <code>{e.url}</code>{' '}
-              <span className="muted">
-                [{e.statusCode}] {e.title ?? ''}
-              </span>
-              {e.isWordpress ? <span className="muted"> · WordPress</span> : null}
-            </li>
-          ))}
-        </ul>
+      <Tabs defaultValue="endpoints">
+        <TabsList>
+          <TabsTrigger value="endpoints">
+            <Globe className="size-3.5" /> Endpoints{' '}
+            <Badge variant="neutral" className="ml-1">
+              {eps.length}
+            </Badge>
+          </TabsTrigger>
+          <TabsTrigger value="ports">
+            <Network className="size-3.5" /> Ports{' '}
+            <Badge variant="neutral" className="ml-1">
+              {prt.length}
+            </Badge>
+          </TabsTrigger>
+          <TabsTrigger value="subdomains">
+            <Server className="size-3.5" /> Subdomains{' '}
+            <Badge variant="neutral" className="ml-1">
+              {subs.length}
+            </Badge>
+          </TabsTrigger>
+          <TabsTrigger value="vulns">
+            <ShieldAlert className="size-3.5" /> Vulnerabilities{' '}
+            <Badge variant="neutral" className="ml-1">
+              {vulns.length}
+            </Badge>
+          </TabsTrigger>
+        </TabsList>
 
-        <h2>Open ports ({prt.length})</h2>
-        <p className="muted">{prt.map((p) => `${p.ip}:${p.port}`).join(', ') || '—'}</p>
+        <TabsContent value="endpoints" className="mt-4">
+          <Table>
+            <THead>
+              <TR>
+                <TH>URL</TH>
+                <TH>Status</TH>
+                <TH>Title</TH>
+                <TH>Tech</TH>
+              </TR>
+            </THead>
+            <TBody>
+              {eps.map((e) => (
+                <TR key={e.id}>
+                  <TD className="font-mono text-xs">{e.url}</TD>
+                  <TD className="tabular">{e.statusCode}</TD>
+                  <TD className="max-w-xs truncate text-fg-muted">{e.title}</TD>
+                  <TD>
+                    <div className="flex flex-wrap gap-1">
+                      {e.isWordpress ? <Badge variant="accent">WordPress</Badge> : null}
+                      {e.tech.slice(0, 3).map((t) => (
+                        <Badge key={t} variant="outline">
+                          {t}
+                        </Badge>
+                      ))}
+                    </div>
+                  </TD>
+                </TR>
+              ))}
+            </TBody>
+          </Table>
+        </TabsContent>
 
-        <h2>Subdomains ({subs.length})</h2>
-        <p className="muted">{subs.map((s) => s.host).join(', ') || '—'}</p>
+        <TabsContent value="ports" className="mt-4">
+          <div className="flex flex-wrap gap-2">
+            {prt.length ? (
+              prt.map((p) => (
+                <Badge key={p.id} variant="neutral" className="font-mono">
+                  {p.ip}:{p.port}/{p.protocol}
+                </Badge>
+              ))
+            ) : (
+              <p className="text-sm text-fg-subtle">No open ports found.</p>
+            )}
+          </div>
+        </TabsContent>
 
-        <h2>Vulnerabilities ({vulns.length})</h2>
-        <ul>
-          {vulns.map((v) => (
-            <li key={v.id}>
-              <strong>{SEVERITY_LABEL[v.severity as SeverityValue] ?? v.severity}</strong> · {v.name}{' '}
-              <span className="muted">{v.matchedAt}</span>
-            </li>
-          ))}
-        </ul>
-      </main>
-    </>
+        <TabsContent value="subdomains" className="mt-4">
+          <div className="flex flex-wrap gap-2">
+            {subs.length ? (
+              subs.map((s) => (
+                <Badge key={s.id} variant="neutral" className="font-mono">
+                  {s.host}
+                </Badge>
+              ))
+            ) : (
+              <p className="text-sm text-fg-subtle">No subdomains (predefined or none discovered).</p>
+            )}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="vulns" className="mt-4">
+          {vulns.length ? (
+            <Table>
+              <THead>
+                <TR>
+                  <TH>Severity</TH>
+                  <TH>Finding</TH>
+                  <TH>Matched at</TH>
+                </TR>
+              </THead>
+              <TBody>
+                {vulns.map((v) => (
+                  <TR key={v.id}>
+                    <TD>
+                      <SeverityBadge severity={v.severity as SeverityValue} />
+                    </TD>
+                    <TD className="font-medium">{v.name}</TD>
+                    <TD className="font-mono text-xs text-fg-muted">{v.matchedAt}</TD>
+                  </TR>
+                ))}
+              </TBody>
+            </Table>
+          ) : (
+            <p className="text-sm text-fg-subtle">No vulnerabilities found.</p>
+          )}
+        </TabsContent>
+      </Tabs>
+    </AppShell>
   );
 }
