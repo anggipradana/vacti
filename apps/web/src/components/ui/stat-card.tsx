@@ -21,7 +21,7 @@ export function StatCard({
         <span className="text-sm text-fg-muted">{label}</span>
         {icon ? <span className="text-fg-subtle [&_svg]:size-4">{icon}</span> : null}
       </div>
-      <div className="mt-2 text-3xl font-semibold tabular tracking-tight">{value}</div>
+      <div className="mt-2 font-display text-3xl font-semibold tabular tracking-tight">{value}</div>
       {hint ? <div className="mt-1 text-xs text-fg-subtle">{hint}</div> : null}
     </Card>
   );
