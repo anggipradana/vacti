@@ -6,3 +6,4 @@ export * from './migrate';
 export * from './threat-intel-schema';
 export * from './reports-schema';
 export * from './integrations-schema';
+export * from './search';

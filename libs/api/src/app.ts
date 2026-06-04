@@ -33,6 +33,7 @@ import {
   threatIntelStatus,
   webhooks,
   scanSchedules,
+  searchAll,
   type Database,
 } from '@vacti/db';
 
@@ -98,6 +99,12 @@ export function buildApi(deps: ApiDeps): Hono<{ Variables: Vars }> {
     c.set('userId', row.userId);
     c.set('role', roleFromUser(user));
     await next();
+  });
+
+  // Universal search across projects/targets/scans/subdomains/endpoints/vulns.
+  app.get('/search', async (c) => {
+    const q = c.req.query('q') ?? '';
+    return c.json(await searchAll(db, q));
   });
 
   app.get('/whoami', async (c) => {
