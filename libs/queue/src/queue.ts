@@ -17,6 +17,8 @@ export interface Queue {
   stop: () => Promise<void>;
   enqueue: <T>(name: string, schema: z.ZodType<T>, payload: T) => Promise<string | null>;
   work: <T>(name: string, schema: z.ZodType<T>, handler: (payload: T) => Promise<void>) => Promise<string>;
+  /** Register a recurring job on `name` using a 5-field cron (pg-boss native scheduler). */
+  schedule: (name: string, cron: string) => Promise<void>;
 }
 
 /** Create a typed pg-boss queue. Payloads are validated with Zod on enqueue and on receipt. */
@@ -53,6 +55,10 @@ export function createQueue(connectionString: string): Queue {
           await handler(validatePayload(schema, job.data));
         }
       });
+    },
+    schedule: async (name, cron) => {
+      await ensureQueue(name);
+      await boss.schedule(name, cron);
     },
   };
 }
