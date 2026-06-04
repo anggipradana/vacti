@@ -49,11 +49,16 @@ export function cover(opts: {
   </section>`;
 }
 
-export function section(num: string, title: string, eyebrow: string, sub?: string): string {
-  return `<div class="page-break"></div><div class="sec-head">
+export function section(
+  num: string,
+  title: string,
+  eyebrow: string,
+  opts?: { sub?: string; pageBreak?: boolean },
+): string {
+  return `<div class="sec-head${opts?.pageBreak ? ' page-break' : ''}">
     <div class="eyebrow">${escapeHtml(eyebrow)}</div>
     <div class="sec-title">${num ? `<span class="num">${escapeHtml(num)}</span>` : ''}<h2>${escapeHtml(title)}</h2></div>
-    ${sub ? `<div class="sec-sub">${escapeHtml(sub)}</div>` : ''}
+    ${opts?.sub ? `<div class="sec-sub">${escapeHtml(opts.sub)}</div>` : ''}
   </div>`;
 }
 

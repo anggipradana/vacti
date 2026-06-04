@@ -62,7 +62,7 @@ export function renderVaReport(d: VaReportData): string {
     : '';
 
   const findings = showVuln
-    ? `${section('04', l.vulnerabilities, 'Findings')}
+    ? `${section('04', l.vulnerabilities, 'Findings', { pageBreak: true })}
       ${
         d.vulns.length
           ? d.vulns
