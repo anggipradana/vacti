@@ -24,6 +24,7 @@ const nav = [
   { label: 'Scans', href: '/scans' },
   { label: 'Schedules', href: '/schedules' },
   { label: 'Threat Intel', href: '/threat' },
+  { label: 'Search', href: '/search' },
   { label: 'Projects', href: '/projects' },
   { label: 'Settings', href: '/settings/tokens' },
 ];

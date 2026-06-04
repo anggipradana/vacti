@@ -90,6 +90,58 @@ export default async function Dashboard() {
         }
       />
 
+      {/* First-run onboarding: guide the next step until the user has data. */}
+      {targetRows.length === 0 || scanRows.length === 0 ? (
+        <Card className="mb-6 border-accent/40 bg-accent/5">
+          <CardHeader>
+            <CardTitle>Get started</CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <ol className="space-y-2 text-sm">
+              <li className="flex items-center gap-2">
+                <span className="flex size-5 items-center justify-center rounded-full bg-accent/20 text-xs font-semibold">
+                  1
+                </span>
+                <span className={targetRows.length ? 'text-fg-subtle line-through' : ''}>Create a project</span>
+                {targetRows.length === 0 ? (
+                  <Link href="/projects" className="text-accent hover:underline">
+                    → Projects
+                  </Link>
+                ) : null}
+              </li>
+              <li className="flex items-center gap-2">
+                <span className="flex size-5 items-center justify-center rounded-full bg-accent/20 text-xs font-semibold">
+                  2
+                </span>
+                <span className={targetRows.length ? 'text-fg-subtle line-through' : ''}>Add a target</span>
+                {targetRows.length === 0 ? (
+                  <Link href="/targets" className="text-accent hover:underline">
+                    → Targets
+                  </Link>
+                ) : null}
+              </li>
+              <li className="flex items-center gap-2">
+                <span className="flex size-5 items-center justify-center rounded-full bg-accent/20 text-xs font-semibold">
+                  3
+                </span>
+                <span className={scanRows.length ? 'text-fg-subtle line-through' : ''}>Run your first scan</span>
+                {targetRows.length > 0 && scanRows.length === 0 ? (
+                  <Link href="/scans" className="text-accent hover:underline">
+                    → Scans
+                  </Link>
+                ) : null}
+              </li>
+              <li className="flex items-center gap-2">
+                <span className="flex size-5 items-center justify-center rounded-full bg-accent/20 text-xs font-semibold">
+                  4
+                </span>
+                <span className="text-fg-muted">Generate a report from the scan detail</span>
+              </li>
+            </ol>
+          </CardContent>
+        </Card>
+      ) : null}
+
       {/* Metric tiles */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard label="Targets" value={targetRows.length} icon={<Crosshair />} />
