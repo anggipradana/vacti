@@ -58,6 +58,28 @@ export async function cancelScanAction(formData: FormData) {
   revalidatePath(`/scans/${id}`);
 }
 
+const ALL_TOOLS = ['subfinder', 'httpx', 'naabu', 'nuclei', 'wordfence'] as const;
+
+/** Re-run a target as a new scan; an optional tool subset becomes a sub-scan (toolsOverride). */
+export async function rescanAction(formData: FormData) {
+  await requirePermission(Permission.InitiateScans);
+  const id = String(formData.get('id') ?? '');
+  const db = getDb();
+  const [scan] = await db.select().from(scans).where(eq(scans.id, id));
+  if (!scan) redirect('/scans?error=notfound');
+  const picked = new Set(formData.getAll('tools').map(String));
+  // A subset (not all tools) → partial rescan; full selection reuses the profile as-is.
+  const isSubset = picked.size > 0 && picked.size < ALL_TOOLS.length;
+  const toolsOverride = isSubset ? Object.fromEntries(ALL_TOOLS.map((t) => [t, picked.has(t)])) : null;
+  const [created] = await db
+    .insert(scans)
+    .values({ projectId: scan.projectId, targetId: scan.targetId, profileId: scan.profileId, toolsOverride })
+    .returning();
+  const q = await getQueue();
+  await q.enqueue('scan', scanJob, { scanId: created!.id });
+  redirect(`/scans/${created!.id}`);
+}
+
 export async function createScheduleAction(formData: FormData) {
   await requirePermission(Permission.InitiateScans);
   const targetId = String(formData.get('targetId') ?? '');

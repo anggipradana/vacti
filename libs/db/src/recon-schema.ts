@@ -41,6 +41,8 @@ export const scans = pgTable('scans', {
   stage: text('stage'),
   // Cross-process cancellation flag: the API/web sets it, the worker polls it and aborts the run.
   cancelRequested: boolean('cancel_requested').notNull().default(false),
+  // Partial-rescan tool subset (sub-scan): overrides the profile's tools when present.
+  toolsOverride: jsonb('tools_override'),
   startedAt: timestamp('started_at', { withTimezone: true }),
   finishedAt: timestamp('finished_at', { withTimezone: true }),
   counts: jsonb('counts'),

@@ -13,6 +13,7 @@ import {
 } from '@vacti/core';
 import type { Context } from 'hono';
 import { computeProjectRisk } from '@vacti/threat-intel';
+import { diffScans, type ScanResultKeys } from '@vacti/recon';
 import { dispatchWebhook, type Channel } from '@vacti/integrations';
 import { openApiSpec, redocHtml } from './openapi';
 import {
@@ -234,6 +235,32 @@ export function buildApi(deps: ApiDeps): Hono<{ Variables: Vars }> {
     }
     const [row] = await db.update(scans).set({ cancelRequested: true }).where(eq(scans.id, id)).returning();
     return c.json({ scan: row }, 202);
+  });
+
+  // Compare two scans (added/removed/unchanged per category).
+  const scanKeys = async (scanId: string): Promise<ScanResultKeys> => {
+    const [subs, eps, prt, vulns] = await Promise.all([
+      db.select().from(subdomains).where(eq(subdomains.scanId, scanId)),
+      db.select().from(endpoints).where(eq(endpoints.scanId, scanId)),
+      db.select().from(portsTable).where(eq(portsTable.scanId, scanId)),
+      db.select().from(vulnerabilities).where(eq(vulnerabilities.scanId, scanId)),
+    ]);
+    return {
+      subdomains: subs.map((s) => s.host),
+      endpoints: eps.map((e) => e.url),
+      ports: prt.map((p) => `${p.ip}:${p.port}`),
+      vulns: vulns.map((v) => `${v.templateId}@${v.matchedAt ?? v.url ?? ''}`),
+    };
+  };
+  app.get('/scans/:id/diff', async (c) => {
+    const id = c.req.param('id');
+    const against = c.req.query('against');
+    if (!against) return c.json({ error: 'against query param required' }, 400);
+    const [a] = await db.select().from(scans).where(eq(scans.id, against));
+    const [b] = await db.select().from(scans).where(eq(scans.id, id));
+    if (!a || !b) return c.json({ error: 'not found' }, 404);
+    const diff = diffScans(await scanKeys(against), await scanKeys(id));
+    return c.json({ baseline: against, current: id, diff });
   });
 
   // ---- Scheduled scans ----

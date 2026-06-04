@@ -6,3 +6,4 @@ export * from './adapters/httpx';
 export * from './adapters/naabu';
 export * from './adapters/nuclei';
 export * from './pipeline';
+export * from './diff';

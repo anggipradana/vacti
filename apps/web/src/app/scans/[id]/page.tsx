@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
-import { eq } from 'drizzle-orm';
+import { desc, eq } from 'drizzle-orm';
+import { diffScans } from '@vacti/recon';
 import { ArrowLeft, Globe, Network, Server, ShieldAlert } from 'lucide-react';
 import { AppShell } from '../../../components/shell/app-shell';
 import { StatusPill } from '../../../components/ui/status-pill';
@@ -19,7 +20,7 @@ import { scans, targets, scanActivity, subdomains, endpoints, ports as portsTabl
 import { getDb } from '../../../lib/db';
 import { getCurrentUser } from '../../../lib/session';
 import { setVulnStatusAction } from '../../../lib/status-actions';
-import { cancelScanAction } from '../../../lib/recon-actions';
+import { cancelScanAction, rescanAction } from '../../../lib/recon-actions';
 import { enrichVulnAction } from '../../../lib/ai-actions';
 import AutoRefresh from './auto-refresh';
 
@@ -27,10 +28,17 @@ export const dynamic = 'force-dynamic';
 const TERMINAL = ['completed', 'failed', 'cancelled'];
 const STAGES = ['subfinder', 'httpx', 'naabu', 'nuclei', 'wordfence'];
 
-export default async function ScanDetail({ params }: { params: Promise<{ id: string }> }) {
+export default async function ScanDetail({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ compare?: string }>;
+}) {
   const user = await getCurrentUser();
   if (!user) redirect('/login');
   const { id } = await params;
+  const { compare } = await searchParams;
   const db = getDb();
   const [scan] = await db.select().from(scans).where(eq(scans.id, id));
   if (!scan) notFound();
@@ -43,6 +51,33 @@ export default async function ScanDetail({ params }: { params: Promise<{ id: str
     db.select().from(vulnerabilities).where(eq(vulnerabilities.scanId, id)),
   ]);
   const terminal = TERMINAL.includes(scan.status);
+  const canScan = userCan(user, Permission.InitiateScans);
+
+  // Sibling scans of the same target (for the compare dropdown) + optional diff.
+  const siblings = (
+    await db.select().from(scans).where(eq(scans.targetId, scan.targetId)).orderBy(desc(scans.createdAt))
+  ).filter((s) => s.id !== id);
+  const keysOf = (
+    sd: { host: string }[],
+    ep: { url: string }[],
+    pt: { ip: string; port: number }[],
+    vl: { templateId: string; matchedAt: string | null; url: string | null }[],
+  ) => ({
+    subdomains: sd.map((s) => s.host),
+    endpoints: ep.map((e) => e.url),
+    ports: pt.map((p) => `${p.ip}:${p.port}`),
+    vulns: vl.map((v) => `${v.templateId}@${v.matchedAt ?? v.url ?? ''}`),
+  });
+  let diff: ReturnType<typeof diffScans> | null = null;
+  if (compare && siblings.some((s) => s.id === compare)) {
+    const [bsub, bep, bpt, bvl] = await Promise.all([
+      db.select().from(subdomains).where(eq(subdomains.scanId, compare)),
+      db.select().from(endpoints).where(eq(endpoints.scanId, compare)),
+      db.select().from(portsTable).where(eq(portsTable.scanId, compare)),
+      db.select().from(vulnerabilities).where(eq(vulnerabilities.scanId, compare)),
+    ]);
+    diff = diffScans(keysOf(bsub, bep, bpt, bvl), keysOf(subs, eps, prt, vulns));
+  }
 
   const stageState = (name: string): StageState => {
     const acts = activity.filter((a) => a.stage === name);
@@ -96,6 +131,76 @@ export default async function ScanDetail({ params }: { params: Promise<{ id: str
           <Timeline items={activity.map((a) => ({ stage: a.stage, status: a.status, message: a.message }))} />
         </CardContent>
       </Card>
+
+      {terminal && (siblings.length > 0 || canScan) ? (
+        <Card className="mb-6">
+          <CardContent className="space-y-4 pt-5">
+            {siblings.length > 0 ? (
+              <form method="get" className="flex flex-wrap items-end gap-2">
+                <div className="space-y-1">
+                  <span className="text-xs font-medium text-fg-subtle">Compare with an earlier scan</span>
+                  <div className="flex items-center gap-2">
+                    <Select name="compare" defaultValue={compare ?? ''} className="w-72">
+                      <option value="">Select a scan…</option>
+                      {siblings.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {new Date(s.createdAt).toISOString().slice(0, 16).replace('T', ' ')} · {s.status}
+                        </option>
+                      ))}
+                    </Select>
+                    <Button type="submit" variant="outline" size="sm">
+                      Compare
+                    </Button>
+                  </div>
+                </div>
+              </form>
+            ) : null}
+
+            {diff ? (
+              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                {(
+                  [
+                    ['Subdomains', diff.subdomains],
+                    ['Endpoints', diff.endpoints],
+                    ['Ports', diff.ports],
+                    ['Vulnerabilities', diff.vulns],
+                  ] as const
+                ).map(([label, d]) => (
+                  <div key={label} className="rounded-lg border border-border p-3">
+                    <div className="text-xs font-medium text-fg-subtle">{label}</div>
+                    <div className="mt-1 flex gap-3 text-sm">
+                      <span className="text-success">+{d.added.length}</span>
+                      <span className="text-danger">−{d.removed.length}</span>
+                      <span className="text-fg-muted">={d.unchanged}</span>
+                    </div>
+                    {d.added.length ? (
+                      <div className="mt-1 truncate font-mono text-[11px] text-success" title={d.added.join('\n')}>
+                        new: {d.added.slice(0, 3).join(', ')}
+                        {d.added.length > 3 ? ` +${d.added.length - 3}` : ''}
+                      </div>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+            ) : null}
+
+            {canScan ? (
+              <form action={rescanAction} className="flex flex-wrap items-center gap-3 border-t border-border pt-4">
+                <input type="hidden" name="id" value={scan.id} />
+                <span className="text-xs font-medium text-fg-subtle">Rescan (uncheck tools for a sub-scan):</span>
+                {STAGES.map((t) => (
+                  <label key={t} className="flex items-center gap-1 text-xs">
+                    <input type="checkbox" name="tools" value={t} defaultChecked /> {t}
+                  </label>
+                ))}
+                <Button type="submit" size="sm">
+                  Rescan
+                </Button>
+              </form>
+            ) : null}
+          </CardContent>
+        </Card>
+      ) : null}
 
       <Tabs defaultValue="endpoints">
         <TabsList>
