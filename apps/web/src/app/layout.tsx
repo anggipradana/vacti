@@ -1,12 +1,12 @@
 import type { ReactNode } from 'react';
-import { IBM_Plex_Sans, IBM_Plex_Mono, Space_Grotesk } from 'next/font/google';
+import { IBM_Plex_Sans, IBM_Plex_Mono, Fraunces } from 'next/font/google';
 import { Toaster } from 'sonner';
 import { ThemeProvider } from '../components/theme-provider';
 import './globals.css';
 
 const sans = IBM_Plex_Sans({ subsets: ['latin'], weight: ['400', '500', '600', '700'], variable: '--font-sans' });
 const mono = IBM_Plex_Mono({ subsets: ['latin'], weight: ['400', '500', '600'], variable: '--font-mono' });
-const display = Space_Grotesk({ subsets: ['latin'], weight: ['500', '600', '700'], variable: '--font-display' });
+const display = Fraunces({ subsets: ['latin'], weight: ['400', '500', '600', '700'], variable: '--font-display' });
 
 export const metadata = {
   title: 'vacti',
