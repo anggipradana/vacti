@@ -9,7 +9,7 @@ import { StatusPill } from '../../components/ui/status-pill';
 import { EmptyState } from '../../components/ui/empty-state';
 import { Button } from '../../components/ui/button';
 import { NewScanDialog } from '../../components/new-scan-dialog';
-import { scans, targets } from '@vacti/db';
+import { scans, targets, scanProfiles } from '@vacti/db';
 import { getDb } from '../../lib/db';
 import { getCurrentUser } from '../../lib/session';
 
@@ -27,9 +27,10 @@ export default async function ScansPage() {
   const user = await getCurrentUser();
   if (!user) redirect('/login');
   const db = getDb();
-  const [scanRows, targetRows] = await Promise.all([
+  const [scanRows, targetRows, profileRows] = await Promise.all([
     db.select().from(scans).orderBy(desc(scans.createdAt)),
     db.select().from(targets).orderBy(desc(targets.createdAt)),
+    db.select().from(scanProfiles),
   ]);
   const targetById = new Map(targetRows.map((t) => [t.id, t]));
   return (
@@ -37,7 +38,12 @@ export default async function ScansPage() {
       <PageHeader
         title="Scans"
         description="Recon runs across your targets."
-        actions={<NewScanDialog targets={targetRows.map((t) => ({ id: t.id, domain: t.domain }))} />}
+        actions={
+          <NewScanDialog
+            targets={targetRows.map((t) => ({ id: t.id, domain: t.domain }))}
+            profiles={profileRows.map((p) => ({ id: p.id, name: p.name }))}
+          />
+        }
       />
       {scanRows.length === 0 ? (
         <EmptyState

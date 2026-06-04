@@ -46,9 +46,13 @@ export async function createTargetAction(formData: FormData) {
 export async function startScanAction(formData: FormData) {
   await requirePermission(Permission.InitiateScans);
   const targetId = String(formData.get('targetId') ?? '');
+  const profileId = String(formData.get('profileId') ?? '').trim() || null;
   const [target] = await getDb().select().from(targets).where(eq(targets.id, targetId));
   if (!target) redirect('/scans?error=notarget');
-  const [scan] = await getDb().insert(scans).values({ projectId: target.projectId, targetId: target.id }).returning();
+  const [scan] = await getDb()
+    .insert(scans)
+    .values({ projectId: target.projectId, targetId: target.id, profileId })
+    .returning();
   const q = await getQueue();
   await q.enqueue('scan', scanJob, { scanId: scan!.id });
   redirect(`/scans/${scan!.id}`);

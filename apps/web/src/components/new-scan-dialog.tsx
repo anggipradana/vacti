@@ -6,7 +6,13 @@ import { Label } from './ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from './ui/dialog';
 import { startScanAction } from '../lib/recon-actions';
 
-export function NewScanDialog({ targets }: { targets: { id: string; domain: string }[] }) {
+export function NewScanDialog({
+  targets,
+  profiles = [],
+}: {
+  targets: { id: string; domain: string }[];
+  profiles?: { id: string; name: string }[];
+}) {
   const disabled = targets.length === 0;
   return (
     <Dialog>
@@ -33,6 +39,19 @@ export function NewScanDialog({ targets }: { targets: { id: string; domain: stri
               ))}
             </Select>
           </div>
+          {profiles.length ? (
+            <div className="space-y-1.5">
+              <Label htmlFor="profileId">Scan profile</Label>
+              <Select id="profileId" name="profileId" defaultValue="">
+                <option value="">Default (all stages)</option>
+                {profiles.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </Select>
+            </div>
+          ) : null}
           <Button type="submit" data-testid="start-scan" className="w-full">
             Start scan
           </Button>
