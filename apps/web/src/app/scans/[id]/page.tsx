@@ -19,6 +19,7 @@ import { scans, targets, scanActivity, subdomains, endpoints, ports as portsTabl
 import { getDb } from '../../../lib/db';
 import { getCurrentUser } from '../../../lib/session';
 import { setVulnStatusAction } from '../../../lib/status-actions';
+import { enrichVulnAction } from '../../../lib/ai-actions';
 import AutoRefresh from './auto-refresh';
 
 export const dynamic = 'force-dynamic';
@@ -193,25 +194,54 @@ export default async function ScanDetail({ params }: { params: Promise<{ id: str
                     <TD>
                       <div className="font-medium">{v.name}</div>
                       <div className="font-mono text-xs text-fg-subtle">{v.matchedAt}</div>
+                      {v.isAiEnriched ? (
+                        <details className="mt-1 max-w-md text-xs text-fg-muted">
+                          <summary className="cursor-pointer text-accent">AI analysis</summary>
+                          {v.aiDescription ? (
+                            <p className="mt-1">
+                              <strong>Description:</strong> {v.aiDescription}
+                            </p>
+                          ) : null}
+                          {v.aiImpact ? (
+                            <p className="mt-1">
+                              <strong>Impact:</strong> {v.aiImpact}
+                            </p>
+                          ) : null}
+                          {v.aiRemediation ? (
+                            <p className="mt-1">
+                              <strong>Remediation:</strong> {v.aiRemediation}
+                            </p>
+                          ) : null}
+                        </details>
+                      ) : null}
                     </TD>
                     <TD>
                       <VulnStatusBadge status={v.status} />
                     </TD>
                     <TD>
-                      <form action={setVulnStatusAction} className="flex items-center gap-1.5">
-                        <input type="hidden" name="id" value={v.id} />
-                        <input type="hidden" name="scanId" value={scan.id} />
-                        <Select name="status" defaultValue={v.status} className="h-8 w-40 text-xs">
-                          {Object.entries(VULN_STATUS_LABEL).map(([val, label]) => (
-                            <option key={val} value={val}>
-                              {label}
-                            </option>
-                          ))}
-                        </Select>
-                        <Button type="submit" size="sm" variant="ghost">
-                          Set
-                        </Button>
-                      </form>
+                      <div className="flex items-center gap-1.5">
+                        <form action={setVulnStatusAction} className="flex items-center gap-1.5">
+                          <input type="hidden" name="id" value={v.id} />
+                          <input type="hidden" name="scanId" value={scan.id} />
+                          <Select name="status" defaultValue={v.status} className="h-8 w-36 text-xs">
+                            {Object.entries(VULN_STATUS_LABEL).map(([val, label]) => (
+                              <option key={val} value={val}>
+                                {label}
+                              </option>
+                            ))}
+                          </Select>
+                          <Button type="submit" size="sm" variant="ghost">
+                            Set
+                          </Button>
+                        </form>
+                        <form action={enrichVulnAction}>
+                          <input type="hidden" name="id" value={v.id} />
+                          <input type="hidden" name="scanId" value={scan.id} />
+                          <Button type="submit" size="sm" variant="outline">
+                            AI
+                          </Button>
+                        </form>
+                      </div>
                     </TD>
                   </TR>
                 ))}

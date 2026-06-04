@@ -1,4 +1,4 @@
-import { integer, jsonb, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
+import { boolean, integer, jsonb, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
 import { projects } from './schema';
 
 const id = () => uuid('id').primaryKey().defaultRandom();
@@ -128,6 +128,11 @@ export const vulnerabilities = pgTable('vulnerabilities', {
   status: text('status').notNull().default('open'),
   statusNote: text('status_note'),
   statusChangedAt: timestamp('status_changed_at', { withTimezone: true }),
+  // AI enrichment (api-and-integrations). Populated on demand; cached in ai_cache.
+  aiDescription: text('ai_description'),
+  aiImpact: text('ai_impact'),
+  aiRemediation: text('ai_remediation'),
+  isAiEnriched: boolean('is_ai_enriched').notNull().default(false),
   createdAt: createdAt(),
 });
 

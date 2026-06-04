@@ -11,10 +11,11 @@ import { Button } from '../../../components/ui/button';
 import { Badge } from '../../../components/ui/badge';
 import { EmptyState } from '../../../components/ui/empty-state';
 import { ALL_EVENT_TYPES } from '@vacti/integrations';
-import { projects, webhooks } from '@vacti/db';
+import { projects, webhooks, aiSettings } from '@vacti/db';
 import { getDb } from '../../../lib/db';
 import { getCurrentUser } from '../../../lib/session';
 import { addWebhookAction, deleteWebhookAction, testWebhookAction } from '../../../lib/integration-actions';
+import { saveAiSettingsAction } from '../../../lib/ai-actions';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,6 +28,7 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
   const projectId = sp.project ?? projectRows[0]?.id;
 
   const hooks = projectId ? await db.select().from(webhooks).where(eq(webhooks.projectId, projectId)) : [];
+  const [ai] = projectId ? await db.select().from(aiSettings).where(eq(aiSettings.projectId, projectId)) : [];
 
   return (
     <AppShell user={{ email: user.email, isSysAdmin: user.isSysAdmin }}>
@@ -135,6 +137,38 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
           </div>
         </div>
       )}
+
+      {projectId ? (
+        <div className="mt-8">
+          <h2 className="mb-3 font-display text-sm font-semibold uppercase tracking-wider text-fg-subtle">
+            AI enrichment
+          </h2>
+          <Card className="max-w-xl">
+            <CardContent className="pt-5">
+              <p className="mb-3 text-sm text-fg-muted">
+                Provider for vulnerability enrichment (description/impact/remediation). Set the matching API key in the
+                environment; features degrade gracefully without a key.
+              </p>
+              <form action={saveAiSettingsAction} className="flex items-end gap-3">
+                <input type="hidden" name="projectId" value={projectId} />
+                <div className="flex-1 space-y-1">
+                  <Label htmlFor="provider">Provider</Label>
+                  <Select id="provider" name="provider" defaultValue={ai?.provider ?? 'anthropic'}>
+                    <option value="anthropic">Anthropic (Claude)</option>
+                    <option value="openai">OpenAI</option>
+                    <option value="ollama">Ollama</option>
+                  </Select>
+                </div>
+                <div className="flex-1 space-y-1">
+                  <Label htmlFor="model">Model</Label>
+                  <Input id="model" name="model" defaultValue={ai?.model ?? 'claude-sonnet-4-6'} />
+                </div>
+                <Button type="submit">Save</Button>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
+      ) : null}
     </AppShell>
   );
 }
