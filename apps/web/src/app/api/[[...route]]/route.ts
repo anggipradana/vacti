@@ -1,29 +1,33 @@
-import { Hono } from 'hono';
 import { handle } from 'hono/vercel';
-import { eq } from 'drizzle-orm';
-import { hashToken } from '@vacti/auth';
-import { apiTokens, users } from '@vacti/db';
+import { z } from 'zod';
+import { buildApi } from '@vacti/api';
 import { getDb } from '../../../lib/db';
+import { getQueue } from '../../../lib/queue';
 
 export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
-const app = new Hono().basePath('/api');
+const scanJob = z.object({ scanId: z.string().uuid() });
 
-app.get('/health', (c) => c.json({ status: 'ok' }));
+// Built lazily so `next build` never evaluates env / connects to the DB.
+let handler: ReturnType<typeof handle> | undefined;
+function getHandler(): ReturnType<typeof handle> {
+  if (!handler) {
+    const app = buildApi({
+      db: getDb(),
+      enqueueScan: async (scanId) => {
+        const q = await getQueue();
+        await q.enqueue('scan', scanJob, { scanId });
+      },
+    });
+    handler = handle(app);
+  }
+  return handler;
+}
 
-app.get('/whoami', async (c) => {
-  const auth = c.req.header('authorization');
-  const token = auth?.startsWith('Bearer ') ? auth.slice(7) : undefined;
-  if (!token) return c.json({ error: 'missing bearer token' }, 401);
-  const db = getDb();
-  const [row] = await db
-    .select()
-    .from(apiTokens)
-    .where(eq(apiTokens.tokenHash, hashToken(token)));
-  if (!row) return c.json({ error: 'invalid token' }, 401);
-  const [user] = await db.select().from(users).where(eq(users.id, row.userId));
-  return c.json({ email: user?.email ?? null, tokenLabel: row.label });
-});
-
-export const GET = handle(app);
-export const POST = handle(app);
+export function GET(req: Request): Response | Promise<Response> {
+  return getHandler()(req);
+}
+export function POST(req: Request): Response | Promise<Response> {
+  return getHandler()(req);
+}
