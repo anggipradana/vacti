@@ -5,6 +5,7 @@ import { createDb, runMigrations, scans, targets, scanProfiles } from '@vacti/db
 import { createQueue } from '@vacti/queue';
 import { runScanPipeline, type ScanProfile } from '@vacti/recon';
 import { refreshThreatIntel } from '@vacti/threat-intel';
+import { sendProjectNotifications } from '@vacti/integrations';
 
 const scanJobSchema = z.object({ scanId: z.string().uuid() });
 const tiJobSchema = z.object({ projectId: z.string().uuid() });
@@ -45,6 +46,17 @@ async function main(): Promise<void> {
       { scanId, domain: target.domain, predefinedSubdomains: target.predefinedSubdomains, profile },
       { db, onProgress: (stage, msg) => console.log(`[scan ${scanId}] ${stage}: ${msg}`) },
     );
+    const [done] = await db.select().from(scans).where(eq(scans.id, scanId));
+    if (done) {
+      const counts = (done.counts ?? {}) as Record<string, number>;
+      await sendProjectNotifications(db, done.projectId, {
+        type: done.status === 'completed' ? 'scan.completed' : 'scan.failed',
+        title: `Scan ${done.status}: ${target.domain}`,
+        message: `${counts.endpoints ?? 0} endpoints · ${counts.ports ?? 0} ports · ${counts.vulnerabilities ?? 0} vulns`,
+        severity: done.status === 'completed' ? 'success' : 'error',
+        fields: { Status: done.status, Target: target.domain },
+      });
+    }
   });
 
   await queue.work('ti-refresh', tiJobSchema, async ({ projectId }) => {
