@@ -18,6 +18,7 @@ export const dynamic = 'force-dynamic';
 
 const FIELDS: { name: string; label: string }[] = [
   { name: 'companyName', label: 'Company name' },
+  { name: 'companyAddress', label: 'Address' },
   { name: 'companyWebsite', label: 'Website' },
   { name: 'companyEmail', label: 'Email' },
   { name: 'documentNumber', label: 'Document number' },
@@ -68,13 +69,25 @@ export default async function ReportSettingsPage({ searchParams }: { searchParam
                 />
               </div>
             ))}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-3 gap-3">
               <div className="space-y-1">
-                <Label htmlFor={`${kind}-primary`}>Primary color</Label>
+                <Label htmlFor={`${kind}-primary`}>Primary (teal)</Label>
                 <Input
                   id={`${kind}-primary`}
                   name="primaryColor"
-                  defaultValue={s?.primaryColor ?? (kind === 'ti' ? '#1a237e' : '#2563eb')}
+                  type="color"
+                  className="h-9 p-1"
+                  defaultValue={s?.primaryColor ?? '#069ec6'}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor={`${kind}-secondary`}>Cover (navy)</Label>
+                <Input
+                  id={`${kind}-secondary`}
+                  name="secondaryColor"
+                  type="color"
+                  className="h-9 p-1"
+                  defaultValue={s?.secondaryColor ?? '#08222b'}
                 />
               </div>
               <div className="space-y-1">
@@ -85,16 +98,18 @@ export default async function ReportSettingsPage({ searchParams }: { searchParam
                 </Select>
               </div>
             </div>
-            {kind === 'ti' ? (
-              <div className="space-y-1">
-                <Label htmlFor="ti-classif">Classification</Label>
-                <Input
-                  id="ti-classif"
-                  name="classification"
-                  defaultValue={s?.classification ?? 'CONFIDENTIAL — FOR INTERNAL USE ONLY'}
-                />
-              </div>
-            ) : null}
+            <div className="space-y-1">
+              <Label htmlFor={`${kind}-classif`}>Classification</Label>
+              <Input
+                id={`${kind}-classif`}
+                name="classification"
+                defaultValue={s?.classification ?? 'CONFIDENTIAL — FOR INTERNAL USE ONLY'}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor={`${kind}-footer`}>Footer text</Label>
+              <Input id={`${kind}-footer`} name="footerText" defaultValue={s?.footerText ?? 'CONFIDENTIAL'} />
+            </div>
             <Button type="submit">Save</Button>
           </form>
         </CardContent>

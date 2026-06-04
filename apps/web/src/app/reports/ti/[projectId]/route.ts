@@ -18,7 +18,7 @@ export const dynamic = 'force-dynamic';
 export async function GET(req: Request, ctx: { params: Promise<{ projectId: string }> }) {
   if (!(await getCurrentUser())) return new Response('Unauthorized', { status: 401 });
   const { projectId } = await ctx.params;
-  const lang = (new URL(req.url).searchParams.get('lang') === 'id' ? 'id' : 'en') as Lang;
+  const langParam = new URL(req.url).searchParams.get('lang');
   const db = getDb();
 
   const [project] = await db.select().from(projects).where(eq(projects.id, projectId));
@@ -37,6 +37,8 @@ export async function GET(req: Request, ctx: { params: Promise<{ projectId: stri
   const settings: ReportSettings = settingRow
     ? { ...DEFAULT_TI_SETTINGS, ...stripNulls(settingRow) }
     : DEFAULT_TI_SETTINGS;
+  // Explicit ?lang wins; otherwise fall back to the saved report language.
+  const lang = (langParam === 'id' || langParam === 'en' ? langParam : (settingRow?.language ?? 'en')) as Lang;
   const signatories: Signatory[] = signRows
     .sort((a, b) => a.sortOrder - b.sortOrder)
     .map((s) => ({ role: s.role as Signatory['role'], name: s.name, position: s.position }));
