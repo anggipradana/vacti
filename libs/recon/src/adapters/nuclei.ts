@@ -14,6 +14,12 @@ export interface VulnResult {
   tags: string[];
   request?: string;
   response?: string;
+  /** From the nuclei template's info block (not AI). */
+  description?: string;
+  remediation?: string;
+  cvss?: number;
+  cveIds: string[];
+  references: string[];
 }
 
 export interface NucleiOptions {
@@ -35,7 +41,20 @@ export function nucleiArgs(opts: NucleiOptions = {}): string[] {
 
 interface NucleiRaw {
   'template-id'?: string;
-  info?: { name?: string; severity?: string; tags?: string[] };
+  info?: {
+    name?: string;
+    severity?: string;
+    tags?: string[];
+    description?: string;
+    remediation?: string;
+    reference?: string[] | string;
+    classification?: {
+      'cvss-metrics'?: string;
+      'cvss-score'?: number | string;
+      'cve-id'?: string[] | string;
+      'cwe-id'?: string[] | string;
+    };
+  };
   type?: string;
   host?: string;
   port?: string;
@@ -46,11 +65,20 @@ interface NucleiRaw {
   response?: string;
 }
 
+/** Normalise a nuclei field that may be a string, array, or absent into a string[]. */
+function toList(v: string[] | string | undefined): string[] {
+  if (!v) return [];
+  return (Array.isArray(v) ? v : [v]).map((x) => String(x).trim()).filter(Boolean);
+}
+
 export function parseNucleiLine(line: string): VulnResult | null {
   try {
     const j = JSON.parse(line) as NucleiRaw;
     const id = j['template-id'];
     if (!id) return null;
+    const cls = j.info?.classification;
+    const rawScore = cls?.['cvss-score'];
+    const cvss = rawScore != null && rawScore !== '' ? Number(rawScore) : undefined;
     return {
       templateId: id,
       name: j.info?.name ?? id,
@@ -64,6 +92,11 @@ export function parseNucleiLine(line: string): VulnResult | null {
       tags: j.info?.tags ?? [],
       request: j.request,
       response: j.response,
+      description: j.info?.description?.trim() || undefined,
+      remediation: j.info?.remediation?.trim() || undefined,
+      cvss: cvss != null && Number.isFinite(cvss) ? cvss : undefined,
+      cveIds: toList(cls?.['cve-id']),
+      references: toList(j.info?.reference),
     };
   } catch {
     return null;

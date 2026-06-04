@@ -60,6 +60,7 @@ export function renderVaReport(d: VaReportData): string {
     .sort((a, b) => a.host.localeCompare(b.host));
 
   // Aggregate vulnerabilities by name.
+  type Vuln = VaReportData['vulns'][number];
   const byName = new Map<
     string,
     {
@@ -69,7 +70,11 @@ export function renderVaReport(d: VaReportData): string {
       type?: string | null;
       urls: Set<string>;
       statuses: Set<string>;
-      ai?: VaReportData['vulns'][number];
+      cves: Set<string>;
+      refs: Set<string>;
+      cvss?: number | null;
+      ai?: Vuln;
+      tpl?: Vuln;
     }
   >();
   for (const v of d.vulns) {
@@ -80,12 +85,18 @@ export function renderVaReport(d: VaReportData): string {
       type: v.type,
       urls: new Set<string>(),
       statuses: new Set<string>(),
+      cves: new Set<string>(),
+      refs: new Set<string>(),
     };
     g.count += 1;
     g.severity = Math.max(g.severity, v.severity);
     if (v.url ?? v.matchedAt) g.urls.add(hostOf(v.url ?? v.matchedAt!));
     g.statuses.add(v.status);
+    for (const c of v.cveIds ?? []) g.cves.add(c);
+    for (const r of v.references ?? []) g.refs.add(r);
+    if (v.cvss != null) g.cvss = Math.max(g.cvss ?? 0, v.cvss);
     if (!g.ai && (v.aiDescription || v.aiImpact || v.aiRemediation)) g.ai = v;
+    if (!g.tpl && (v.description || v.remediation)) g.tpl = v;
     byName.set(v.name, g);
   }
   const grouped = [...byName.values()].sort((a, b) => b.severity - a.severity || b.count - a.count);
@@ -282,6 +293,10 @@ export function renderVaReport(d: VaReportData): string {
     } else {
       grouped.forEach((g, i) => {
         const statuses = [...g.statuses].map((st) => VULN_STATUS_LABEL[st as VulnStatusValue] ?? st);
+        // Prefer AI-enriched prose, fall back to the nuclei template's own text.
+        const description = g.ai?.aiDescription ?? g.tpl?.description ?? '';
+        const impact = g.ai?.aiImpact ?? '';
+        const remediation = g.ai?.aiRemediation ?? g.tpl?.remediation ?? '';
         body.push(
           findingCard({
             index: i + 1,
@@ -289,10 +304,13 @@ export function renderVaReport(d: VaReportData): string {
             lang,
             title: g.name,
             tags: [`${g.count}×`, ...(g.type ? [g.type] : []), ...statuses.slice(0, 2)],
+            cvss: g.cvss,
+            cves: [...g.cves],
+            references: [...g.refs],
             blocks: [
-              { label: bi(lang, 'description'), text: g.ai?.aiDescription ?? '' },
-              { label: bi(lang, 'impact'), text: g.ai?.aiImpact ?? '' },
-              { label: bi(lang, 'remediation'), text: g.ai?.aiRemediation ?? '' },
+              { label: bi(lang, 'description'), text: description },
+              { label: bi(lang, 'impact'), text: impact },
+              { label: bi(lang, 'remediation'), text: remediation },
             ],
             urls: [...g.urls],
           }),

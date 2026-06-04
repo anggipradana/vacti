@@ -54,6 +54,12 @@ export interface VaReportData {
     aiDescription?: string | null;
     aiImpact?: string | null;
     aiRemediation?: string | null;
+    // From the nuclei template (non-AI).
+    cvss?: number | null;
+    cveIds?: string[];
+    references?: string[];
+    description?: string | null;
+    remediation?: string | null;
   }[];
 }
 

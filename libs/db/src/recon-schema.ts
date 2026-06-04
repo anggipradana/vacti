@@ -1,4 +1,4 @@
-import { boolean, integer, jsonb, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
+import { boolean, doublePrecision, integer, jsonb, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
 import { projects } from './schema';
 
 const id = () => uuid('id').primaryKey().defaultRandom();
@@ -124,6 +124,12 @@ export const vulnerabilities = pgTable('vulnerabilities', {
   tags: text('tags').array().notNull().default([]),
   request: text('request'),
   response: text('response'),
+  // From the nuclei template's info block (CVSS / CVE / references / template prose).
+  cvss: doublePrecision('cvss'),
+  cveIds: text('cve_ids').array().notNull().default([]),
+  references: text('references').array().notNull().default([]),
+  description: text('description'),
+  remediation: text('remediation'),
   // Triage status (see docs/planning/05-FINDING-STATUS.md). Only active statuses feed the risk score.
   status: text('status').notNull().default('open'),
   statusNote: text('status_note'),
