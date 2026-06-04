@@ -1,0 +1,199 @@
+import { eq } from 'drizzle-orm';
+import type { Database } from '@vacti/db';
+import { scans, scanActivity, commands, subdomains, endpoints, ports as portsTable, vulnerabilities } from '@vacti/db';
+import { runTool, type RunResult } from './runner';
+import { subfinderArgs, parseSubfinderLine } from './adapters/subfinder';
+import { httpxArgs, parseHttpxLine } from './adapters/httpx';
+import { naabuArgs, parseNaabuLine } from './adapters/naabu';
+import { nucleiArgs, parseNucleiLine, type VulnResult } from './adapters/nuclei';
+import { isWordPress } from './wordpress';
+
+export interface ScanProfile {
+  tools: { subfinder?: boolean; httpx?: boolean; naabu?: boolean; nuclei?: boolean; wordfence?: boolean };
+  ports: string;
+  severities: string[];
+  timeoutSec?: number;
+}
+
+export interface ScanInput {
+  scanId: string;
+  domain: string;
+  predefinedSubdomains?: string[];
+  profile: ScanProfile;
+  signal?: AbortSignal;
+}
+
+export interface PipelineDeps {
+  db: Database;
+  onProgress?: (stage: string, message: string) => void;
+}
+
+/**
+ * Linear recon pipeline: subfinder (skippable) → httpx → naabu → nuclei (+ conditional wordfence).
+ * Persists results, records every command + activity, and completes idempotently (status set once).
+ */
+export async function runScanPipeline(input: ScanInput, deps: PipelineDeps): Promise<void> {
+  const { db } = deps;
+  const timeoutMs = (input.profile.timeoutSec ?? 600) * 1000;
+  const counts = { subdomains: 0, endpoints: 0, ports: 0, vulnerabilities: 0 };
+
+  const activity = async (stage: string, status: string, message?: string): Promise<void> => {
+    await db.insert(scanActivity).values({ scanId: input.scanId, stage, status, message });
+    deps.onProgress?.(stage, message ?? status);
+  };
+  const record = async (tool: string, args: string[], r: RunResult): Promise<void> => {
+    await db
+      .insert(commands)
+      .values({ scanId: input.scanId, tool, argv: [tool, ...args], exitCode: r.code, durationMs: r.durationMs });
+  };
+  const insertVulns = async (vulns: VulnResult[]): Promise<void> => {
+    if (!vulns.length) return;
+    await db.insert(vulnerabilities).values(
+      vulns.map((v) => ({
+        scanId: input.scanId,
+        templateId: v.templateId,
+        name: v.name,
+        severity: v.severity,
+        type: v.type,
+        host: v.host,
+        port: v.port,
+        url: v.url,
+        matchedAt: v.matchedAt,
+        tags: v.tags,
+        request: v.request,
+        response: v.response,
+      })),
+    );
+    counts.vulnerabilities += vulns.length;
+  };
+
+  try {
+    await db
+      .update(scans)
+      .set({ status: 'running', stage: 'start', startedAt: new Date() })
+      .where(eq(scans.id, input.scanId));
+
+    // Stage 1 — subdomains (skipped when predefined list provided).
+    let hosts: string[] = [];
+    if (input.predefinedSubdomains?.length) {
+      hosts = input.predefinedSubdomains;
+      await activity('subfinder', 'skipped', 'predefined subdomains provided');
+    } else if (input.profile.tools.subfinder !== false) {
+      await activity('subfinder', 'running');
+      const args = subfinderArgs(input.domain);
+      const r = await runTool({ bin: 'subfinder', args, timeoutMs, signal: input.signal });
+      await record('subfinder', args, r);
+      const subs = r.lines.map(parseSubfinderLine).flatMap((s) => (s ? [s] : []));
+      hosts = subs.map((s) => s.host);
+      if (subs.length)
+        await db.insert(subdomains).values(subs.map((s) => ({ scanId: input.scanId, host: s.host, source: s.source })));
+      counts.subdomains = subs.length;
+      await activity('subfinder', 'completed', `${subs.length} subdomains`);
+    }
+    if (!hosts.length) hosts = [input.domain];
+
+    // Stage 2 — httpx probe + WordPress detection.
+    const live: { url: string; host: string; isWp: boolean }[] = [];
+    if (input.profile.tools.httpx !== false) {
+      await activity('httpx', 'running');
+      const args = httpxArgs();
+      const r = await runTool({ bin: 'httpx', args, input: hosts.join('\n') + '\n', timeoutMs, signal: input.signal });
+      await record('httpx', args, r);
+      const results = r.lines.map(parseHttpxLine).flatMap((x) => (x ? [x] : []));
+      if (results.length) {
+        await db.insert(endpoints).values(
+          results.map((h) => ({
+            scanId: input.scanId,
+            url: h.url,
+            host: h.host,
+            port: h.port,
+            scheme: h.scheme,
+            title: h.title,
+            webServer: h.webServer,
+            statusCode: h.statusCode,
+            contentLength: h.contentLength,
+            tech: h.tech,
+            isWordpress: isWordPress(h) ? 1 : 0,
+          })),
+        );
+      }
+      for (const h of results) live.push({ url: h.url, host: h.host, isWp: isWordPress(h) });
+      counts.endpoints = results.length;
+      await activity('httpx', 'completed', `${results.length} live endpoints`);
+    }
+
+    // Stage 3 — naabu port scan.
+    if (input.profile.tools.naabu !== false) {
+      await activity('naabu', 'running');
+      const scanHosts = [...new Set((live.length ? live.map((e) => e.host) : hosts).filter(Boolean))];
+      for (const host of scanHosts) {
+        const args = naabuArgs(host, input.profile.ports);
+        const r = await runTool({ bin: 'naabu', args, timeoutMs, signal: input.signal });
+        await record('naabu', args, r);
+        const seen = new Set<string>();
+        const ps = r.lines
+          .map(parseNaabuLine)
+          .flatMap((p) => (p ? [p] : []))
+          .filter((p) => {
+            const key = `${p.ip}:${p.port}:${p.protocol}`;
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+          });
+        if (ps.length)
+          await db
+            .insert(portsTable)
+            .values(ps.map((p) => ({ scanId: input.scanId, ip: p.ip, port: p.port, protocol: p.protocol })));
+        counts.ports += ps.length;
+      }
+      await activity('naabu', 'completed', `${counts.ports} open ports`);
+    }
+
+    // Stage 4 — nuclei (+ conditional wordfence on WordPress hosts).
+    if (input.profile.tools.nuclei !== false && live.length) {
+      await activity('nuclei', 'running');
+      const args = nucleiArgs({ severities: input.profile.severities });
+      const r = await runTool({
+        bin: 'nuclei',
+        args,
+        input: live.map((e) => e.url).join('\n') + '\n',
+        timeoutMs,
+        signal: input.signal,
+      });
+      await record('nuclei', args, r);
+      await insertVulns(r.lines.map(parseNucleiLine).flatMap((v) => (v ? [v] : [])));
+      await activity('nuclei', 'completed', `${counts.vulnerabilities} findings`);
+
+      const wpUrls = live.filter((e) => e.isWp).map((e) => e.url);
+      if (input.profile.tools.wordfence !== false && wpUrls.length) {
+        await activity('wordfence', 'running', `${wpUrls.length} WordPress host(s)`);
+        const wargs = nucleiArgs({ tags: ['wordpress'] });
+        const wr = await runTool({
+          bin: 'nuclei',
+          args: wargs,
+          input: wpUrls.join('\n') + '\n',
+          timeoutMs,
+          signal: input.signal,
+        });
+        await record('nuclei', wargs, wr);
+        await insertVulns(wr.lines.map(parseNucleiLine).flatMap((v) => (v ? [v] : [])));
+        await activity('wordfence', 'completed');
+      }
+    }
+
+    await db
+      .update(scans)
+      .set({ status: 'completed', stage: 'done', finishedAt: new Date(), counts })
+      .where(eq(scans.id, input.scanId));
+    await activity('done', 'completed');
+  } catch (err) {
+    const aborted = input.signal?.aborted ?? false;
+    const message = err instanceof Error ? err.message : String(err);
+    await db
+      .update(scans)
+      .set({ status: aborted ? 'cancelled' : 'failed', finishedAt: new Date(), error: message, counts })
+      .where(eq(scans.id, input.scanId));
+    await activity('done', aborted ? 'cancelled' : 'failed', message);
+    if (!aborted) throw err;
+  }
+}

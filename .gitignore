@@ -20,3 +20,4 @@ tmp/
 
 # TS incremental build info
 *.tsbuildinfo
+/.scratch/

@@ -13,3 +13,7 @@ Values that govern every convention and practice below.
    server-side; no secret in logs or commits.
 6. **Documentation first (Diátaxis).** Tutorials, how-to, reference, explanation — kept current.
 7. **Explicit over implicit.** Conventional Commits, declared dependencies, quality gates in CI.
+
+8. **API-first.** Every operation is exposed via a typed REST API (Bearer-token auth) from the
+   start, so the platform is scriptable, testable, and integrable. A new resource ships with its
+   endpoint in the same change. See [API & deploy](../../docs/planning/03-API-AND-DEPLOY.md).
