@@ -19,8 +19,8 @@ export async function saveReportSettingsAction(formData: FormData) {
   const values = {
     projectId,
     kind,
-    primaryColor: v('primaryColor') ?? (kind === 'ti' ? '#1a237e' : '#2563eb'),
-    secondaryColor: v('secondaryColor') ?? (kind === 'ti' ? '#0d1b2a' : '#0b1220'),
+    primaryColor: v('primaryColor') ?? '#069ec6',
+    secondaryColor: v('secondaryColor') ?? '#08222b',
     companyName: v('companyName'),
     companyAddress: v('companyAddress'),
     companyEmail: v('companyEmail'),

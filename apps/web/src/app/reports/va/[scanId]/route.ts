@@ -27,7 +27,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ scanId: string 
   if (!(await getCurrentUser())) return new Response('Unauthorized', { status: 401 });
   const { scanId } = await ctx.params;
   const url = new URL(req.url);
-  const lang = (url.searchParams.get('lang') === 'id' ? 'id' : 'en') as Lang;
+  const langParam = url.searchParams.get('lang');
   const t = url.searchParams.get('type');
   const type = t === 'recon' || t === 'vuln' ? t : 'full';
   const db = getDb();
@@ -48,6 +48,8 @@ export async function GET(req: Request, ctx: { params: Promise<{ scanId: string 
   const settings: ReportSettings = settingRow
     ? { ...DEFAULT_VA_SETTINGS, ...stripNulls(settingRow) }
     : DEFAULT_VA_SETTINGS;
+  // Explicit ?lang wins; otherwise fall back to the saved report language.
+  const lang = (langParam === 'id' || langParam === 'en' ? langParam : (settingRow?.language ?? 'en')) as Lang;
   const signatories: Signatory[] = signRows
     .sort((a, b) => a.sortOrder - b.sortOrder)
     .map((s) => ({ role: s.role as Signatory['role'], name: s.name, position: s.position }));

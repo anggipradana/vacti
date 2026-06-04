@@ -12,8 +12,8 @@ export const reportSettings = pgTable(
       .notNull()
       .references(() => projects.id, { onDelete: 'cascade' }),
     kind: text('kind').notNull().default('va'), // va | ti
-    primaryColor: text('primary_color').notNull().default('#2563eb'),
-    secondaryColor: text('secondary_color').notNull().default('#0b1220'),
+    primaryColor: text('primary_color').notNull().default('#069ec6'),
+    secondaryColor: text('secondary_color').notNull().default('#08222b'),
     companyName: text('company_name'),
     companyAddress: text('company_address'),
     companyEmail: text('company_email'),
