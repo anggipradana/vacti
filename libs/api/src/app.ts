@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { desc, eq } from 'drizzle-orm';
+import { desc, eq, count as sqlCount } from 'drizzle-orm';
 import { z } from 'zod';
 import { hashToken } from '@vacti/auth';
 import {
@@ -163,10 +163,15 @@ export function buildApi(deps: ApiDeps): Hono<{ Variables: Vars }> {
   });
   app.get('/scans', async (c) => {
     const projectId = c.req.query('projectId');
-    const rows = projectId
-      ? await db.select().from(scans).where(eq(scans.projectId, projectId)).orderBy(desc(scans.createdAt))
-      : await db.select().from(scans).orderBy(desc(scans.createdAt));
-    return c.json({ scans: rows });
+    // Server-side pagination: ?limit (1..100, default 25) & ?offset.
+    const limit = Math.min(100, Math.max(1, Number(c.req.query('limit') ?? 25) || 25));
+    const offset = Math.max(0, Number(c.req.query('offset') ?? 0) || 0);
+    const where = projectId ? eq(scans.projectId, projectId) : undefined;
+    const base = db.select().from(scans);
+    const rows = await (where ? base.where(where) : base).orderBy(desc(scans.createdAt)).limit(limit).offset(offset);
+    const countBase = db.select({ n: sqlCount() }).from(scans);
+    const totalRows = await (where ? countBase.where(where) : countBase);
+    return c.json({ scans: rows, total: Number(totalRows[0]?.n ?? 0), limit, offset });
   });
   app.get('/scans/:id', async (c) => {
     const id = c.req.param('id');
