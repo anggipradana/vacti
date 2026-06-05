@@ -10,6 +10,7 @@ import { EmptyState } from '../../components/ui/empty-state';
 import { Button } from '../../components/ui/button';
 import { NewScanDialog } from '../../components/new-scan-dialog';
 import { ProjectSwitcher } from '../../components/project-switcher';
+import { getActiveProjectId } from '../../lib/active-project';
 import { scans, targets, scanProfiles, projects } from '@vacti/db';
 import { getDb } from '../../lib/db';
 import { getCurrentUser } from '../../lib/session';
@@ -38,7 +39,7 @@ export default async function ScansPage({
   const page = Math.max(1, Number(sp.page ?? 1) || 1);
   const offset = (page - 1) * PAGE_SIZE;
   const projectRows = await db.select().from(projects).orderBy(desc(projects.createdAt));
-  const projectId = sp.project ?? projectRows[0]?.id;
+  const projectId = await getActiveProjectId(sp.project, projectRows);
   // Scope scans + targets to the active project (multi-project workspaces).
   const scanWhere = projectId ? eq(scans.projectId, projectId) : undefined;
   const [scanRows, targetRows, profileRows, countRows] = await Promise.all([

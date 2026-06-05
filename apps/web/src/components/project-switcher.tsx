@@ -1,9 +1,11 @@
 import { Select } from './ui/select';
 import { Button } from './ui/button';
+import { selectProjectAction } from '../lib/active-project';
 
 /**
- * Active-project selector for project-scoped pages (targets, scans). Submits as a GET form so the
- * page re-renders scoped to `?project=`, mirroring the Threat Intelligence page's switcher.
+ * Active-project selector for project-scoped pages (dashboard, targets, scans, schedules). Switching
+ * persists the choice in a cookie (via selectProjectAction) so every page stays on the same project
+ * as you navigate, rather than each page independently defaulting to the most recent project.
  */
 export function ProjectSwitcher({
   projects,
@@ -16,7 +18,8 @@ export function ProjectSwitcher({
 }) {
   if (projects.length === 0) return null;
   return (
-    <form method="get" action={basePath} className="flex items-center gap-2">
+    <form action={selectProjectAction} className="flex items-center gap-2">
+      <input type="hidden" name="basePath" value={basePath} />
       <Select name="project" defaultValue={current} aria-label="Active project" className="w-52">
         {projects.map((p) => (
           <option key={p.id} value={p.id}>

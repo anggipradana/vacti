@@ -17,6 +17,7 @@ import { getDb } from '../../lib/db';
 import { getCurrentUser } from '../../lib/session';
 import { createScheduleAction, toggleScheduleAction, deleteScheduleAction } from '../../lib/recon-actions';
 import { ProjectSwitcher } from '../../components/project-switcher';
+import { getActiveProjectId } from '../../lib/active-project';
 
 export const dynamic = 'force-dynamic';
 
@@ -33,7 +34,7 @@ export default async function SchedulesPage({ searchParams }: { searchParams: Pr
   const canManage = userCan(user, Permission.InitiateScans);
   const db = getDb();
   const projectRows = await db.select().from(projects).orderBy(desc(projects.createdAt));
-  const projectId = (await searchParams).project ?? projectRows[0]?.id;
+  const projectId = await getActiveProjectId((await searchParams).project, projectRows);
   // Schedules have no projectId of their own, so scope them via the active project's targets.
   const [targetRows, profileRows, allSchedules] = await Promise.all([
     projectId

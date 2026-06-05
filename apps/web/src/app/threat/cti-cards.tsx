@@ -76,24 +76,30 @@ export async function CtiCards({ projectId }: { projectId: string }) {
               ))}
             </div>
           ) : null}
-          <div className="text-xs font-semibold uppercase tracking-wide text-fg-subtle">Recently disclosed</div>
-          {ransomware.recent.length === 0 ? (
-            <p className="py-2 text-sm text-fg-muted">Feed unavailable.</p>
-          ) : (
-            <ul className="mt-1 divide-y divide-border">
-              {ransomware.recent.slice(0, 8).map((v, i) => (
-                <li key={`${v.title}-${i}`} className="flex items-center justify-between gap-2 py-1.5 text-sm">
-                  <span className="min-w-0 truncate">
-                    {v.country === 'ID' ? <Flame className="mr-1 inline size-3 text-danger" /> : null}
-                    {v.title || v.website || 'unknown'}
-                  </span>
-                  <span className="shrink-0 text-xs text-fg-subtle">
-                    {v.group} · {v.country} · {v.discovered.slice(0, 10)}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
+          <div className="text-xs font-semibold uppercase tracking-wide text-fg-subtle">
+            {ransomware.indonesia.length ? 'Recently disclosed · Indonesia' : 'Recently disclosed'}
+          </div>
+          {(() => {
+            // Default to the Indonesia view; fall back to the global feed when no ID victims are in window.
+            const feed = ransomware.indonesia.length ? ransomware.indonesia : ransomware.recent;
+            return feed.length === 0 ? (
+              <p className="py-2 text-sm text-fg-muted">Feed unavailable.</p>
+            ) : (
+              <ul className="mt-1 divide-y divide-border">
+                {feed.slice(0, 8).map((v, i) => (
+                  <li key={`${v.title}-${i}`} className="flex items-center justify-between gap-2 py-1.5 text-sm">
+                    <span className="min-w-0 truncate">
+                      {v.country === 'ID' ? <Flame className="mr-1 inline size-3 text-danger" /> : null}
+                      {v.title || v.website || 'unknown'}
+                    </span>
+                    <span className="shrink-0 text-xs text-fg-subtle">
+                      {v.group} · {v.country} · {v.discovered.slice(0, 10)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            );
+          })()}
         </CardContent>
       </Card>
 

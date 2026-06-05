@@ -17,6 +17,7 @@ import { getDb } from '../../lib/db';
 import { getCurrentUser } from '../../lib/session';
 import { createTargetAction } from '../../lib/recon-actions';
 import { ProjectSwitcher } from '../../components/project-switcher';
+import { getActiveProjectId } from '../../lib/active-project';
 
 export const dynamic = 'force-dynamic';
 
@@ -25,7 +26,7 @@ export default async function TargetsPage({ searchParams }: { searchParams: Prom
   if (!user) redirect('/login');
   const db = getDb();
   const projectRows = await db.select().from(projects).orderBy(desc(projects.createdAt));
-  const projectId = (await searchParams).project ?? projectRows[0]?.id;
+  const projectId = await getActiveProjectId((await searchParams).project, projectRows);
   // Scope targets to the active project (multi-project workspaces, like the Threat page).
   const targetRows = projectId
     ? await db.select().from(targets).where(eq(targets.projectId, projectId)).orderBy(desc(targets.createdAt))
