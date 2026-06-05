@@ -64,6 +64,12 @@ export interface VaReportData {
     description?: string | null;
     remediation?: string | null;
   }[];
+  /** CVE ids (upper-case) present in the CISA KEV catalog (actively exploited). */
+  kevCves?: string[];
+  /** Subset of kevCves CISA flags as used in ransomware campaigns. */
+  kevRansomwareCves?: string[];
+  /** EPSS exploit probability (0..1) keyed by upper-case CVE id. */
+  epss?: Record<string, number>;
 }
 
 export interface TiReportData {
