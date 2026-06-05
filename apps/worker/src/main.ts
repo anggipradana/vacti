@@ -35,6 +35,17 @@ async function main(): Promise<void> {
   console.log('[worker] running migrations…');
   await runMigrations(env.DATABASE_URL);
   const { db } = createDb(env.DATABASE_URL);
+
+  // Reap orphaned scans: a freshly-started worker means nothing is mid-flight, so any scan still
+  // marked 'running' was abandoned by a worker that died (restart/crash) — its pg-boss job is gone
+  // and nothing will ever resume it. Fail it cleanly so it never stays stuck ("no stuck scans").
+  const reaped = await db
+    .update(scans)
+    .set({ status: 'failed', stage: 'interrupted', error: 'Interrupted (worker restarted)', finishedAt: new Date() })
+    .where(eq(scans.status, 'running'))
+    .returning({ id: scans.id });
+  if (reaped.length) console.log(`[worker] reaped ${reaped.length} orphaned scan(s) stuck in 'running'`);
+
   const queue = createQueue(env.DATABASE_URL);
   await queue.start();
 
