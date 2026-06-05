@@ -16,6 +16,9 @@ export interface ReportSettings {
   showExecutiveSummary?: boolean | null;
   executiveSummary?: string | null;
   executiveSummaryId?: string | null;
+  /** Optional AI-generated general recommendations (overrides the deterministic fallback). */
+  aiRecommendations?: string | null;
+  aiRecommendationsId?: string | null;
 }
 
 export interface Signatory {

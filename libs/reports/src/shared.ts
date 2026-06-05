@@ -50,6 +50,8 @@ export function cover(opts: {
       <div class="kicker">${escapeHtml(kicker)}</div>
       <h1>${h1}</h1>
       <div class="target"><span class="tg">▸</span> ${escapeHtml(target)}</div>
+    </div>
+    <div class="cover-bot">
       <div class="cover-meta">${cells}</div>
       <div class="cover-foot"><div class="org">${escapeHtml(opts.org ?? s.companyName ?? 'vacti')}</div><div>${escapeHtml(s.classification ?? '')}</div></div>
     </div>

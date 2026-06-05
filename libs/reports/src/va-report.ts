@@ -32,6 +32,75 @@ function hostOf(u: string): string {
   }
 }
 
+type Lang = 'en' | 'id';
+type Counts = { crit: number; high: number; med: number; low: number; info: number };
+
+/**
+ * Finding-driven general recommendations (the fallback when no AI-generated set is supplied).
+ * Reads severity counts + finding name/type patterns and emits prioritised, actionable guidance.
+ */
+function generalRecommendations(vulns: VaReportData['vulns'], counts: Counts, active: number, lang: Lang): string[] {
+  const id = lang === 'id';
+  const hay = vulns.map((v) => `${v.name} ${v.type ?? ''}`.toLowerCase()).join(' | ');
+  const has = (re: RegExp) => re.test(hay);
+  const recs: string[] = [];
+  const ch = counts.crit + counts.high;
+  if (ch > 0)
+    recs.push(
+      id
+        ? `Prioritaskan remediasi ${ch} temuan tingkat Kritis/Tinggi terlebih dahulu dengan SLA terikat.`
+        : `Prioritise remediation of the ${ch} Critical/High findings first, under a bound SLA.`,
+    );
+  if (has(/tls|ssl|cipher|deprecated/))
+    recs.push(
+      id
+        ? 'Perketat konfigurasi TLS: nonaktifkan protokol & cipher usang (TLS 1.0/1.1, cipher lemah), aktifkan TLS 1.2/1.3.'
+        : 'Harden TLS: disable deprecated protocols & weak ciphers (TLS 1.0/1.1), enable TLS 1.2/1.3 only.',
+    );
+  if (has(/header|hsts|csp|x-frame|content-security|x-content-type/))
+    recs.push(
+      id
+        ? 'Terapkan header keamanan: HSTS, Content-Security-Policy, X-Frame-Options, X-Content-Type-Options.'
+        : 'Apply security headers: HSTS, Content-Security-Policy, X-Frame-Options, X-Content-Type-Options.',
+    );
+  if (has(/cookie|samesite/))
+    recs.push(
+      id
+        ? 'Set atribut cookie: SameSite=Strict/Lax, Secure, dan HttpOnly pada cookie sesi.'
+        : 'Set cookie attributes: SameSite=Strict/Lax, Secure, and HttpOnly on session cookies.',
+    );
+  if (has(/swagger|api|exposed|exposure|directory|listing/))
+    recs.push(
+      id
+        ? 'Batasi akses ke dokumentasi/endpoint API & path internal yang terekspos publik.'
+        : 'Restrict public access to exposed API docs/endpoints and internal paths.',
+    );
+  if (has(/spf|dmarc|dkim|dns|mail/))
+    recs.push(
+      id
+        ? 'Perkuat email/DNS: terapkan SPF, DKIM, dan DMARC (kebijakan reject/quarantine).'
+        : 'Strengthen email/DNS posture: enforce SPF, DKIM, and DMARC (reject/quarantine policy).',
+    );
+  if (has(/wordpress|cms|plugin/))
+    recs.push(
+      id
+        ? 'Perbarui core CMS & seluruh plugin ke versi stabil terbaru; aktifkan pembaruan otomatis.'
+        : 'Update the CMS core & all plugins to the latest stable release; enable auto-updates.',
+    );
+  // Always-on closers.
+  recs.push(
+    id
+      ? `Verifikasi setiap remediasi dan pantau ${active} temuan aktif hingga tertutup.`
+      : `Verify each remediation and track the ${active} active findings to closure.`,
+  );
+  recs.push(
+    id
+      ? 'Jadwalkan pemindaian berkala (scheduled scan) & pemantauan threat-intelligence berkelanjutan.'
+      : 'Schedule recurring scans and maintain continuous threat-intelligence monitoring.',
+  );
+  return recs.slice(0, 7);
+}
+
 export function renderVaReport(d: VaReportData): string {
   const l = labels(d.lang);
   const s = d.settings;
@@ -144,6 +213,13 @@ export function renderVaReport(d: VaReportData): string {
   if (showVuln)
     toc.push({
       num: tnum(++n),
+      primary: pri(lang, 'generalRecommendations'),
+      secondary: sec(lang, 'generalRecommendations'),
+      page: '',
+    });
+  if (showVuln)
+    toc.push({
+      num: tnum(++n),
       primary: pri(lang, 'findingsOverview'),
       secondary: sec(lang, 'findingsOverview'),
       page: '',
@@ -216,7 +292,22 @@ export function renderVaReport(d: VaReportData): string {
     ]),
   );
 
-  // ---- 02 Findings overview (donut + bars) ----
+  // ---- General recommendations (AI override, else a finding-driven fallback) ----
+  if (showVuln) {
+    const aiRec = lang === 'id' ? (s.aiRecommendationsId ?? s.aiRecommendations) : s.aiRecommendations;
+    const recItems = aiRec?.trim()
+      ? aiRec
+          .split('\n')
+          .map((x) => x.replace(/^[-*•\d.\s]+/, '').trim())
+          .filter(Boolean)
+      : generalRecommendations(d.vulns, counts, active, lang);
+    body.push(
+      numberedSection(lang, next(), pri(lang, 'generalRecommendations')),
+      `<ul>${recItems.map((r) => `<li>${escapeHtml(r)}</li>`).join('')}</ul>`,
+    );
+  }
+
+  // ---- Findings overview (donut + bars) ----
   if (showVuln) {
     const sevRows = [
       { label: l.critical, value: counts.crit, color: SEV_HEX[4] },

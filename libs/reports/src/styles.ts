@@ -44,7 +44,7 @@ export function reportCss(primary: string, secondary: string, footer: string, cl
   .en { color: var(--muted); font-weight: 400; }
 
   /* ---------- Cover ---------- */
-  .cover { height: 297mm; background: var(--navy); color: #eaf4f7; position: relative; overflow: hidden; display: flex; flex-direction: column; padding: 60px 60px 70px; }
+  .cover { height: 297mm; background: var(--navy); color: #eaf4f7; position: relative; overflow: hidden; display: flex; flex-direction: column; justify-content: space-between; padding: 60px 60px 70px; }
   .cover .grid-bg { position: absolute; inset: 0; background-image: linear-gradient(rgba(255,255,255,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.045) 1px,transparent 1px); background-size: 38px 38px; -webkit-mask-image: radial-gradient(120% 90% at 80% 10%,#000 0%,transparent 70%); mask-image: radial-gradient(120% 90% at 80% 10%,#000 0%,transparent 70%); }
   .cover .glow { position: absolute; width: 520px; height: 520px; border-radius: 50%; right: -160px; top: -150px; background: radial-gradient(circle,rgba(6,158,198,.4),transparent 62%); filter: blur(8px); }
   .cover-top { display: flex; align-items: center; justify-content: space-between; position: relative; }
@@ -53,7 +53,8 @@ export function reportCss(primary: string, secondary: string, footer: string, cl
   .cover-top .mark .logo { max-height: 40px; max-width: 150px; object-fit: contain; }
   .cover-top .mark .nm { font-family:'Space Grotesk'; font-weight: 600; font-size: 17px; color: #fff; }
   .conf-pill { font-family:'IBM Plex Mono'; font-size: 10px; letter-spacing: .22em; border: 1px solid rgba(234,88,12,.7); color: #ff9d63; padding: 6px 13px; border-radius: 2px; text-transform: uppercase; font-weight: 600; }
-  .cover-mid { margin-top: auto; position: relative; }
+  .cover-mid { position: relative; }
+  .cover-bot { position: relative; }
   .cover .kicker { font-family:'IBM Plex Mono'; font-size: 12px; letter-spacing: .3em; text-transform: uppercase; color: var(--teal); margin-bottom: 22px; display: flex; align-items: center; gap: 12px; }
   .cover .kicker::before { content: ''; width: 42px; height: 2px; background: var(--teal); display: inline-block; }
   .cover h1 { font-family:'Space Grotesk'; font-size: 62px; line-height: .98; letter-spacing: -.02em; color: #fff; font-weight: 700; }
