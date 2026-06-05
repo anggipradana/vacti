@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { and, eq } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { isVulnStatus, isLeakStatus, Permission, REVIEW_TOGGLE } from '@vacti/core';
 import { vulnerabilities, leakcheckData } from '@vacti/db';
 import { getDb } from './db';
@@ -19,16 +19,17 @@ export async function setVulnStatusAction(formData: FormData) {
 }
 
 /** Bulk one-click: mark every still-open vuln of a scan as reviewed (on progress). */
+/** Bulk-set every vulnerability of a scan to a CHOSEN triage status (defaults to the review status). */
 export async function bulkReviewVulnsAction(formData: FormData) {
   await requirePermission(Permission.ModifyScanResults);
   const scanId = String(formData.get('scanId') ?? '');
-  if (!scanId) return;
-  const t = REVIEW_TOGGLE.vuln;
+  const status = String(formData.get('status') || REVIEW_TOGGLE.vuln.reviewed);
+  if (!scanId || !isVulnStatus(status)) return;
   await getDb()
     .update(vulnerabilities)
-    .set({ status: t.reviewed, statusChangedAt: new Date() })
-    .where(and(eq(vulnerabilities.scanId, scanId), eq(vulnerabilities.status, t.base)));
-  if (scanId) revalidatePath(`/scans/${scanId}`);
+    .set({ status, statusChangedAt: new Date() })
+    .where(eq(vulnerabilities.scanId, scanId));
+  revalidatePath(`/scans/${scanId}`);
 }
 
 export async function setLeakStatusAction(formData: FormData) {

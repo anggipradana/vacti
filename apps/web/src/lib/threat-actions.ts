@@ -1,9 +1,9 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { and, eq } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { z } from 'zod';
-import { Permission, isNewsStatus, REVIEW_TOGGLE } from '@vacti/core';
+import { Permission, isNewsStatus, isLeakStatus, REVIEW_TOGGLE } from '@vacti/core';
 import { isSector } from '@vacti/threat-intel';
 import { manualIndicators, leakcheckData, projects, threatNews } from '@vacti/db';
 import { getDb } from './db';
@@ -43,29 +43,26 @@ export async function setNewsStatusAction(formData: FormData) {
   revalidatePath('/threat');
 }
 
-/** Bulk one-click: mark every still-unreviewed news headline of a sector as reviewed. */
+/** Bulk-set every news headline of a sector to a CHOSEN status (defaults to the review status). */
 export async function bulkReviewNewsAction(formData: FormData) {
   await requirePermission(Permission.ModifyScanResults);
   const sector = String(formData.get('sector') ?? '');
-  if (!isSector(sector)) return;
-  const t = REVIEW_TOGGLE.news;
-  await getDb()
-    .update(threatNews)
-    .set({ status: t.reviewed })
-    .where(and(eq(threatNews.sector, sector), eq(threatNews.status, t.base)));
+  const status = String(formData.get('status') || REVIEW_TOGGLE.news.reviewed);
+  if (!isSector(sector) || !isNewsStatus(status)) return;
+  await getDb().update(threatNews).set({ status }).where(eq(threatNews.sector, sector));
   revalidatePath('/threat');
 }
 
-/** Bulk one-click: mark every still-untriaged leak of a project as reviewed (investigating). */
+/** Bulk-set every leaked credential of a project to a CHOSEN triage status. */
 export async function bulkReviewLeaksAction(formData: FormData) {
   await requirePermission(Permission.ModifyScanResults);
   const projectId = String(formData.get('projectId') ?? '');
-  if (!projectId) return;
-  const t = REVIEW_TOGGLE.leak;
+  const status = String(formData.get('status') || REVIEW_TOGGLE.leak.reviewed);
+  if (!projectId || !isLeakStatus(status)) return;
   await getDb()
     .update(leakcheckData)
-    .set({ status: t.reviewed, checked: true })
-    .where(and(eq(leakcheckData.projectId, projectId), eq(leakcheckData.status, t.base)));
+    .set({ status, checked: status !== 'new' })
+    .where(eq(leakcheckData.projectId, projectId));
   revalidatePath('/threat');
 }
 

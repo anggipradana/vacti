@@ -221,10 +221,17 @@ export default async function ThreatPage({
             </form>
             {canTriage ? (
               <>
-                <form action={bulkReviewNewsAction}>
+                <form action={bulkReviewNewsAction} className="flex items-center gap-1.5">
                   <input type="hidden" name="sector" value={sector} />
+                  <Select name="status" defaultValue="reviewed" className="h-8 w-36 text-xs" aria-label="Bulk status">
+                    {Object.entries(NEWS_STATUS_LABEL).map(([val, label]) => (
+                      <option key={val} value={val}>
+                        Mark all: {label}
+                      </option>
+                    ))}
+                  </Select>
                   <Button type="submit" variant="outline" size="sm">
-                    Mark all reviewed
+                    Apply
                   </Button>
                 </form>
                 <form action={setSectorAction} className="flex items-center gap-2">
@@ -325,10 +332,22 @@ export default async function ThreatPage({
               </Button>
             </form>
             {canTriage ? (
-              <form action={bulkReviewLeaksAction}>
+              <form action={bulkReviewLeaksAction} className="flex items-center gap-1.5">
                 <input type="hidden" name="projectId" value={projectId} />
+                <Select
+                  name="status"
+                  defaultValue="investigating"
+                  className="h-8 w-40 text-xs"
+                  aria-label="Bulk status"
+                >
+                  {Object.entries(LEAK_STATUS_LABEL).map(([val, label]) => (
+                    <option key={val} value={val}>
+                      Mark all: {label}
+                    </option>
+                  ))}
+                </Select>
                 <Button type="submit" variant="outline" size="sm">
-                  Mark all reviewed
+                  Apply
                 </Button>
               </form>
             ) : null}
