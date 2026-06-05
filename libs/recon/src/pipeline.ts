@@ -224,7 +224,7 @@ export async function runScanPipeline(input: ScanInput, deps: PipelineDeps): Pro
       await activity('naabu', 'completed', `${counts.ports} open ports`);
     }
 
-    // Stage 4 — nuclei (+ conditional wordfence on WordPress hosts).
+    // Stage 4 — nuclei.
     checkAbort();
     if (input.profile.tools.nuclei !== false && live.length) {
       await activity('nuclei', 'running');
@@ -250,22 +250,25 @@ export async function runScanPipeline(input: ScanInput, deps: PipelineDeps): Pro
       await record('nuclei', args, r);
       await insertVulns(r.lines.map(parseNucleiLine).flatMap((v) => (v ? [v] : [])));
       await activity('nuclei', 'completed', `${counts.vulnerabilities} findings`);
+    }
 
-      const wpUrls = live.filter((e) => e.isWp).map((e) => e.url);
-      if (input.profile.tools.wordfence !== false && wpUrls.length) {
-        await activity('wordfence', 'running', `${wpUrls.length} WordPress host(s)`);
-        const wargs = nucleiArgs({ tags: ['wordpress'] });
-        const wr = await runTool({
-          bin: 'nuclei',
-          args: wargs,
-          input: wpUrls.join('\n') + '\n',
-          timeoutMs,
-          signal: input.signal,
-        });
-        await record('nuclei', wargs, wr);
-        await insertVulns(wr.lines.map(parseNucleiLine).flatMap((v) => (v ? [v] : [])));
-        await activity('wordfence', 'completed');
-      }
+    // Stage 4b — wordfence: WordPress-focused nuclei templates on detected WP hosts. Runs
+    // independently of the main nuclei toggle, so a profile can run wordfence with nuclei off.
+    checkAbort();
+    const wpUrls = live.filter((e) => e.isWp).map((e) => e.url);
+    if (input.profile.tools.wordfence !== false && wpUrls.length) {
+      await activity('wordfence', 'running', `${wpUrls.length} WordPress host(s)`);
+      const wargs = nucleiArgs({ tags: ['wordpress'] });
+      const wr = await runTool({
+        bin: 'nuclei',
+        args: wargs,
+        input: wpUrls.join('\n') + '\n',
+        timeoutMs,
+        signal: input.signal,
+      });
+      await record('nuclei', wargs, wr);
+      await insertVulns(wr.lines.map(parseNucleiLine).flatMap((v) => (v ? [v] : [])));
+      await activity('wordfence', 'completed');
     }
 
     await db
