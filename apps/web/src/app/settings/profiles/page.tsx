@@ -19,7 +19,6 @@ import { saveProfileAction, deleteProfileAction } from '../../../lib/recon-actio
 
 export const dynamic = 'force-dynamic';
 
-const TOOLS = ['subfinder', 'httpx', 'naabu', 'nuclei', 'wordfence'] as const;
 const SEVS = ['critical', 'high', 'medium', 'low', 'info'] as const;
 
 export default async function ProfilesPage() {
@@ -45,77 +44,131 @@ export default async function ProfilesPage() {
                   <Label htmlFor="name">Name</Label>
                   <Input id="name" name="name" placeholder="e.g. Deep w/ custom UA" required />
                 </div>
-                <div className="space-y-1.5">
-                  <Label>Tools</Label>
-                  <div className="flex flex-wrap gap-2 text-xs">
-                    {TOOLS.map((t) => (
-                      <label key={t} className="flex items-center gap-1 rounded-md border border-border px-2 py-1">
-                        <input type="checkbox" name="tools" value={t} defaultChecked={t !== 'wordfence'} /> {t}
-                      </label>
-                    ))}
+
+                <p className="text-xs text-fg-subtle">
+                  Each tool runs in order and has its own options below. Untick a tool to skip its stage.
+                </p>
+
+                {/* subfinder — subdomain discovery */}
+                <fieldset className="space-y-2 rounded-md border border-border p-3">
+                  <legend className="flex items-center gap-2 px-1 text-sm font-medium">
+                    <input type="checkbox" name="tools" value="subfinder" defaultChecked /> subfinder
+                  </legend>
+                  <p className="text-xs text-fg-subtle">
+                    Subdomain discovery. Untick to skip and use the target&apos;s predefined subdomains.
+                  </p>
+                </fieldset>
+
+                {/* httpx — HTTP probe */}
+                <fieldset className="space-y-2 rounded-md border border-border p-3">
+                  <legend className="flex items-center gap-2 px-1 text-sm font-medium">
+                    <input type="checkbox" name="tools" value="httpx" defaultChecked /> httpx
+                  </legend>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="httpxUserAgent">User-Agent</Label>
+                    <Input id="httpxUserAgent" name="httpxUserAgent" placeholder="Mozilla/5.0 …" />
                   </div>
-                  <p className="text-xs text-fg-subtle">Uncheck subfinder to skip discovery (use predefined subs).</p>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="httpxRateLimit">Rate limit</Label>
+                      <Input id="httpxRateLimit" name="httpxRateLimit" type="number" placeholder="150" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="httpxConcurrency">Threads</Label>
+                      <Input id="httpxConcurrency" name="httpxConcurrency" type="number" placeholder="50" />
+                    </div>
+                  </div>
+                </fieldset>
+
+                {/* naabu — port scan */}
+                <fieldset className="space-y-2 rounded-md border border-border p-3">
+                  <legend className="flex items-center gap-2 px-1 text-sm font-medium">
+                    <input type="checkbox" name="tools" value="naabu" defaultChecked /> naabu
+                  </legend>
                   <div className="space-y-1.5">
                     <Label htmlFor="ports">Ports</Label>
-                    <Input id="ports" name="ports" defaultValue="top-100" />
+                    <Input id="ports" name="ports" defaultValue="top-100" placeholder="top-100 / 80,443 / 1-1000" />
+                  </div>
+                </fieldset>
+
+                {/* nuclei — vulnerability templates */}
+                <fieldset className="space-y-2 rounded-md border border-border p-3">
+                  <legend className="flex items-center gap-2 px-1 text-sm font-medium">
+                    <input type="checkbox" name="tools" value="nuclei" defaultChecked /> nuclei
+                  </legend>
+                  <div className="space-y-1.5">
+                    <Label>Severities</Label>
+                    <div className="flex flex-wrap gap-2 text-xs">
+                      {SEVS.map((s) => (
+                        <label key={s} className="flex items-center gap-1 rounded-md border border-border px-2 py-1">
+                          <input type="checkbox" name="severities" value={s} defaultChecked={s !== 'info'} /> {s}
+                        </label>
+                      ))}
+                    </div>
                   </div>
                   <div className="space-y-1.5">
-                    <Label htmlFor="userAgent">User-Agent</Label>
-                    <Input id="userAgent" name="userAgent" placeholder="Mozilla/5.0 …" />
-                  </div>
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Severities</Label>
-                  <div className="flex flex-wrap gap-2 text-xs">
-                    {SEVS.map((s) => (
-                      <label key={s} className="flex items-center gap-1 rounded-md border border-border px-2 py-1">
-                        <input type="checkbox" name="severities" value={s} defaultChecked={s !== 'info'} /> {s}
-                      </label>
-                    ))}
-                  </div>
-                </div>
-                <div className="grid grid-cols-3 gap-3">
-                  <div className="space-y-1.5">
-                    <Label htmlFor="rateLimit">Rate limit</Label>
-                    <Input id="rateLimit" name="rateLimit" type="number" placeholder="150" />
+                    <Label htmlFor="nucleiTags">tags</Label>
+                    <Input id="nucleiTags" name="nucleiTags" placeholder="cve, exposure, misconfig" />
                   </div>
                   <div className="space-y-1.5">
-                    <Label htmlFor="concurrency">Concurrency</Label>
-                    <Input id="concurrency" name="concurrency" type="number" placeholder="25" />
+                    <Label htmlFor="nucleiExcludeTags">exclude-tags</Label>
+                    <Input id="nucleiExcludeTags" name="nucleiExcludeTags" placeholder="dos, intrusive, fuzzing" />
                   </div>
                   <div className="space-y-1.5">
-                    <Label htmlFor="retries">Retries</Label>
-                    <Input id="retries" name="retries" type="number" placeholder="1" />
+                    <Label htmlFor="nucleiTemplates">templates (paths)</Label>
+                    <Input id="nucleiTemplates" name="nucleiTemplates" placeholder="custom/my-template.yaml" />
                   </div>
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="nucleiTags">nuclei tags</Label>
-                  <Input id="nucleiTags" name="nucleiTags" placeholder="cve, exposure, misconfig" />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="nucleiExcludeTags">nuclei exclude-tags</Label>
-                  <Input id="nucleiExcludeTags" name="nucleiExcludeTags" placeholder="dos, intrusive, fuzzing" />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="nucleiTemplates">nuclei templates (paths)</Label>
-                  <Input id="nucleiTemplates" name="nucleiTemplates" placeholder="custom/my-template.yaml" />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="excludeSubdomains">Exclude subdomains</Label>
-                  <Textarea
-                    id="excludeSubdomains"
-                    name="excludeSubdomains"
-                    rows={2}
-                    placeholder={'dev.example.com\nstaging.example.com'}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="nucleiExtraArgs">nuclei extra args (advanced, allow-listed)</Label>
-                  <Input id="nucleiExtraArgs" name="nucleiExtraArgs" placeholder="-follow-redirects -timeout 10" />
-                  <p className="text-xs text-fg-subtle">Only safe flags pass; unknown flags are dropped server-side.</p>
-                </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="nucleiUserAgent">User-Agent</Label>
+                    <Input id="nucleiUserAgent" name="nucleiUserAgent" placeholder="Mozilla/5.0 …" />
+                  </div>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="nucleiRateLimit">Rate limit</Label>
+                      <Input id="nucleiRateLimit" name="nucleiRateLimit" type="number" placeholder="150" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="nucleiConcurrency">Concurrency</Label>
+                      <Input id="nucleiConcurrency" name="nucleiConcurrency" type="number" placeholder="25" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="nucleiRetries">Retries</Label>
+                      <Input id="nucleiRetries" name="nucleiRetries" type="number" placeholder="1" />
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="nucleiExtraArgs">extra args (advanced, allow-listed)</Label>
+                    <Input id="nucleiExtraArgs" name="nucleiExtraArgs" placeholder="-follow-redirects -timeout 10" />
+                    <p className="text-xs text-fg-subtle">
+                      Only safe flags pass; unknown flags are dropped server-side.
+                    </p>
+                  </div>
+                </fieldset>
+
+                {/* wordfence — WordPress templates (auto-runs on detected WP hosts) */}
+                <fieldset className="space-y-2 rounded-md border border-border p-3">
+                  <legend className="flex items-center gap-2 px-1 text-sm font-medium">
+                    <input type="checkbox" name="tools" value="wordfence" /> wordfence
+                  </legend>
+                  <p className="text-xs text-fg-subtle">
+                    WordPress-focused nuclei templates, run automatically on hosts detected as WordPress.
+                  </p>
+                </fieldset>
+
+                {/* Scope — applies across tools */}
+                <fieldset className="space-y-2 rounded-md border border-border p-3">
+                  <legend className="px-1 text-sm font-medium">Scope</legend>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="excludeSubdomains">Exclude subdomains</Label>
+                    <Textarea
+                      id="excludeSubdomains"
+                      name="excludeSubdomains"
+                      rows={2}
+                      placeholder={'dev.example.com\nstaging.example.com'}
+                    />
+                  </div>
+                </fieldset>
+
                 <SubmitButton pendingText="Saving…" className="w-full">
                   Create profile
                 </SubmitButton>
@@ -131,6 +184,10 @@ export default async function ProfilesPage() {
             rows.map((p) => {
               const tools = (p.tools ?? {}) as Record<string, boolean>;
               const cfg = (p.config ?? {}) as Record<string, unknown>;
+              const httpxCfg = (cfg.httpx ?? {}) as Record<string, unknown>;
+              const nucleiCfg = (cfg.nuclei ?? {}) as Record<string, unknown>;
+              const ua = httpxCfg.userAgent ?? nucleiCfg.userAgent ?? cfg.userAgent;
+              const rate = httpxCfg.rateLimit ?? nucleiCfg.rateLimit ?? cfg.rateLimit;
               const on = Object.entries(tools)
                 .filter(([, v]) => v)
                 .map(([k]) => k);
@@ -155,8 +212,8 @@ export default async function ProfilesPage() {
                       <span>tools: {on.join(', ') || '—'}</span>
                       <span>· ports: {p.ports}</span>
                       <span>· sev: {p.severities.join('/')}</span>
-                      {cfg.userAgent ? <span>· UA set</span> : null}
-                      {cfg.rateLimit ? <span>· rate {String(cfg.rateLimit)}</span> : null}
+                      {ua ? <span>· UA set</span> : null}
+                      {rate ? <span>· rate {String(rate)}</span> : null}
                       {Array.isArray(cfg.excludeSubdomains) ? (
                         <span>· excl {(cfg.excludeSubdomains as string[]).length}</span>
                       ) : null}
