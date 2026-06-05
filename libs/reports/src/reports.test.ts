@@ -71,7 +71,7 @@ describe('TI report html', () => {
     indicators: [{ type: 'domain', value: 'evil.com' }],
   });
   it('contains risk, IoC, breach sections', () => {
-    expect(html).toContain('Threat Intelligence Report');
+    expect(html).toContain('Cyber Threat Intelligence Report');
     expect(html).toContain('72 / 100');
     expect(html).toContain('Indicators of Compromise');
     expect(html).toContain('a@acme.com');

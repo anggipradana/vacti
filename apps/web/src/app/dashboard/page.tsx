@@ -178,7 +178,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
         <ModuleCard
           hue="262 70% 62%"
           icon={<ShieldCheck />}
-          title="Threat Intelligence"
+          title="Cyber Threat Intelligence"
           description="OTX, LeakCheck, indicators & unified risk score."
           href="/threat"
           status="live"

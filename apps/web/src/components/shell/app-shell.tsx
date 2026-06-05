@@ -23,7 +23,7 @@ const nav = [
   { label: 'Targets', href: '/targets' },
   { label: 'Scans', href: '/scans' },
   { label: 'Schedules', href: '/schedules' },
-  { label: 'Threat Intel', href: '/threat' },
+  { label: 'Cyber Threat Intel', href: '/threat' },
   { label: 'Search', href: '/search' },
   { label: 'Projects', href: '/projects' },
   { label: 'Settings', href: '/settings/tokens' },

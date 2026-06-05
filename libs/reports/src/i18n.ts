@@ -3,7 +3,7 @@ export type Lang = 'en' | 'id';
 const dict = {
   en: {
     vaTitle: 'Vulnerability Assessment Report',
-    tiTitle: 'Threat Intelligence Report',
+    tiTitle: 'Cyber Threat Intelligence Report',
     reportDate: 'Report date',
     documentNumber: 'Document number',
     project: 'Project',
@@ -62,7 +62,7 @@ const dict = {
     activeFindings: 'Active findings',
     findingsWord: 'Findings',
     securityAssessment: 'Security Assessment',
-    threatIntelligence: 'Threat Intelligence',
+    threatIntelligence: 'Cyber Threat Intelligence',
     engagement: 'Engagement',
     overview: 'Overview',
     signOff: 'Sign-off',
@@ -70,7 +70,7 @@ const dict = {
   },
   id: {
     vaTitle: 'Laporan Vulnerability Assessment',
-    tiTitle: 'Laporan Threat Intelligence',
+    tiTitle: 'Laporan Cyber Threat Intelligence',
     reportDate: 'Tanggal laporan',
     documentNumber: 'Nomor dokumen',
     project: 'Proyek',
@@ -129,7 +129,7 @@ const dict = {
     activeFindings: 'Temuan aktif',
     findingsWord: 'Temuan',
     securityAssessment: 'Penilaian Keamanan',
-    threatIntelligence: 'Threat Intelligence',
+    threatIntelligence: 'Cyber Threat Intelligence',
     engagement: 'Ruang Lingkup',
     overview: 'Ikhtisar',
     signOff: 'Pengesahan',

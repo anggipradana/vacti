@@ -53,7 +53,7 @@ export default async function ThreatPage({
   if (!projectId) {
     return (
       <AppShell user={{ email: user.email, isSysAdmin: user.isSysAdmin }}>
-        <PageHeader title="Threat Intelligence" />
+        <PageHeader title="Cyber Threat Intelligence" />
         <EmptyState
           icon={<ShieldCheck />}
           title="No project yet"
@@ -102,7 +102,7 @@ export default async function ThreatPage({
   return (
     <AppShell user={{ email: user.email, isSysAdmin: user.isSysAdmin }}>
       <PageHeader
-        title="Threat Intelligence"
+        title="Cyber Threat Intelligence"
         description="OTX AlienVault, leaked credentials, manual indicators & unified risk score."
         actions={
           <div className="flex items-center gap-2">
