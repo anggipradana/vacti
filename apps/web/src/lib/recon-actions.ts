@@ -37,25 +37,43 @@ export async function saveProfileAction(formData: FormData) {
   const tools = Object.fromEntries(ALL_TOOL_KEYS.map((t) => [t, picked.has(t)]));
   const sev = formData.getAll('severities').map(String).filter(Boolean);
   const config: Record<string, unknown> = {};
-  const ua = String(formData.get('userAgent') ?? '').trim();
-  if (ua) config.userAgent = ua;
-  const rate = num(formData.get('rateLimit'));
-  if (rate) config.rateLimit = rate;
-  const conc = num(formData.get('concurrency'));
-  if (conc) config.concurrency = conc;
-  const retries = num(formData.get('retries'));
-  if (retries !== undefined) config.retries = retries;
+
+  // httpx — its own probe options.
+  const httpx: Record<string, unknown> = {};
+  const hua = String(formData.get('httpxUserAgent') ?? '').trim();
+  if (hua) httpx.userAgent = hua;
+  const hrate = num(formData.get('httpxRateLimit'));
+  if (hrate) httpx.rateLimit = hrate;
+  const hconc = num(formData.get('httpxConcurrency'));
+  if (hconc) httpx.concurrency = hconc;
+  if (Object.keys(httpx).length) config.httpx = httpx;
+
+  // nuclei — its own scan options.
+  const nuclei: Record<string, unknown> = {};
+  const nua = String(formData.get('nucleiUserAgent') ?? '').trim();
+  if (nua) nuclei.userAgent = nua;
+  const nrate = num(formData.get('nucleiRateLimit'));
+  if (nrate) nuclei.rateLimit = nrate;
+  const nconc = num(formData.get('nucleiConcurrency'));
+  if (nconc) nuclei.concurrency = nconc;
+  const nret = num(formData.get('nucleiRetries'));
+  if (nret !== undefined) nuclei.retries = nret;
   const nt = list(formData.get('nucleiTags'));
-  if (nt.length) config.nucleiTags = nt;
+  if (nt.length) nuclei.tags = nt;
   const ntpl = list(formData.get('nucleiTemplates'));
-  if (ntpl.length) config.nucleiTemplates = ntpl;
+  if (ntpl.length) nuclei.templates = ntpl;
   const net = list(formData.get('nucleiExcludeTags'));
-  if (net.length) config.nucleiExcludeTags = net;
+  if (net.length) nuclei.excludeTags = net;
+  const extra = list(formData.get('nucleiExtraArgs'));
+  if (extra.length) nuclei.extraArgs = extra;
+  if (Object.keys(nuclei).length) config.nuclei = nuclei;
+
+  // Scope (applies across tools).
   const ex = list(formData.get('excludeSubdomains'));
   if (ex.length) config.excludeSubdomains = ex;
-  const extra = list(formData.get('nucleiExtraArgs'));
-  if (extra.length) config.extraArgs = { nuclei: extra };
 
+  // Keep the legacy top-level `rate` column in sync (httpx rate is the headline throughput).
+  const rate = hrate ?? nrate;
   await getDb()
     .insert(scanProfiles)
     .values({

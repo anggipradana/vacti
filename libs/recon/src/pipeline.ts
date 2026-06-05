@@ -23,6 +23,18 @@ export interface ScanProfileConfig {
   /** Override the default "interesting endpoint" keyword list (admin/login/.env/…). */
   interestingKeywords?: string[];
   extraArgs?: { nuclei?: string[]; httpx?: string[]; subfinder?: string[]; naabu?: string[] };
+  /** Per-tool overrides — take precedence over the shared flat fields above (backward compatible). */
+  httpx?: { userAgent?: string; rateLimit?: number; concurrency?: number };
+  nuclei?: {
+    userAgent?: string;
+    rateLimit?: number;
+    concurrency?: number;
+    retries?: number;
+    tags?: string[];
+    templates?: string[];
+    excludeTags?: string[];
+    extraArgs?: string[];
+  };
 }
 
 export interface ScanProfile {
@@ -59,6 +71,22 @@ export async function runScanPipeline(input: ScanInput, deps: PipelineDeps): Pro
   // Profile headers merge under the target's custom headers (target wins on conflict).
   const reqHeaders = { ...(cfg.headers ?? {}), ...(input.customHeaders ?? {}) };
   const excluded = new Set((cfg.excludeSubdomains ?? []).map((s) => s.toLowerCase()));
+  // Resolve per-tool options: a tool's own override wins, else the shared flat field (legacy profiles).
+  const httpxCfg = {
+    userAgent: cfg.httpx?.userAgent ?? cfg.userAgent,
+    rateLimit: cfg.httpx?.rateLimit ?? cfg.rateLimit,
+    concurrency: cfg.httpx?.concurrency ?? cfg.concurrency,
+  };
+  const nucleiCfg = {
+    userAgent: cfg.nuclei?.userAgent ?? cfg.userAgent,
+    rateLimit: cfg.nuclei?.rateLimit ?? cfg.rateLimit,
+    concurrency: cfg.nuclei?.concurrency ?? cfg.concurrency,
+    retries: cfg.nuclei?.retries ?? cfg.retries,
+    tags: cfg.nuclei?.tags ?? cfg.nucleiTags,
+    templates: cfg.nuclei?.templates ?? cfg.nucleiTemplates,
+    excludeTags: cfg.nuclei?.excludeTags ?? cfg.nucleiExcludeTags,
+    extraArgs: cfg.nuclei?.extraArgs ?? cfg.extraArgs?.nuclei,
+  };
   const counts = { subdomains: 0, endpoints: 0, ports: 0, vulnerabilities: 0 };
   // Backstop for cancellation between stages (a running tool is killed via the AbortSignal directly).
   const checkAbort = () => {
@@ -134,9 +162,9 @@ export async function runScanPipeline(input: ScanInput, deps: PipelineDeps): Pro
     if (input.profile.tools.httpx !== false) {
       await activity('httpx', 'running');
       const args = httpxArgs(reqHeaders, {
-        userAgent: cfg.userAgent,
-        rateLimit: cfg.rateLimit,
-        threads: cfg.concurrency,
+        userAgent: httpxCfg.userAgent,
+        rateLimit: httpxCfg.rateLimit,
+        threads: httpxCfg.concurrency,
       });
       const r = await runTool({ bin: 'httpx', args, input: hosts.join('\n') + '\n', timeoutMs, signal: input.signal });
       await record('httpx', args, r);
@@ -202,15 +230,15 @@ export async function runScanPipeline(input: ScanInput, deps: PipelineDeps): Pro
       await activity('nuclei', 'running');
       const args = nucleiArgs({
         severities: input.profile.severities,
-        tags: cfg.nucleiTags,
-        templates: cfg.nucleiTemplates,
-        excludeTags: cfg.nucleiExcludeTags,
+        tags: nucleiCfg.tags,
+        templates: nucleiCfg.templates,
+        excludeTags: nucleiCfg.excludeTags,
         headers: reqHeaders,
-        userAgent: cfg.userAgent,
-        rateLimit: cfg.rateLimit,
-        concurrency: cfg.concurrency,
-        retries: cfg.retries,
-        extraArgs: cfg.extraArgs?.nuclei,
+        userAgent: nucleiCfg.userAgent,
+        rateLimit: nucleiCfg.rateLimit,
+        concurrency: nucleiCfg.concurrency,
+        retries: nucleiCfg.retries,
+        extraArgs: nucleiCfg.extraArgs,
       });
       const r = await runTool({
         bin: 'nuclei',
