@@ -367,6 +367,51 @@ export default async function ScanDetail({
                         <TD>
                           <div className="font-medium">{v.name}</div>
                           <div className="font-mono text-xs text-fg-subtle">{v.matchedAt}</div>
+                          {v.description ||
+                          v.remediation ||
+                          v.cvss != null ||
+                          (v.cveIds?.length ?? 0) > 0 ||
+                          (v.references?.length ?? 0) > 0 ? (
+                            <details className="mt-1 max-w-md text-xs text-fg-muted">
+                              <summary className="cursor-pointer text-accent">Details (template)</summary>
+                              {v.description ? (
+                                <p className="mt-1">
+                                  <strong>Description:</strong> {v.description}
+                                </p>
+                              ) : null}
+                              {v.remediation ? (
+                                <p className="mt-1">
+                                  <strong>Remediation:</strong> {v.remediation}
+                                </p>
+                              ) : null}
+                              {v.cvss != null || (v.cveIds?.length ?? 0) > 0 ? (
+                                <p className="mt-1">
+                                  {v.cvss != null ? <strong>CVSS {v.cvss}</strong> : null}
+                                  {v.cvss != null && (v.cveIds?.length ?? 0) > 0 ? ' · ' : null}
+                                  {v.cveIds?.join(', ')}
+                                </p>
+                              ) : null}
+                              {v.references?.length ? (
+                                <div className="mt-1">
+                                  <strong>References:</strong>
+                                  <ul className="ml-4 list-disc">
+                                    {v.references.slice(0, 8).map((r) => (
+                                      <li key={r} className="break-all">
+                                        <a
+                                          href={r}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="text-accent hover:underline"
+                                        >
+                                          {r}
+                                        </a>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              ) : null}
+                            </details>
+                          ) : null}
                           {v.isAiEnriched ? (
                             <details className="mt-1 max-w-md text-xs text-fg-muted">
                               <summary className="cursor-pointer text-accent">AI analysis</summary>
