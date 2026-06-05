@@ -3,7 +3,7 @@
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
-import { Permission, isValidCron } from '@vacti/core';
+import { Permission, isValidCron, buildCron, type ScheduleFrequency } from '@vacti/core';
 import { targets, scans, scanSchedules, reconNotes, scanProfiles } from '@vacti/db';
 import { eq } from 'drizzle-orm';
 import { getDb } from './db';
@@ -175,8 +175,17 @@ export async function rescanAction(formData: FormData) {
 export async function createScheduleAction(formData: FormData) {
   await requirePermission(Permission.InitiateScans);
   const targetId = String(formData.get('targetId') ?? '');
-  const cron = String(formData.get('cron') ?? '').trim();
   const profileId = String(formData.get('profileId') ?? '').trim() || null;
+  // Build the cron from the friendly schedule pickers (frequency + time + day).
+  const freq = String(formData.get('freq') ?? 'daily') as ScheduleFrequency;
+  const [hh, mm] = String(formData.get('time') ?? '02:00').split(':');
+  const cron = buildCron({
+    freq,
+    hour: Number(hh) || 0,
+    minute: Number(mm) || 0,
+    dow: Number(formData.get('dow') ?? 1),
+    dom: Number(formData.get('dom') ?? 1),
+  });
   if (!targetId || !isValidCron(cron)) redirect('/schedules?error=invalid');
   await getDb().insert(scanSchedules).values({ targetId, cron, profileId });
   revalidatePath('/schedules');

@@ -30,3 +30,13 @@ describe('cron parser', () => {
     expect(cronMatches('*/15 * * * *', new Date(2026, 5, 4, 9, 31))).toBe(false);
   });
 });
+
+import { buildCron } from './cron';
+describe('buildCron', () => {
+  it('builds cron for each frequency', () => {
+    expect(buildCron({ freq: 'hourly', minute: 5 })).toBe('5 * * * *');
+    expect(buildCron({ freq: 'daily', hour: 2, minute: 30 })).toBe('30 2 * * *');
+    expect(buildCron({ freq: 'weekly', hour: 9, minute: 0, dow: 1 })).toBe('0 9 * * 1');
+    expect(buildCron({ freq: 'monthly', hour: 0, minute: 0, dom: 15 })).toBe('0 0 15 * *');
+  });
+});

@@ -71,3 +71,32 @@ export function cronMatches(expr: string, date: Date): boolean {
     sets[4]!.has(date.getDay())
   );
 }
+
+export type ScheduleFrequency = 'hourly' | 'daily' | 'weekly' | 'monthly';
+
+/**
+ * Build a 5-field cron from a friendly schedule (frequency + time of day, plus day-of-week for
+ * weekly or day-of-month for monthly). Lets the UI offer pickers instead of raw cron syntax.
+ */
+export function buildCron(opts: {
+  freq: ScheduleFrequency;
+  hour?: number;
+  minute?: number;
+  dow?: number; // 0=Sunday .. 6=Saturday (weekly)
+  dom?: number; // 1..28 (monthly)
+}): string {
+  const clamp = (n: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, Math.floor(n) || 0));
+  const m = clamp(opts.minute ?? 0, 0, 59);
+  const h = clamp(opts.hour ?? 2, 0, 23);
+  switch (opts.freq) {
+    case 'hourly':
+      return `${m} * * * *`;
+    case 'weekly':
+      return `${m} ${h} * * ${clamp(opts.dow ?? 1, 0, 6)}`;
+    case 'monthly':
+      return `${m} ${h} ${clamp(opts.dom ?? 1, 1, 28)} * *`;
+    case 'daily':
+    default:
+      return `${m} ${h} * * *`;
+  }
+}
