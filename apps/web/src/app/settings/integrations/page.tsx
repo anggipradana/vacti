@@ -104,7 +104,7 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
                     ))}
                   </div>
                 </div>
-                <Button type="submit" className="w-full">
+                <Button type="submit" className="w-full" data-testid="webhook-add">
                   Add webhook
                 </Button>
               </form>
@@ -172,7 +172,9 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
                   <Label htmlFor="model">Model</Label>
                   <Input id="model" name="model" defaultValue={ai?.model ?? 'claude-sonnet-4-6'} />
                 </div>
-                <Button type="submit">Save</Button>
+                <Button type="submit" data-testid="ai-save">
+                  Save
+                </Button>
               </form>
             </CardContent>
           </Card>
@@ -211,9 +213,10 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
                         id={`key-${k.name}`}
                         name="value"
                         type="password"
+                        data-testid={`vault-input-${k.name}`}
                         placeholder={setKeys.has(k.name) ? '•••••••• (replace)' : 'Paste key…'}
                       />
-                      <Button type="submit" variant="outline" size="sm">
+                      <Button type="submit" variant="outline" size="sm" data-testid={`vault-save-${k.name}`}>
                         Save
                       </Button>
                     </form>
@@ -222,7 +225,13 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
                     <form action={clearProjectKeyAction}>
                       <input type="hidden" name="projectId" value={projectId} />
                       <input type="hidden" name="name" value={k.name} />
-                      <Button type="submit" variant="ghost" size="sm" className="text-danger hover:bg-danger/10">
+                      <Button
+                        type="submit"
+                        variant="ghost"
+                        size="sm"
+                        className="text-danger hover:bg-danger/10"
+                        data-testid={`vault-clear-${k.name}`}
+                      >
                         Clear
                       </Button>
                     </form>

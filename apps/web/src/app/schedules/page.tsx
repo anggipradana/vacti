@@ -95,7 +95,7 @@ export default async function SchedulesPage() {
       ) : (
         <div className="space-y-2">
           {scheduleRows.map((s) => (
-            <Card key={s.id}>
+            <Card key={s.id} data-testid="schedule-row">
               <CardContent className="flex flex-wrap items-center justify-between gap-3 py-3">
                 <div>
                   <span className="font-mono text-sm">{targetById.get(s.targetId) ?? s.targetId.slice(0, 8)}</span>

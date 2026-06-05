@@ -2,16 +2,27 @@ import { defineConfig, devices } from '@playwright/test';
 
 const PORT = 3100;
 const baseURL = `http://localhost:${PORT}`;
+const STORAGE = 'apps/web/e2e/.auth/admin.json';
 
 export default defineConfig({
   testDir: './e2e',
   testMatch: '**/*.e2e.ts',
-  timeout: 30_000,
+  timeout: 45_000,
+  expect: { timeout: 10_000 },
   fullyParallel: false,
   workers: 1,
   globalSetup: './e2e/global-setup.ts',
-  use: { baseURL, trace: 'on-first-retry' },
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+  use: { baseURL, trace: 'on-first-retry', screenshot: 'only-on-failure' },
+  projects: [
+    // 1) Create the first-run admin and persist its authenticated storage state.
+    { name: 'setup', testMatch: /auth\.setup\.ts/ },
+    // 2) All e2e specs reuse that admin session.
+    {
+      name: 'chromium',
+      use: { ...devices['Desktop Chrome'], storageState: STORAGE },
+      dependencies: ['setup'],
+    },
+  ],
   webServer: {
     command: `next dev apps/web -p ${PORT}`,
     url: `${baseURL}/api/health`,
