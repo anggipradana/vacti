@@ -1,6 +1,7 @@
 services:
   db:
     image: postgres:16
+    restart: unless-stopped
     environment:
       POSTGRES_USER: vacti
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-vacti}
@@ -20,6 +21,9 @@ services:
     build:
       context: .
       target: runtime
+    # Auto-restart on crash so a dead worker never leaves scans orphaned (pairs with the worker's
+    # startup reaper + live watchdog). This is the canonical supervision for the documented stack.
+    restart: unless-stopped
     command: ['npx', 'tsx', 'apps/worker/src/main.ts']
     environment:
       DATABASE_URL: postgres://vacti:${POSTGRES_PASSWORD:-vacti}@db:5432/vacti
@@ -34,6 +38,7 @@ services:
     build:
       context: .
       target: runtime
+    restart: unless-stopped
     command: ['npx', 'next', 'start', 'apps/web', '-p', '3000']
     environment:
       DATABASE_URL: postgres://vacti:${POSTGRES_PASSWORD:-vacti}@db:5432/vacti
