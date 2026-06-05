@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { desc, eq } from 'drizzle-orm';
 import {
   renderTiReport,
   renderPdf,
@@ -16,6 +16,7 @@ import {
   reportSettings,
   reportSignatories,
   threatIntelStatus,
+  threatNews,
 } from '@vacti/db';
 import { getDb } from '../../../../lib/db';
 import { getCurrentUser } from '../../../../lib/session';
@@ -32,7 +33,8 @@ export async function GET(req: Request, ctx: { params: Promise<{ projectId: stri
   const [project] = await db.select().from(projects).where(eq(projects.id, projectId));
   if (!project) return new Response('Not found', { status: 404 });
 
-  const [risk, otx, leaks, indicators, settingRows, signRows, tiStatusRows] = await Promise.all([
+  const sector = project.sector ?? 'banking';
+  const [risk, otx, leaks, indicators, settingRows, signRows, tiStatusRows, news] = await Promise.all([
     computeProjectRisk(db, projectId),
     db.select().from(otxThreatData).where(eq(otxThreatData.projectId, projectId)),
     db.select().from(leakcheckData).where(eq(leakcheckData.projectId, projectId)),
@@ -40,6 +42,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ projectId: stri
     db.select().from(reportSettings).where(eq(reportSettings.projectId, projectId)),
     db.select().from(reportSignatories).where(eq(reportSignatories.projectId, projectId)),
     db.select().from(threatIntelStatus).where(eq(threatIntelStatus.projectId, projectId)),
+    db.select().from(threatNews).where(eq(threatNews.sector, sector)).orderBy(desc(threatNews.publishedAt)).limit(15),
   ]);
 
   const settingRow = settingRows.find((s) => s.kind === 'ti');
@@ -77,6 +80,8 @@ export async function GET(req: Request, ctx: { params: Promise<{ projectId: stri
     })),
     leaks: leaks.map((x) => ({ identifier: x.identifier ?? '', source: x.source, status: x.status })),
     indicators: indicators.map((i) => ({ type: i.type, value: i.value })),
+    sector,
+    news: news.map((n) => ({ title: n.title, source: n.source, link: n.link, publishedAt: n.publishedAt })),
   });
   const pdf = await renderPdf(html, { footer: settings.classification ?? settings.footerText ?? '' });
   const name = `ti_report_${project.slug}.pdf`;

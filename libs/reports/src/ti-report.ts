@@ -72,6 +72,16 @@ export function renderTiReport(d: TiReportData): string {
       { num: tnum(2), primary: pri(lang, 'iocTitle'), secondary: sec(lang, 'iocTitle'), page: '' },
       { num: tnum(3), primary: pri(lang, 'breachTitle'), secondary: sec(lang, 'breachTitle'), page: '' },
       { num: tnum(4), primary: pri(lang, 'recommendations'), secondary: sec(lang, 'recommendations'), page: '' },
+      ...(d.news?.length
+        ? [
+            {
+              num: tnum(5),
+              primary: p2('Berita Keamanan Sektor', 'Sector Security News').primary,
+              secondary: p2('Berita Keamanan Sektor', 'Sector Security News').secondary,
+              page: '',
+            },
+          ]
+        : []),
     ]),
   );
 
@@ -160,6 +170,31 @@ export function renderTiReport(d: TiReportData): string {
       <li>Maintain continuous threat-intelligence monitoring and schedule periodic re-assessment.</li>
     </ul>`,
   );
+
+  // 05 Sector security news (optional — only when populated)
+  if (d.news?.length) {
+    const newsTitle = p2('Berita Keamanan Sektor', 'Sector Security News');
+    const sectorLabel = d.sector ? ` · ${escapeHtml(d.sector)}` : '';
+    body.push(
+      numberedSection(lang, tnum(5), newsTitle.primary, { pageBreak: true }),
+      note(
+        escapeHtml(
+          lang === 'id'
+            ? `Berita serangan & isu keamanan terkini yang relevan dengan sektor${sectorLabel ? ` ${d.sector}` : ''}, dikumpulkan dari sumber intel publik.`
+            : `Recent attack news & security developments relevant to the${sectorLabel ? ` ${d.sector}` : ''} sector, aggregated from public intelligence sources.`,
+        ),
+      ),
+      `<table><thead><tr><th>${escapeHtml(lang === 'id' ? 'Judul' : 'Headline')}</th><th>${escapeHtml(lang === 'id' ? 'Sumber' : 'Source')}</th><th>${escapeHtml(lang === 'id' ? 'Tanggal' : 'Date')}</th></tr></thead><tbody>
+        ${d.news
+          .slice(0, 15)
+          .map(
+            (n) =>
+              `<tr><td>${escapeHtml(n.title)}</td><td>${escapeHtml(n.source)}</td><td class="mono">${n.publishedAt ? n.publishedAt.toISOString().slice(0, 10) : '—'}</td></tr>`,
+          )
+          .join('')}
+        </tbody></table>`,
+    );
+  }
 
   body.push(`<div class="end">— ${escapeHtml(l.endOfReport)} —</div>`);
   return doc(l.tiTitle, css, body.join('\n'));
