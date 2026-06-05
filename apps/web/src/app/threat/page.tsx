@@ -16,6 +16,7 @@ import { Table, THead, TBody, TR, TH, TD } from '../../components/ui/table';
 import { EmptyState } from '../../components/ui/empty-state';
 import { ReviewToggle } from '../../components/ui/review-toggle';
 import { Pagination } from '../../components/ui/pagination';
+import { Reveal } from '../../components/ui/reveal';
 import { computeProjectRisk } from '@vacti/threat-intel';
 import { LEAK_STATUS_LABEL, NEWS_STATUS_LABEL, userCan, Permission } from '@vacti/core';
 import { SECTORS } from '@vacti/threat-intel';
@@ -367,6 +368,7 @@ export default async function ThreatPage({
           <THead>
             <TR>
               <TH>Identifier</TH>
+              <TH>Password</TH>
               <TH>Source</TH>
               <TH>Type</TH>
               <TH className="text-right">Triage status</TH>
@@ -376,6 +378,9 @@ export default async function ThreatPage({
             {leaks.map((l) => (
               <TR key={l.id}>
                 <TD className="font-mono text-xs">{l.identifier}</TD>
+                <TD>
+                  <Reveal value={l.password} />
+                </TD>
                 <TD>{l.source}</TD>
                 <TD>
                   <Badge variant="neutral">{l.type}</Badge>

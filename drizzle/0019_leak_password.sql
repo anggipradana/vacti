@@ -1,0 +1,1 @@
+ALTER TABLE "leakcheck_data" ADD COLUMN "password" text;
