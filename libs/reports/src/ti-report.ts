@@ -2,6 +2,7 @@ import { reportCss, escapeHtml } from './styles';
 import { labels, bi, biText, pri, sec, type Lang } from './i18n';
 import {
   cover,
+  backCover,
   approvalCards,
   doc,
   section,
@@ -205,5 +206,6 @@ export function renderTiReport(d: TiReportData): string {
   }
 
   body.push(`<div class="end">${escapeHtml(l.endOfReport)}</div>`);
+  body.push(backCover({ settings: s, title: l.tiTitle, endText: l.endOfReport }));
   return doc(l.tiTitle, css, body.join('\n'));
 }
