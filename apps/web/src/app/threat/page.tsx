@@ -34,6 +34,7 @@ import {
 import { setLeakStatusAction } from '../../lib/status-actions';
 import { generateThreatNarrativeAction } from '../../lib/ai-actions';
 import { CtiCards } from './cti-cards';
+import { BrandNews } from './brand-news';
 import { getActiveProjectId } from '../../lib/active-project';
 
 export const dynamic = 'force-dynamic';
@@ -173,6 +174,10 @@ export default async function ThreatPage({
         fallback={<div className="mt-4 text-sm text-fg-subtle">Loading threat landscape (KEV, EPSS, ransomware)…</div>}
       >
         <CtiCards projectId={projectId} />
+      </Suspense>
+
+      <Suspense fallback={<div className="mt-4 text-sm text-fg-subtle">Loading brand news…</div>}>
+        <BrandNews brand={(project?.name ?? '').split('.')[0] || (project?.name ?? 'brand')} />
       </Suspense>
 
       <Card className="mt-4">

@@ -209,3 +209,34 @@ export async function fetchSectorNews(sector: string, opts: FetchNewsOptions = {
     .sort((a, b) => (b.publishedAt?.getTime() ?? 0) - (a.publishedAt?.getTime() ?? 0))
     .slice(0, limit);
 }
+
+/**
+ * Public news mentioning a brand/keyword, via Google News RSS search (key-less). Used in CTI to
+ * monitor what is being said about the project's brand/domain. Degrades to [] on error.
+ */
+export async function fetchBrandNews(
+  brand: string,
+  opts: { fetchImpl?: FetchLike; limit?: number; timeoutMs?: number; security?: boolean } = {},
+): Promise<NewsItem[]> {
+  const { fetchImpl = fetch, limit = 12, timeoutMs = 8000, security = false } = opts;
+  const term = brand.trim();
+  if (!term) return [];
+  // Optionally bias toward security/breach coverage of the brand.
+  const q = security ? `"${term}" (breach OR hack OR leak OR cyber OR ransomware OR phishing)` : `"${term}"`;
+  const url = `https://news.google.com/rss/search?q=${encodeURIComponent(q)}&hl=id&gl=ID&ceid=ID:id`;
+  try {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), timeoutMs);
+    const res = await fetchImpl(url, { signal: ctrl.signal, headers: { 'user-agent': 'vacti-threatnews/1.0' } });
+    clearTimeout(t);
+    if (!res.ok) return [];
+    const items = parseFeed(await res.text(), 'Google News');
+    const seen = new Set<string>();
+    return items
+      .filter((i) => (seen.has(i.link) ? false : (seen.add(i.link), true)))
+      .sort((a, b) => (b.publishedAt?.getTime() ?? 0) - (a.publishedAt?.getTime() ?? 0))
+      .slice(0, limit);
+  } catch {
+    return [];
+  }
+}
