@@ -96,10 +96,21 @@ export async function addIndicatorAction(formData: FormData) {
   await requirePermission(Permission.ModifyScanResults);
   const projectId = String(formData.get('projectId') ?? '');
   const type = String(formData.get('type') ?? 'domain');
-  const value = String(formData.get('value') ?? '').trim();
   const note = String(formData.get('note') ?? '').trim() || null;
-  if (!projectId || !value || !['domain', 'subdomain', 'ip'].includes(type)) return;
-  await getDb().insert(manualIndicators).values({ projectId, type, value, note });
+  if (!projectId || !['domain', 'subdomain', 'ip'].includes(type)) return;
+  // Bulk: accept many values, one per line or comma/space separated. Dedupe within the batch.
+  const values = [
+    ...new Set(
+      String(formData.get('value') ?? '')
+        .split(/[\n,\s]+/)
+        .map((v) => v.trim())
+        .filter(Boolean),
+    ),
+  ];
+  if (!values.length) return;
+  await getDb()
+    .insert(manualIndicators)
+    .values(values.map((value) => ({ projectId, type, value, note })));
   revalidatePath('/threat');
 }
 

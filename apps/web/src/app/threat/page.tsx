@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/ca
 import { StatCard } from '../../components/ui/stat-card';
 import { RiskGauge } from '../../components/ui/risk-gauge';
 import { Button } from '../../components/ui/button';
-import { Input } from '../../components/ui/input';
+import { Textarea } from '../../components/ui/textarea';
 import { Label } from '../../components/ui/label';
 import { Select } from '../../components/ui/select';
 import { Badge } from '../../components/ui/badge';
@@ -444,11 +444,18 @@ export default async function ThreatPage({
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="value">Value</Label>
-                <Input id="value" name="value" placeholder="evil.example.com" required />
+                <Label htmlFor="value">Value(s)</Label>
+                <Textarea
+                  id="value"
+                  name="value"
+                  rows={4}
+                  placeholder={'evil.example.com\nbad.example.com\n34.1.2.3'}
+                  required
+                />
+                <p className="text-xs text-fg-subtle">One per line (or comma/space separated) for bulk add.</p>
               </div>
               <Button type="submit" className="w-full">
-                <Plus /> Add indicator
+                <Plus /> Add indicator(s)
               </Button>
             </form>
           </CardContent>
