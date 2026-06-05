@@ -13,6 +13,7 @@ import { Select } from '../../components/ui/select';
 import { Badge } from '../../components/ui/badge';
 import { Table, THead, TBody, TR, TH, TD } from '../../components/ui/table';
 import { EmptyState } from '../../components/ui/empty-state';
+import { ReviewToggle } from '../../components/ui/review-toggle';
 import { computeProjectRisk } from '@vacti/threat-intel';
 import { LEAK_STATUS_LABEL, NEWS_STATUS_LABEL, userCan, Permission } from '@vacti/core';
 import { SECTORS } from '@vacti/threat-intel';
@@ -188,19 +189,22 @@ export default async function ThreatPage({ searchParams }: { searchParams: Promi
                     </div>
                   </div>
                   {canTriage ? (
-                    <form action={setNewsStatusAction} className="flex shrink-0 items-center gap-1.5">
-                      <input type="hidden" name="id" value={n.id} />
-                      <Select name="status" defaultValue={n.status} className="h-8 w-36 text-xs">
-                        {Object.entries(NEWS_STATUS_LABEL).map(([val, label]) => (
-                          <option key={val} value={val}>
-                            {label}
-                          </option>
-                        ))}
-                      </Select>
-                      <Button type="submit" size="sm" variant="ghost">
-                        Set
-                      </Button>
-                    </form>
+                    <div className="flex shrink-0 items-center gap-1.5">
+                      <ReviewToggle action={setNewsStatusAction} kind="news" id={n.id} status={n.status} />
+                      <form action={setNewsStatusAction} className="flex items-center gap-1.5">
+                        <input type="hidden" name="id" value={n.id} />
+                        <Select name="status" defaultValue={n.status} className="h-8 w-36 text-xs">
+                          {Object.entries(NEWS_STATUS_LABEL).map(([val, label]) => (
+                            <option key={val} value={val}>
+                              {label}
+                            </option>
+                          ))}
+                        </Select>
+                        <Button type="submit" size="sm" variant="ghost">
+                          Set
+                        </Button>
+                      </form>
+                    </div>
                   ) : (
                     <Badge variant="neutral" className="shrink-0">
                       {NEWS_STATUS_LABEL[n.status as keyof typeof NEWS_STATUS_LABEL] ?? n.status}
@@ -239,19 +243,22 @@ export default async function ThreatPage({ searchParams }: { searchParams: Promi
                   <Badge variant="neutral">{l.type}</Badge>
                 </TD>
                 <TD>
-                  <form action={setLeakStatusAction} className="flex items-center justify-end gap-1.5">
-                    <input type="hidden" name="id" value={l.id} />
-                    <Select name="status" defaultValue={l.status} className="h-8 w-40 text-xs">
-                      {Object.entries(LEAK_STATUS_LABEL).map(([val, label]) => (
-                        <option key={val} value={val}>
-                          {label}
-                        </option>
-                      ))}
-                    </Select>
-                    <Button type="submit" size="sm" variant="ghost">
-                      Set
-                    </Button>
-                  </form>
+                  <div className="flex items-center justify-end gap-1.5">
+                    <ReviewToggle action={setLeakStatusAction} kind="leak" id={l.id} status={l.status} />
+                    <form action={setLeakStatusAction} className="flex items-center gap-1.5">
+                      <input type="hidden" name="id" value={l.id} />
+                      <Select name="status" defaultValue={l.status} className="h-8 w-40 text-xs">
+                        {Object.entries(LEAK_STATUS_LABEL).map(([val, label]) => (
+                          <option key={val} value={val}>
+                            {label}
+                          </option>
+                        ))}
+                      </Select>
+                      <Button type="submit" size="sm" variant="ghost">
+                        Set
+                      </Button>
+                    </form>
+                  </div>
                 </TD>
               </TR>
             ))}
