@@ -72,7 +72,7 @@ export async function refreshThreatIntel(deps: RefreshDeps): Promise<void> {
       }
       for (const l of leak ? await fetchLeaks(domain, { apiKey: deps.leakKey }) : []) {
         const ex = await db
-          .select({ id: leakcheckData.id })
+          .select({ id: leakcheckData.id, password: leakcheckData.password })
           .from(leakcheckData)
           .where(and(eq(leakcheckData.projectId, projectId), eq(leakcheckData.hashMd5, l.hashMd5)));
         if (!ex.length) {
@@ -85,6 +85,9 @@ export async function refreshThreatIntel(deps: RefreshDeps): Promise<void> {
             hashMd5: l.hashMd5,
             type: l.type,
           });
+        } else if (l.password && !ex[0]!.password) {
+          // Backfill a newly-available password onto an existing leak row.
+          await db.update(leakcheckData).set({ password: l.password }).where(eq(leakcheckData.id, ex[0]!.id));
         }
       }
       i += 1;
