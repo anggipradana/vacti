@@ -387,6 +387,27 @@ export default async function ScanDetail({
                               ) : null}
                             </details>
                           ) : null}
+                          {v.request || v.response ? (
+                            <details className="mt-1 max-w-md text-xs text-fg-muted">
+                              <summary className="cursor-pointer text-accent">Request / Response</summary>
+                              {v.request ? (
+                                <div className="mt-1">
+                                  <div className="font-semibold text-fg-subtle">Request</div>
+                                  <pre className="mt-0.5 max-h-64 overflow-auto whitespace-pre-wrap rounded-md bg-bg-subtle p-2 font-mono text-[11px] leading-snug">
+                                    {v.request}
+                                  </pre>
+                                </div>
+                              ) : null}
+                              {v.response ? (
+                                <div className="mt-1">
+                                  <div className="font-semibold text-fg-subtle">Response</div>
+                                  <pre className="mt-0.5 max-h-64 overflow-auto whitespace-pre-wrap rounded-md bg-bg-subtle p-2 font-mono text-[11px] leading-snug">
+                                    {v.response}
+                                  </pre>
+                                </div>
+                              ) : null}
+                            </details>
+                          ) : null}
                         </TD>
                         <TD>
                           <VulnStatusBadge status={v.status} />
