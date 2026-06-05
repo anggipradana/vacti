@@ -325,10 +325,22 @@ export default async function ScanDetail({
                   </Button>
                 </form>
                 {canTriage ? (
-                  <form action={bulkReviewVulnsAction}>
+                  <form action={bulkReviewVulnsAction} className="flex items-center gap-1.5">
                     <input type="hidden" name="scanId" value={scan.id} />
+                    <Select
+                      name="status"
+                      defaultValue="in_progress"
+                      className="h-8 w-36 text-xs"
+                      aria-label="Bulk status"
+                    >
+                      {Object.entries(VULN_STATUS_LABEL).map(([val, label]) => (
+                        <option key={val} value={val}>
+                          Mark all: {label}
+                        </option>
+                      ))}
+                    </Select>
                     <Button type="submit" variant="outline" size="sm">
-                      Mark all reviewed
+                      Apply
                     </Button>
                   </form>
                 ) : null}
