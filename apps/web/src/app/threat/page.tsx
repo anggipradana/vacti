@@ -15,10 +15,11 @@ import { Table, THead, TBody, TR, TH, TD } from '../../components/ui/table';
 import { EmptyState } from '../../components/ui/empty-state';
 import { computeProjectRisk } from '@vacti/threat-intel';
 import { LEAK_STATUS_LABEL, userCan, Permission } from '@vacti/core';
-import { projects, otxThreatData, leakcheckData, manualIndicators, threatIntelStatus } from '@vacti/db';
+import { SECTORS } from '@vacti/threat-intel';
+import { projects, otxThreatData, leakcheckData, manualIndicators, threatIntelStatus, threatNews } from '@vacti/db';
 import { getDb } from '../../lib/db';
 import { getCurrentUser } from '../../lib/session';
-import { refreshTiAction, addIndicatorAction } from '../../lib/threat-actions';
+import { refreshTiAction, addIndicatorAction, setSectorAction } from '../../lib/threat-actions';
 import { setLeakStatusAction } from '../../lib/status-actions';
 import { generateThreatNarrativeAction } from '../../lib/ai-actions';
 
@@ -45,12 +46,15 @@ export default async function ThreatPage({ searchParams }: { searchParams: Promi
     );
   }
 
-  const [risk, otx, leaks, indicators, statusRows] = await Promise.all([
+  const project = projectRows.find((p) => p.id === projectId);
+  const sector = project?.sector ?? 'banking';
+  const [risk, otx, leaks, indicators, statusRows, news] = await Promise.all([
     computeProjectRisk(db, projectId),
     db.select().from(otxThreatData).where(eq(otxThreatData.projectId, projectId)),
     db.select().from(leakcheckData).where(eq(leakcheckData.projectId, projectId)),
     db.select().from(manualIndicators).where(eq(manualIndicators.projectId, projectId)),
     db.select().from(threatIntelStatus).where(eq(threatIntelStatus.projectId, projectId)),
+    db.select().from(threatNews).where(eq(threatNews.sector, sector)).orderBy(desc(threatNews.publishedAt)).limit(15),
   ]);
   const status = statusRows[0];
   const canTriage = userCan(user, Permission.ModifyScanResults);
@@ -138,6 +142,53 @@ export default async function ThreatPage({ searchParams }: { searchParams: Promi
         </CardHeader>
         <CardContent className="pt-0 text-sm leading-relaxed text-fg-muted">
           {status?.aiNarrative ? status.aiNarrative : <span className="text-fg-subtle">Not generated yet.</span>}
+        </CardContent>
+      </Card>
+
+      <Card className="mt-4">
+        <CardHeader className="flex flex-row items-center justify-between gap-3">
+          <CardTitle>Security news · {sector}</CardTitle>
+          {canTriage ? (
+            <form action={setSectorAction} className="flex items-center gap-2">
+              <input type="hidden" name="projectId" value={projectId} />
+              <Select name="sector" defaultValue={sector} className="w-44">
+                {Object.keys(SECTORS).map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </Select>
+              <Button type="submit" variant="outline" size="sm">
+                Apply sector
+              </Button>
+            </form>
+          ) : null}
+        </CardHeader>
+        <CardContent className="pt-0">
+          {news.length === 0 ? (
+            <p className="py-2 text-sm text-fg-muted">
+              No news yet — pick a sector and refresh to pull the latest security headlines.
+            </p>
+          ) : (
+            <ul className="divide-y divide-border">
+              {news.map((n) => (
+                <li key={n.id} className="py-2.5">
+                  <a
+                    href={n.link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm font-medium text-accent hover:underline"
+                  >
+                    {n.title}
+                  </a>
+                  <div className="mt-0.5 text-xs text-fg-subtle">
+                    {n.source}
+                    {n.publishedAt ? ` · ${new Date(n.publishedAt).toISOString().slice(0, 10)}` : ''}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
         </CardContent>
       </Card>
 

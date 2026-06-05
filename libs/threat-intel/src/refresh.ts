@@ -1,13 +1,25 @@
 import { and, eq } from 'drizzle-orm';
-import { targets, manualIndicators, otxThreatData, leakcheckData, threatIntelStatus, type Database } from '@vacti/db';
-import { fetchOtxIndicator } from './otx';
+import {
+  targets,
+  manualIndicators,
+  otxThreatData,
+  leakcheckData,
+  threatIntelStatus,
+  projects,
+  threatNews,
+  type Database,
+} from '@vacti/db';
+import { fetchOtxIndicator, type FetchLike } from './otx';
 import { fetchLeaks } from './leakcheck';
+import { fetchSectorNews } from './news';
 
 export interface RefreshDeps {
   db: Database;
   projectId: string;
   otxKey?: string;
   leakKey?: string;
+  /** Injected fetch for the sector news feeds (mocked in tests). */
+  newsFetch?: FetchLike;
   onProgress?: (progress: number, message: string) => void;
 }
 
@@ -75,8 +87,32 @@ export async function refreshThreatIntel(deps: RefreshDeps): Promise<void> {
         }
       }
       i += 1;
-      await setStatus('running', Math.round((i / Math.max(1, lookups.length)) * 100), `processed ${domain}`);
+      await setStatus('running', Math.round((i / Math.max(1, lookups.length)) * 90), `processed ${domain}`);
     }
+
+    // Sector security news (RSS) — refresh the shared per-sector cache for the project's sector.
+    await setStatus('running', 92, 'fetching sector news');
+    const [proj] = await db.select().from(projects).where(eq(projects.id, projectId));
+    const sector = proj?.sector ?? 'banking';
+    try {
+      const news = await fetchSectorNews(sector, { fetchImpl: deps.newsFetch });
+      if (news.length) {
+        await db.delete(threatNews).where(eq(threatNews.sector, sector));
+        await db.insert(threatNews).values(
+          news.map((n) => ({
+            sector,
+            title: n.title.slice(0, 500),
+            link: n.link,
+            source: n.source,
+            summary: n.summary,
+            publishedAt: n.publishedAt,
+          })),
+        );
+      }
+    } catch {
+      // News is best-effort — a feed outage must not fail the TI refresh.
+    }
+
     await setStatus('completed', 100, `${lookups.length} indicator(s)`);
   } catch (err) {
     await setStatus('failed', 0, err instanceof Error ? err.message : String(err));

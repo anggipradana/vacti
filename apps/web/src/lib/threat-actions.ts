@@ -4,7 +4,8 @@ import { revalidatePath } from 'next/cache';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { Permission } from '@vacti/core';
-import { manualIndicators, leakcheckData } from '@vacti/db';
+import { isSector } from '@vacti/threat-intel';
+import { manualIndicators, leakcheckData, projects } from '@vacti/db';
 import { getDb } from './db';
 import { getQueue } from './queue';
 import { requirePermission } from './authz';
@@ -15,6 +16,18 @@ export async function refreshTiAction(formData: FormData) {
   await requirePermission(Permission.InitiateScans);
   const projectId = String(formData.get('projectId') ?? '');
   if (!projectId) return;
+  const q = await getQueue();
+  await q.enqueue('ti-refresh', tiJob, { projectId });
+  revalidatePath('/threat');
+}
+
+/** Set the project's news sector, then enqueue a TI refresh to repopulate the feed. */
+export async function setSectorAction(formData: FormData) {
+  await requirePermission(Permission.ModifyScanResults);
+  const projectId = String(formData.get('projectId') ?? '');
+  const sector = String(formData.get('sector') ?? '');
+  if (!projectId || !isSector(sector)) return;
+  await getDb().update(projects).set({ sector, updatedAt: new Date() }).where(eq(projects.id, projectId));
   const q = await getQueue();
   await q.enqueue('ti-refresh', tiJob, { projectId });
   revalidatePath('/threat');
