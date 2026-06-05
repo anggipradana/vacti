@@ -38,6 +38,7 @@ export const leakcheckData = pgTable('leakcheck_data', {
   source: text('source'),
   identifier: text('identifier'), // email/username (display)
   password: text('password'), // plaintext leaked password (stealer logs); shown on demand
+  origin: text('origin'), // where the credential was captured (stealer-log origin hosts)
   hashMd5: text('hash_md5').notNull(),
   type: text('type').notNull().default('domain'), // domain | origin (stealer log)
   checked: boolean('checked').notNull().default(false), // legacy; superseded by status

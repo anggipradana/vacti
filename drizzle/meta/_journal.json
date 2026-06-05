@@ -141,6 +141,13 @@
       "when": 1780650795042,
       "tag": "0019_leak_password",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1780652903342,
+      "tag": "0020_leak_origin",
+      "breakpoints": true
     }
   ]
 }
