@@ -38,6 +38,15 @@ describe('matchesSector', () => {
   it('general matches everything', () => {
     expect(matchesSector(items[1]!, 'general')).toBe(true);
   });
+  it('matches Indonesian-language headlines for the banking sector', () => {
+    const ID_RSS = `<?xml version="1.0"?><rss><channel>
+      <item><title>Waspada penipuan perbankan lewat tautan palsu</title><link>https://id/1</link>
+        <pubDate>Wed, 04 Jun 2026 10:00:00 GMT</pubDate><description><![CDATA[Modus peretasan dan kebocoran data nasabah.]]></description></item>
+    </channel></rss>`;
+    const idItems = parseFeed(ID_RSS, 'ID Source');
+    expect(idItems).toHaveLength(1);
+    expect(matchesSector(idItems[0]!, 'banking')).toBe(true);
+  });
 });
 
 describe('fetchSectorNews', () => {

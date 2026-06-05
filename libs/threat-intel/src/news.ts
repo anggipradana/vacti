@@ -25,8 +25,27 @@ export const SECTORS: Record<string, string[]> = {
     'phishing',
     'wire transfer',
     'ojk',
+    // Indonesian-language keywords
+    'perbankan',
+    'keuangan',
+    'penipuan',
+    'peretasan',
+    'bocor',
+    'siber',
   ],
-  healthcare: ['hospital', 'health', 'healthcare', 'medical', 'patient', 'ehr', 'pharma', 'clinic'],
+  healthcare: [
+    'hospital',
+    'health',
+    'healthcare',
+    'medical',
+    'patient',
+    'ehr',
+    'pharma',
+    'clinic',
+    // Indonesian-language keywords
+    'rumah sakit',
+    'kesehatan',
+  ],
   government: [
     'government',
     'govt',
@@ -36,10 +55,54 @@ export const SECTORS: Record<string, string[]> = {
     'federal',
     'espionage',
     'state-sponsored',
+    // Indonesian-language keywords
+    'pemerintah',
+    'bssn',
+    'pemilu',
   ],
-  energy: ['energy', 'power grid', 'grid', 'scada', 'ics', 'ot security', 'utility', 'oil', 'gas', 'nuclear'],
-  technology: ['saas', 'cloud', 'software supply chain', 'zero-day', 'zero day', 'npm', 'github', 'api key', 'devops'],
-  retail: ['retail', 'e-commerce', 'ecommerce', 'point of sale', 'pos malware', 'magecart', 'skimmer', 'checkout'],
+  energy: [
+    'energy',
+    'power grid',
+    'grid',
+    'scada',
+    'ics',
+    'ot security',
+    'utility',
+    'oil',
+    'gas',
+    'nuclear',
+    // Indonesian-language keywords
+    'pln',
+    'pertamina',
+    'energi',
+  ],
+  technology: [
+    'saas',
+    'cloud',
+    'software supply chain',
+    'zero-day',
+    'zero day',
+    'npm',
+    'github',
+    'api key',
+    'devops',
+    // Indonesian-language keywords
+    'siber',
+    'keamanan siber',
+  ],
+  retail: [
+    'retail',
+    'e-commerce',
+    'ecommerce',
+    'point of sale',
+    'pos malware',
+    'magecart',
+    'skimmer',
+    'checkout',
+    // Indonesian-language keywords
+    'ritel',
+    'belanja',
+  ],
   general: [],
 };
 
@@ -56,6 +119,13 @@ export const FEEDS: { url: string; source: string }[] = [
   { url: 'https://krebsonsecurity.com/feed/', source: 'KrebsOnSecurity' },
   { url: 'https://www.cisa.gov/cybersecurity-advisories/all.xml', source: 'CISA' },
   { url: 'https://www.securityweek.com/feed/', source: 'SecurityWeek' },
+  // Indonesian-language coverage (keyword filter still applies per sector).
+  {
+    url: 'https://news.google.com/rss/search?q=keamanan+siber+OR+peretasan+OR+bocor+data&hl=id&gl=ID&ceid=ID:id',
+    source: 'Google News (ID)',
+  },
+  { url: 'https://www.cnnindonesia.com/teknologi/rss', source: 'CNN Indonesia Teknologi' },
+  { url: 'https://inet.detik.com/rss', source: 'detikInet' },
 ];
 
 function decode(s: string): string {
