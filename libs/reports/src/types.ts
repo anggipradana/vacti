@@ -87,12 +87,12 @@ export interface TiReportData {
 export const DEFAULT_VA_SETTINGS: ReportSettings = {
   primaryColor: '#069ec6',
   secondaryColor: '#08222b',
-  classification: 'CONFIDENTIAL — FOR INTERNAL USE ONLY',
+  classification: 'CONFIDENTIAL - FOR INTERNAL USE ONLY',
   footerText: 'CONFIDENTIAL',
 };
 export const DEFAULT_TI_SETTINGS: ReportSettings = {
   primaryColor: '#069ec6',
   secondaryColor: '#08222b',
-  classification: 'CONFIDENTIAL — FOR INTERNAL USE ONLY',
+  classification: 'CONFIDENTIAL - FOR INTERNAL USE ONLY',
   footerText: 'CONFIDENTIAL',
 };

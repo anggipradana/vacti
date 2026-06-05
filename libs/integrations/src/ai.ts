@@ -25,11 +25,19 @@ export interface VulnEnrichment {
   remediation: string;
 }
 
+/**
+ * Reports and narration must never contain em/en dashes (— / –). Even with the instruction in the
+ * system prompt, models slip them in, so normalise any to a plain hyphen as a hard guarantee.
+ */
+export function stripEmDash(s: string): string {
+  return s.replace(/[—–]/g, '-');
+}
+
 const SYSTEM = `You are a senior application security engineer. For the given vulnerability finding, write a concise, technically accurate report in EXACTLY three sections with these headings:
 Description:
 Impact:
 Remediation:
-Use plain text, no markdown bullets in headings. Be specific and actionable.`;
+Use plain text, no markdown bullets in headings. Be specific and actionable. Do not use em dashes (the "—" character); use hyphens, commas, or separate sentences instead.`;
 
 export function buildVulnPrompt(v: VulnEnrichmentInput): string {
   return [
@@ -56,7 +64,7 @@ export function parseEnrichment(text: string): VulnEnrichment {
 }
 
 export async function enrichVulnerability(v: VulnEnrichmentInput, provider: AiProvider): Promise<VulnEnrichment> {
-  return parseEnrichment(await provider.generate(SYSTEM, buildVulnPrompt(v)));
+  return parseEnrichment(stripEmDash(await provider.generate(SYSTEM, buildVulnPrompt(v))));
 }
 
 /** Build a concrete provider via the Vercel AI SDK. Returns null when no key/config (graceful degrade). */
@@ -117,17 +125,17 @@ export interface ExecSummaryInput {
 export async function generateExecutiveSummary(input: ExecSummaryInput, provider: AiProvider): Promise<string> {
   const system =
     input.lang === 'id'
-      ? 'Anda penulis laporan keamanan senior. Tulis ringkasan eksekutif 2-4 kalimat dalam Bahasa Indonesia untuk pembaca manajemen. Faktual, ringkas, tanpa markdown.'
-      : 'You are a senior security report writer. Write a 2-4 sentence executive summary for a management audience. Factual, concise, no markdown.';
+      ? 'Anda penulis laporan keamanan senior. Tulis ringkasan eksekutif 2-4 kalimat dalam Bahasa Indonesia untuk pembaca manajemen. Faktual, ringkas, tanpa markdown. Jangan gunakan tanda em dash (karakter "—"); pakai tanda hubung, koma, atau kalimat terpisah.'
+      : 'You are a senior security report writer. Write a 2-4 sentence executive summary for a management audience. Factual, concise, no markdown. Do not use em dashes (the "—" character); use hyphens, commas, or separate sentences instead.';
   const prompt = [
     `Target: ${input.target}`,
     `Subdomains: ${input.counts.subdomains}, live endpoints: ${input.counts.endpoints}, open ports: ${input.counts.ports}`,
-    `Vulnerabilities: ${input.counts.vulns} (${input.counts.active} active) — crit ${input.severities.critical}, high ${input.severities.high}, med ${input.severities.medium}, low ${input.severities.low}, info ${input.severities.info}`,
+    `Vulnerabilities: ${input.counts.vulns} (${input.counts.active} active), crit ${input.severities.critical}, high ${input.severities.high}, med ${input.severities.medium}, low ${input.severities.low}, info ${input.severities.info}`,
     input.topFindings.length ? `Notable findings: ${input.topFindings.slice(0, 5).join('; ')}` : '',
   ]
     .filter(Boolean)
     .join('\n');
-  return (await provider.generate(system, prompt)).trim();
+  return stripEmDash((await provider.generate(system, prompt)).trim());
 }
 
 // ---- Threat-intelligence narrative (TI report / page) ----
@@ -144,8 +152,8 @@ export interface ThreatNarrativeInput {
 export async function generateThreatNarrative(input: ThreatNarrativeInput, provider: AiProvider): Promise<string> {
   const system =
     input.lang === 'id'
-      ? 'Anda analis threat intelligence senior. Tulis narasi analisis risiko 3-5 kalimat dalam Bahasa Indonesia: jelaskan pendorong utama skor risiko dan rekomendasi prioritas. Faktual, tanpa markdown.'
-      : 'You are a senior threat-intelligence analyst. Write a 3-5 sentence risk-analysis narrative: explain the main drivers of the risk score and the priority recommendation. Factual, no markdown.';
+      ? 'Anda analis threat intelligence senior. Tulis narasi analisis risiko 3-5 kalimat dalam Bahasa Indonesia: jelaskan pendorong utama skor risiko dan rekomendasi prioritas. Faktual, tanpa markdown. Jangan gunakan tanda em dash (karakter "—"); pakai tanda hubung, koma, atau kalimat terpisah.'
+      : 'You are a senior threat-intelligence analyst. Write a 3-5 sentence risk-analysis narrative: explain the main drivers of the risk score and the priority recommendation. Factual, no markdown. Do not use em dashes (the "—" character); use hyphens, commas, or separate sentences instead.';
   const prompt = [
     `Project: ${input.project}`,
     `Unified risk score: ${input.riskScore}/100 (${input.riskLevel})`,
@@ -159,5 +167,5 @@ export async function generateThreatNarrative(input: ThreatNarrativeInput, provi
   ]
     .filter(Boolean)
     .join('\n');
-  return (await provider.generate(system, prompt)).trim();
+  return stripEmDash((await provider.generate(system, prompt)).trim());
 }

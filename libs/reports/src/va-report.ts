@@ -195,8 +195,8 @@ export function renderVaReport(d: VaReportData): string {
     kv([
       [l.project, d.target.domain],
       [l.status, d.scan.status],
-      ['Started', d.scan.startedAt ? new Date(d.scan.startedAt).toISOString().slice(0, 19).replace('T', ' ') : '—'],
-      ['Finished', d.scan.finishedAt ? new Date(d.scan.finishedAt).toISOString().slice(0, 19).replace('T', ' ') : '—'],
+      ['Started', d.scan.startedAt ? new Date(d.scan.startedAt).toISOString().slice(0, 19).replace('T', ' ') : '-'],
+      ['Finished', d.scan.finishedAt ? new Date(d.scan.finishedAt).toISOString().slice(0, 19).replace('T', ' ') : '-'],
     ]),
   );
 
@@ -410,6 +410,6 @@ export function renderVaReport(d: VaReportData): string {
     }
   }
 
-  body.push(`<div class="end">— ${escapeHtml(l.endOfReport)} —</div>`);
+  body.push(`<div class="end">${escapeHtml(l.endOfReport)}</div>`);
   return doc(l.vaTitle, css, body.join('\n'));
 }
