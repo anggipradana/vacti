@@ -20,6 +20,8 @@ export interface ScanProfileConfig {
   nucleiTemplates?: string[];
   nucleiExcludeTags?: string[];
   excludeSubdomains?: string[];
+  /** Override the default "interesting endpoint" keyword list (admin/login/.env/…). */
+  interestingKeywords?: string[];
   extraArgs?: { nuclei?: string[]; httpx?: string[]; subfinder?: string[]; naabu?: string[] };
 }
 
@@ -153,7 +155,11 @@ export async function runScanPipeline(input: ScanInput, deps: PipelineDeps): Pro
             contentLength: h.contentLength,
             tech: h.tech,
             isWordpress: isWordPress(h) ? 1 : 0,
-            isInteresting: isInterestingEndpoint(h.url, h.title),
+            isInteresting: isInterestingEndpoint(
+              h.url,
+              h.title,
+              cfg.interestingKeywords?.length ? cfg.interestingKeywords : undefined,
+            ),
           })),
         );
       }

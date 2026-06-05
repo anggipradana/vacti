@@ -1,6 +1,31 @@
+import { eq } from 'drizzle-orm';
 import { createDb } from './client';
 import { runMigrations } from './migrate';
 import { scanProfiles } from './recon-schema';
+
+/**
+ * Default "interesting endpoint" keywords seeded into each profile's config so the recon pipeline
+ * flags sensitive paths. Inlined here (not imported from @vacti/recon) to keep the db lib leaf-level;
+ * the pipeline falls back to its own built-in list when a profile leaves this unset.
+ */
+const INTERESTING_KEYWORDS = [
+  'admin',
+  'login',
+  'ftp',
+  'cpanel',
+  'phpmyadmin',
+  '.git',
+  '.env',
+  'backup',
+  'swagger',
+  'actuator',
+  'jenkins',
+  'gitlab',
+  'wp-admin',
+  'dashboard',
+  'api',
+  'graphql',
+];
 
 /** Default global scan profiles (projectId = null) — selectable presets in the UI/API. */
 const DEFAULT_PROFILES = [
@@ -10,6 +35,7 @@ const DEFAULT_PROFILES = [
     ports: 'top-100',
     severities: ['critical', 'high'],
     timeoutSec: 300,
+    config: { interestingKeywords: INTERESTING_KEYWORDS },
   },
   {
     name: 'Standard',
@@ -17,6 +43,7 @@ const DEFAULT_PROFILES = [
     ports: 'top-100',
     severities: ['critical', 'high', 'medium', 'low'],
     timeoutSec: 600,
+    config: { interestingKeywords: INTERESTING_KEYWORDS },
   },
   {
     name: 'Deep',
@@ -24,6 +51,7 @@ const DEFAULT_PROFILES = [
     ports: 'top-1000',
     severities: ['critical', 'high', 'medium', 'low', 'info'],
     timeoutSec: 1800,
+    config: { interestingKeywords: INTERESTING_KEYWORDS },
   },
 ];
 
@@ -33,16 +61,27 @@ export async function seed(connectionString: string): Promise<void> {
   const { db, close } = createDb(connectionString);
   try {
     const existing = await db.select().from(scanProfiles);
-    const names = new Set(existing.filter((p) => p.projectId === null).map((p) => p.name));
-    const toInsert = DEFAULT_PROFILES.filter((p) => !names.has(p.name)).map((p) => ({ ...p, projectId: null }));
+    const globals = existing.filter((p) => p.projectId === null);
+    const byName = new Map(globals.map((p) => [p.name, p]));
+    const toInsert = DEFAULT_PROFILES.filter((p) => !byName.has(p.name)).map((p) => ({ ...p, projectId: null }));
     if (toInsert.length) {
       await db.insert(scanProfiles).values(toInsert);
       console.log(
         `[seed] inserted ${toInsert.length} default scan profile(s): ${toInsert.map((p) => p.name).join(', ')}`,
       );
-    } else {
-      console.log('[seed] default scan profiles already present — nothing to do');
     }
+    // Backfill the interesting-keywords config onto presets that predate it — only when a preset
+    // has no config yet, so an operator's customisations are never clobbered.
+    let backfilled = 0;
+    for (const def of DEFAULT_PROFILES) {
+      const row = byName.get(def.name);
+      if (row && (!row.config || Object.keys(row.config as object).length === 0)) {
+        await db.update(scanProfiles).set({ config: def.config }).where(eq(scanProfiles.id, row.id));
+        backfilled += 1;
+      }
+    }
+    if (backfilled) console.log(`[seed] backfilled config on ${backfilled} existing preset(s)`);
+    if (!toInsert.length && !backfilled) console.log('[seed] default scan profiles already present — nothing to do');
   } finally {
     await close();
   }
