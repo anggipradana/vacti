@@ -57,14 +57,16 @@ rendering), argon2id password hashing, an Nx monorepo, and Vitest.
 
 ## Architecture
 
-```text
-Browser ─ Next.js app (web)  ──┐
-                               ├── PostgreSQL  (data + pg-boss job queue)
-External CLI ─ REST API (Hono) ┘        ▲
-                                        │ jobs
-                          worker (pg-boss) ── runs the recon pipeline + TI refresh
-                                        │
-                          subfinder / httpx / naabu / nuclei (Go binaries on PATH)
+```mermaid
+flowchart TD
+    Browser["Browser (UI)"] --> Web["Next.js app: web UI + REST API (Hono)"]
+    Client["External CLI / API client"] --> Web
+    Web -->|"read / write"| PG[("PostgreSQL: data + pg-boss job queue")]
+    Web -->|"enqueue scan / TI jobs"| PG
+    Worker["worker (pg-boss consumer)"] -->|"poll jobs"| PG
+    Worker -->|"recon pipeline"| Tools["subfinder / httpx / naabu / nuclei (Go on PATH)"]
+    Worker -->|"threat intel"| TI["OTX / LeakCheck / RSS feeds"]
+    Worker -->|"persist results"| PG
 ```
 
 The web app serves the UI and the REST API; the worker consumes jobs from the queue and shells out to
