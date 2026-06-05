@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation';
 import { ShieldCheck } from 'lucide-react';
 import { createAdminAction, loginAction } from '../../lib/actions';
 import { getCurrentUser, userCount } from '../../lib/session';
-import { Button } from '../../components/ui/button';
+import { SubmitButton } from '../../components/ui/submit-button';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { ThemeToggle } from '../../components/ui/theme-toggle';
@@ -48,9 +48,9 @@ export default async function LoginPage() {
                 required
               />
             </div>
-            <Button type="submit" data-testid="submit" className="w-full">
+            <SubmitButton data-testid="submit" className="w-full" pendingText="Please wait…">
               {firstRun ? 'Create admin & continue' : 'Sign in'}
-            </Button>
+            </SubmitButton>
           </form>
         </div>
         <p className="mt-4 text-center text-xs text-fg-subtle">

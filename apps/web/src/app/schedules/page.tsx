@@ -7,6 +7,7 @@ import { Card, CardContent } from '../../components/ui/card';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Button } from '../../components/ui/button';
+import { SubmitButton } from '../../components/ui/submit-button';
 import { Select } from '../../components/ui/select';
 import { Badge } from '../../components/ui/badge';
 import { EmptyState } from '../../components/ui/empty-state';
@@ -80,7 +81,7 @@ export default async function SchedulesPage() {
                   ))}
                 </datalist>
               </div>
-              <Button type="submit">Add schedule</Button>
+              <SubmitButton pendingText="Adding…">Add schedule</SubmitButton>
             </form>
             <p className="mt-2 text-xs text-fg-subtle">
               Presets: {PRESETS.map((p) => `${p.label} = ${p.cron}`).join(' · ')}

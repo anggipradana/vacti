@@ -50,7 +50,13 @@ export default async function AuditPage() {
                     <TD className="whitespace-nowrap font-mono text-xs text-fg-muted">
                       {new Date(r.createdAt).toISOString().slice(0, 19).replace('T', ' ')}
                     </TD>
-                    <TD className="text-sm">{r.actorId ? (emailById.get(r.actorId) ?? r.actorId.slice(0, 8)) : '—'}</TD>
+                    <TD className="text-sm">
+                      {r.actorId ? (
+                        (emailById.get(r.actorId) ?? r.actorId.slice(0, 8))
+                      ) : (
+                        <span className="text-fg-subtle">system</span>
+                      )}
+                    </TD>
                     <TD>
                       <Badge variant="neutral">{r.action}</Badge>
                     </TD>

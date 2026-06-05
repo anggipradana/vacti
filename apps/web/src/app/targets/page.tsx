@@ -8,7 +8,7 @@ import { Card, CardContent } from '../../components/ui/card';
 import { Input } from '../../components/ui/input';
 import { Textarea } from '../../components/ui/textarea';
 import { Label } from '../../components/ui/label';
-import { Button } from '../../components/ui/button';
+import { SubmitButton } from '../../components/ui/submit-button';
 import { Select } from '../../components/ui/select';
 import { Badge } from '../../components/ui/badge';
 import { EmptyState } from '../../components/ui/empty-state';
@@ -73,9 +73,9 @@ export default async function TargetsPage() {
                   One per line as &quot;Key: value&quot;. Sent by httpx &amp; nuclei.
                 </p>
               </div>
-              <Button type="submit" data-testid="create-target" className="w-full">
+              <SubmitButton data-testid="create-target" className="w-full" pendingText="Adding…">
                 Add target
-              </Button>
+              </SubmitButton>
             </form>
           </CardContent>
         </Card>
