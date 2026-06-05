@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { desc, count } from 'drizzle-orm';
+import { desc, count, eq } from 'drizzle-orm';
 import { Radar } from 'lucide-react';
 import { AppShell } from '../../components/shell/app-shell';
 import { PageHeader } from '../../components/ui/page-header';
@@ -9,7 +9,8 @@ import { StatusPill } from '../../components/ui/status-pill';
 import { EmptyState } from '../../components/ui/empty-state';
 import { Button } from '../../components/ui/button';
 import { NewScanDialog } from '../../components/new-scan-dialog';
-import { scans, targets, scanProfiles } from '@vacti/db';
+import { ProjectSwitcher } from '../../components/project-switcher';
+import { scans, targets, scanProfiles, projects } from '@vacti/db';
 import { getDb } from '../../lib/db';
 import { getCurrentUser } from '../../lib/session';
 
@@ -25,18 +26,28 @@ function rel(d: Date): string {
 
 const PAGE_SIZE = 25;
 
-export default async function ScansPage({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
+export default async function ScansPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string; project?: string }>;
+}) {
   const user = await getCurrentUser();
   if (!user) redirect('/login');
   const db = getDb();
-  const { page: pageParam } = await searchParams;
-  const page = Math.max(1, Number(pageParam ?? 1) || 1);
+  const sp = await searchParams;
+  const page = Math.max(1, Number(sp.page ?? 1) || 1);
   const offset = (page - 1) * PAGE_SIZE;
+  const projectRows = await db.select().from(projects).orderBy(desc(projects.createdAt));
+  const projectId = sp.project ?? projectRows[0]?.id;
+  // Scope scans + targets to the active project (multi-project workspaces).
+  const scanWhere = projectId ? eq(scans.projectId, projectId) : undefined;
   const [scanRows, targetRows, profileRows, countRows] = await Promise.all([
-    db.select().from(scans).orderBy(desc(scans.createdAt)).limit(PAGE_SIZE).offset(offset),
-    db.select().from(targets).orderBy(desc(targets.createdAt)),
+    db.select().from(scans).where(scanWhere).orderBy(desc(scans.createdAt)).limit(PAGE_SIZE).offset(offset),
+    projectId
+      ? db.select().from(targets).where(eq(targets.projectId, projectId)).orderBy(desc(targets.createdAt))
+      : Promise.resolve([]),
     db.select().from(scanProfiles),
-    db.select({ n: count() }).from(scans),
+    db.select({ n: count() }).from(scans).where(scanWhere),
   ]);
   const totalScans = Number(countRows[0]?.n ?? 0);
   const totalPages = Math.max(1, Math.ceil(totalScans / PAGE_SIZE));
@@ -47,10 +58,13 @@ export default async function ScansPage({ searchParams }: { searchParams: Promis
         title="Scans"
         description="Recon runs across your targets."
         actions={
-          <NewScanDialog
-            targets={targetRows.map((t) => ({ id: t.id, domain: t.domain }))}
-            profiles={profileRows.map((p) => ({ id: p.id, name: p.name }))}
-          />
+          <div className="flex items-center gap-2">
+            <ProjectSwitcher projects={projectRows} current={projectId} basePath="/scans" />
+            <NewScanDialog
+              targets={targetRows.map((t) => ({ id: t.id, domain: t.domain }))}
+              profiles={profileRows.map((p) => ({ id: p.id, name: p.name }))}
+            />
+          </div>
         }
       />
       {scanRows.length === 0 ? (
@@ -106,12 +120,12 @@ export default async function ScansPage({ searchParams }: { searchParams: Promis
               </span>
               <div className="flex gap-2">
                 <Button asChild variant="outline" size="sm" disabled={page <= 1}>
-                  <Link href={`/scans?page=${page - 1}`} aria-disabled={page <= 1}>
+                  <Link href={`/scans?project=${projectId}&page=${page - 1}`} aria-disabled={page <= 1}>
                     Previous
                   </Link>
                 </Button>
                 <Button asChild variant="outline" size="sm" disabled={page >= totalPages}>
-                  <Link href={`/scans?page=${page + 1}`} aria-disabled={page >= totalPages}>
+                  <Link href={`/scans?project=${projectId}&page=${page + 1}`} aria-disabled={page >= totalPages}>
                     Next
                   </Link>
                 </Button>
