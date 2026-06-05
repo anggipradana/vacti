@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { desc } from 'drizzle-orm';
+import { desc, eq, inArray } from 'drizzle-orm';
 import { Crosshair, Radar, Globe, ShieldAlert, ShieldCheck, FileText, Plug, Radar as RadarIcon } from 'lucide-react';
 import { AppShell } from '../../components/shell/app-shell';
 import { PageHeader } from '../../components/ui/page-header';
@@ -15,22 +15,33 @@ import { TrendArea } from '../../components/ui/trend-area';
 import { Severity, VULN_ACTIVE_STATUSES } from '@vacti/core';
 import { SeverityBadge } from '../../components/ui/severity-badge';
 import type { SeverityValue } from '@vacti/core';
-import { targets, scans, endpoints, vulnerabilities } from '@vacti/db';
+import { targets, scans, endpoints, vulnerabilities, projects } from '@vacti/db';
 import { getDb } from '../../lib/db';
 import { getCurrentUser } from '../../lib/session';
+import { ProjectSwitcher } from '../../components/project-switcher';
 
 export const dynamic = 'force-dynamic';
 
-export default async function Dashboard() {
+export default async function Dashboard({ searchParams }: { searchParams: Promise<{ project?: string }> }) {
   const user = await getCurrentUser();
   if (!user) redirect('/login');
   const db = getDb();
-  const [targetRows, scanRows, endpointRows, vulnRows] = await Promise.all([
-    db.select().from(targets),
-    db.select().from(scans).orderBy(desc(scans.createdAt)),
-    db.select().from(endpoints),
-    db.select().from(vulnerabilities),
-  ]);
+  const projectRows = await db.select().from(projects).orderBy(desc(projects.createdAt));
+  const projectId = (await searchParams).project ?? projectRows[0]?.id;
+  // Scope the whole overview to the active project so client engagements never bleed into each other.
+  const [targetRows, scanRows] = projectId
+    ? await Promise.all([
+        db.select().from(targets).where(eq(targets.projectId, projectId)),
+        db.select().from(scans).where(eq(scans.projectId, projectId)).orderBy(desc(scans.createdAt)),
+      ])
+    : [[], []];
+  const scanIds = scanRows.map((s) => s.id);
+  const [endpointRows, vulnRows] = scanIds.length
+    ? await Promise.all([
+        db.select().from(endpoints).where(inArray(endpoints.scanId, scanIds)),
+        db.select().from(vulnerabilities).where(inArray(vulnerabilities.scanId, scanIds)),
+      ])
+    : [[], []];
   const targetById = new Map(targetRows.map((t) => [t.id, t]));
 
   const sev = (v: number) => vulnRows.filter((x) => x.severity === v).length;
@@ -84,9 +95,12 @@ export default async function Dashboard() {
         title="Overview"
         description={`Signed in as ${user.email}${user.isSysAdmin ? ' · SysAdmin' : ''}`}
         actions={
-          <Button asChild>
-            <Link href="/scans">New scan</Link>
-          </Button>
+          <div className="flex items-center gap-2">
+            <ProjectSwitcher projects={projectRows} current={projectId} basePath="/dashboard" />
+            <Button asChild>
+              <Link href="/scans">New scan</Link>
+            </Button>
+          </div>
         }
       />
 
@@ -144,7 +158,7 @@ export default async function Dashboard() {
 
       {/* Metric tiles */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard label="Targets" value={targetRows.length} icon={<Crosshair />} />
+        <StatCard label="Targets" value={targetRows.length} icon={<Crosshair />} testId="stat-targets" />
         <StatCard label="Scans" value={scanRows.length} icon={<Radar />} />
         <StatCard label="Live endpoints" value={endpointRows.length} icon={<Globe />} />
         <StatCard label="Vulnerabilities" value={vulnRows.length} icon={<ShieldAlert />} />
