@@ -82,12 +82,16 @@ export async function refreshThreatIntel(deps: RefreshDeps): Promise<void> {
             source: l.source,
             identifier: l.identifier,
             password: l.password,
+            origin: l.origin,
             hashMd5: l.hashMd5,
             type: l.type,
           });
         } else if (l.password && !ex[0]!.password) {
           // Backfill a newly-available password onto an existing leak row.
-          await db.update(leakcheckData).set({ password: l.password }).where(eq(leakcheckData.id, ex[0]!.id));
+          await db
+            .update(leakcheckData)
+            .set({ password: l.password, origin: l.origin })
+            .where(eq(leakcheckData.id, ex[0]!.id));
         }
       }
       i += 1;

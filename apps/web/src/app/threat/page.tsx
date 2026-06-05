@@ -374,6 +374,7 @@ export default async function ThreatPage({
             <TR>
               <TH>Identifier</TH>
               <TH>Password</TH>
+              <TH>Origin</TH>
               <TH>Source</TH>
               <TH>Type</TH>
               <TH className="text-right">Triage status</TH>
@@ -385,6 +386,9 @@ export default async function ThreatPage({
                 <TD className="font-mono text-xs">{l.identifier}</TD>
                 <TD>
                   <Reveal value={l.password} />
+                </TD>
+                <TD className="max-w-[200px] truncate font-mono text-xs text-fg-subtle" title={l.origin ?? ''}>
+                  {l.origin ?? '-'}
                 </TD>
                 <TD>{l.source}</TD>
                 <TD>

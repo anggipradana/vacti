@@ -47,12 +47,29 @@ describe('LeakCheck client', () => {
     expect(await fetchLeaks('example.com', {})).toEqual([]);
   });
 
-  it('maps results with stable md5 ids', async () => {
+  it('maps results with stable md5 ids (over source:identifier:password:origin) and dedupes', async () => {
+    // fetchLeaks queries both the domain and origin indexes; identical rows dedupe by hash.
     const fetchImpl = vi.fn(async () => jsonRes({ result: [{ source: { name: 'BreachX' }, email: 'a@example.com' }] }));
     const r = await fetchLeaks('example.com', { apiKey: 'k', fetchImpl: fetchImpl as unknown as typeof fetch });
     expect(r).toHaveLength(1);
     expect(r[0]!.source).toBe('BreachX');
     expect(r[0]!.identifier).toBe('a@example.com');
-    expect(r[0]!.hashMd5).toBe(md5('BreachX:a@example.com'));
+    expect(r[0]!.hashMd5).toBe(md5('BreachX:a@example.com::'));
+  });
+
+  it('keeps distinct credentials (same email, different password) and captures origin', async () => {
+    const fetchImpl = vi.fn(async () =>
+      jsonRes({
+        result: [
+          { source: { name: 'Stealer' }, email: 'a@example.com', password: 'p1', origin: ['x.test'] },
+          { source: { name: 'Stealer' }, email: 'a@example.com', password: 'p2', origin: ['x.test'] },
+        ],
+      }),
+    );
+    const r = await fetchLeaks('example.com', { apiKey: 'k', fetchImpl: fetchImpl as unknown as typeof fetch });
+    // Both passwords kept (not collapsed); origin captured.
+    expect(r).toHaveLength(2);
+    expect(new Set(r.map((x) => x.password))).toEqual(new Set(['p1', 'p2']));
+    expect(r[0]!.origin).toBe('x.test');
   });
 });
