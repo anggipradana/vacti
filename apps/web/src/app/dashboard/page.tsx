@@ -173,8 +173,9 @@ export default async function Dashboard() {
           hue="160 70% 42%"
           icon={<FileText />}
           title="Reports"
-          description="Bilingual VA & TI PDF reports."
-          status="soon"
+          description="Bilingual VA & TI PDF reports — generate from any scan."
+          href="/scans"
+          status="live"
         />
         <ModuleCard
           hue="35 92% 52%"

@@ -1,0 +1,15 @@
+{
+  "cookies": [
+    {
+      "name": "vacti_session",
+      "value": "f8ab91ff5000fa54a41fa02565ad616d7b7f022d12703fc4",
+      "domain": "localhost",
+      "path": "/",
+      "expires": 1781226625.058371,
+      "httpOnly": true,
+      "secure": false,
+      "sameSite": "Lax"
+    }
+  ],
+  "origins": []
+}
