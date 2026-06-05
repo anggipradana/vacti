@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { isVulnStatus, isLeakStatus, Permission, REVIEW_TOGGLE } from '@vacti/core';
 import { vulnerabilities, leakcheckData } from '@vacti/db';
 import { getDb } from './db';
@@ -24,11 +24,17 @@ export async function bulkReviewVulnsAction(formData: FormData) {
   await requirePermission(Permission.ModifyScanResults);
   const scanId = String(formData.get('scanId') ?? '');
   const status = String(formData.get('status') || REVIEW_TOGGLE.vuln.reviewed);
+  const filter = String(formData.get('filter') ?? 'all');
   if (!scanId || !isVulnStatus(status)) return;
   await getDb()
     .update(vulnerabilities)
     .set({ status, statusChangedAt: new Date() })
-    .where(eq(vulnerabilities.scanId, scanId));
+    .where(
+      and(
+        eq(vulnerabilities.scanId, scanId),
+        filter !== 'all' && isVulnStatus(filter) ? eq(vulnerabilities.status, filter) : undefined,
+      ),
+    );
   revalidatePath(`/scans/${scanId}`);
 }
 

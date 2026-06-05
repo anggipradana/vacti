@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { eq, sql } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { Permission, isNewsStatus, isLeakStatus, REVIEW_TOGGLE } from '@vacti/core';
 import { isSector, fetchSectorNews } from '@vacti/threat-intel';
@@ -69,26 +69,41 @@ export async function setNewsStatusAction(formData: FormData) {
   revalidatePath('/threat');
 }
 
-/** Bulk-set every news headline of a sector to a CHOSEN status (defaults to the review status). */
+/** Bulk-set news headlines of a sector to a CHOSEN status; honours the current status filter. */
 export async function bulkReviewNewsAction(formData: FormData) {
   await requirePermission(Permission.ModifyScanResults);
   const sector = String(formData.get('sector') ?? '');
   const status = String(formData.get('status') || REVIEW_TOGGLE.news.reviewed);
+  const filter = String(formData.get('filter') ?? 'all');
   if (!isSector(sector) || !isNewsStatus(status)) return;
-  await getDb().update(threatNews).set({ status }).where(eq(threatNews.sector, sector));
+  await getDb()
+    .update(threatNews)
+    .set({ status })
+    .where(
+      and(
+        eq(threatNews.sector, sector),
+        filter !== 'all' && isNewsStatus(filter) ? eq(threatNews.status, filter) : undefined,
+      ),
+    );
   revalidatePath('/threat');
 }
 
-/** Bulk-set every leaked credential of a project to a CHOSEN triage status. */
+/** Bulk-set leaked credentials of a project to a CHOSEN status; honours the current status filter. */
 export async function bulkReviewLeaksAction(formData: FormData) {
   await requirePermission(Permission.ModifyScanResults);
   const projectId = String(formData.get('projectId') ?? '');
   const status = String(formData.get('status') || REVIEW_TOGGLE.leak.reviewed);
+  const filter = String(formData.get('filter') ?? 'all');
   if (!projectId || !isLeakStatus(status)) return;
   await getDb()
     .update(leakcheckData)
     .set({ status, checked: status !== 'new' })
-    .where(eq(leakcheckData.projectId, projectId));
+    .where(
+      and(
+        eq(leakcheckData.projectId, projectId),
+        filter !== 'all' && isLeakStatus(filter) ? eq(leakcheckData.status, filter) : undefined,
+      ),
+    );
   revalidatePath('/threat');
 }
 

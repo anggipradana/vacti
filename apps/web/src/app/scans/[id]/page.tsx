@@ -327,6 +327,7 @@ export default async function ScanDetail({
                 {canTriage ? (
                   <form action={bulkReviewVulnsAction} className="flex items-center gap-1.5">
                     <input type="hidden" name="scanId" value={scan.id} />
+                    <input type="hidden" name="filter" value={vulnFilter} />
                     <Select
                       name="status"
                       defaultValue="in_progress"
