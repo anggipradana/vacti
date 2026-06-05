@@ -1,4 +1,4 @@
-import { and, count, eq, inArray } from 'drizzle-orm';
+import { and, count, eq, inArray, lt } from 'drizzle-orm';
 import { z } from 'zod';
 import { loadEnv } from '@vacti/config';
 import { cronMatches, Severity, SEVERITY_LABEL, type SeverityValue } from '@vacti/core';
@@ -45,6 +45,21 @@ async function main(): Promise<void> {
     .where(eq(scans.status, 'running'))
     .returning({ id: scans.id });
   if (reaped.length) console.log(`[worker] reaped ${reaped.length} orphaned scan(s) stuck in 'running'`);
+
+  // Live watchdog: even while the worker stays up, a scan that runs far longer than any real scan
+  // should (stalled tool, hung host, lost job) is failed so it can never sit "running" forever. The
+  // cap is generous (default 60 min vs a ~10-16 min normal scan) so a legitimately long scan is safe.
+  const MAX_SCAN_MS = Number(process.env.SCAN_MAX_RUNTIME_MS ?? 60 * 60 * 1000);
+  const watchdog = setInterval(() => {
+    void db
+      .update(scans)
+      .set({ status: 'failed', stage: 'interrupted', error: 'Stalled (watchdog timeout)', finishedAt: new Date() })
+      .where(and(eq(scans.status, 'running'), lt(scans.startedAt, new Date(Date.now() - MAX_SCAN_MS))))
+      .returning({ id: scans.id })
+      .then((rows) => rows.length && console.log(`[worker] watchdog failed ${rows.length} stalled scan(s)`))
+      .catch((err) => console.error('[worker] watchdog error:', err));
+  }, 60_000);
+  watchdog.unref();
 
   const queue = createQueue(env.DATABASE_URL);
   await queue.start();
@@ -205,6 +220,7 @@ async function main(): Promise<void> {
 
   const shutdown = async (signal: string): Promise<void> => {
     console.log(`[worker] ${signal} received, shutting down…`);
+    clearInterval(watchdog);
     await queue.stop();
     process.exit(0);
   };
