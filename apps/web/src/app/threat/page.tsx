@@ -177,7 +177,7 @@ export default async function ThreatPage({
       </Suspense>
 
       <Suspense fallback={<div className="mt-4 text-sm text-fg-subtle">Loading brand news…</div>}>
-        <BrandNews brand={(project?.name ?? '').split('.')[0] || (project?.name ?? 'brand')} />
+        <BrandNews brand={project?.name ?? 'brand'} />
       </Suspense>
 
       <Card className="mt-4">

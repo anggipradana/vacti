@@ -215,14 +215,18 @@ export async function fetchSectorNews(sector: string, opts: FetchNewsOptions = {
  * monitor what is being said about the project's brand/domain. Degrades to [] on error.
  */
 export async function fetchBrandNews(
-  brand: string,
+  name: string,
   opts: { fetchImpl?: FetchLike; limit?: number; timeoutMs?: number; security?: boolean } = {},
 ): Promise<NewsItem[]> {
   const { fetchImpl = fetch, limit = 12, timeoutMs = 8000, security = false } = opts;
-  const term = brand.trim();
+  const term = name.trim();
   if (!term) return [];
-  // Optionally bias toward security/breach coverage of the brand.
-  const q = security ? `"${term}" (breach OR hack OR leak OR cyber OR ransomware OR phishing)` : `"${term}"`;
+  // Tighten the match: the brand word alone (e.g. "hijra") is far too broad, so require either the
+  // exact domain/name OR the brand word together with a security/breach qualifier.
+  const brandWord = term.split(/[.\s]/)[0] || term;
+  const sec =
+    '(breach OR hacked OR leaked OR "data breach" OR cyber OR ransomware OR phishing OR peretasan OR "bocor data" OR "keamanan siber")';
+  const q = security ? `"${term}" OR ("${brandWord}" ${sec})` : `"${term}" OR "${brandWord}"`;
   const url = `https://news.google.com/rss/search?q=${encodeURIComponent(q)}&hl=id&gl=ID&ceid=ID:id`;
   try {
     const ctrl = new AbortController();
