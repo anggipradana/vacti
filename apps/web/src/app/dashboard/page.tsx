@@ -19,6 +19,7 @@ import { targets, scans, endpoints, vulnerabilities, projects } from '@vacti/db'
 import { getDb } from '../../lib/db';
 import { getCurrentUser } from '../../lib/session';
 import { ProjectSwitcher } from '../../components/project-switcher';
+import { getActiveProjectId } from '../../lib/active-project';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,7 +28,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
   if (!user) redirect('/login');
   const db = getDb();
   const projectRows = await db.select().from(projects).orderBy(desc(projects.createdAt));
-  const projectId = (await searchParams).project ?? projectRows[0]?.id;
+  const projectId = await getActiveProjectId((await searchParams).project, projectRows);
   // Scope the whole overview to the active project so client engagements never bleed into each other.
   const [targetRows, scanRows] = projectId
     ? await Promise.all([

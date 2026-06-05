@@ -33,6 +33,7 @@ import {
 import { setLeakStatusAction } from '../../lib/status-actions';
 import { generateThreatNarrativeAction } from '../../lib/ai-actions';
 import { CtiCards } from './cti-cards';
+import { getActiveProjectId } from '../../lib/active-project';
 
 export const dynamic = 'force-dynamic';
 
@@ -46,7 +47,7 @@ export default async function ThreatPage({
   const db = getDb();
   const projectRows = await db.select().from(projects).orderBy(desc(projects.createdAt));
   const sp = await searchParams;
-  const projectId = sp.project ?? projectRows[0]?.id;
+  const projectId = await getActiveProjectId(sp.project, projectRows);
   const leakFilter = sp.leak ?? 'all';
   const newsFilter = sp.news ?? 'all';
   const LEAK_PAGE_SIZE = 25;
