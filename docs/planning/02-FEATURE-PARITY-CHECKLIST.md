@@ -232,3 +232,24 @@ G4/G5 (diff/sub-scan) → sisanya. Proxy support & multi-org tetap di luar v1.
 - ➕ **README GitHub** ditulis ulang (fitur, quickstart+env, contoh API curl, route report, testing, deploy).
 - ✅ **Output-QA**: scan nyata ke **testfire.net** (target uji terotorisasi) → report VA PDF dirender →
   paginasi/komponen diperiksa per-halaman (pdftoppm) + alur diuji Playwright.
+
+## Addendum — Triase, berita sektor & batch paralel (2026-06-05)
+
+Lanjutan threat-intel + finding-triage; lima fitur dikerjakan paralel lalu diverifikasi & commit
+terpisah (typecheck 12/12, lint, unit 9 proyek, e2e 22/22 hijau).
+
+- ➕ **Berita keamanan sektor** (RSS bebas-API-key + filter keyword per sektor) di kartu TI **dan**
+  section report; tiap headline punya **status triase** (preserved lintas refresh via upsert). Lihat
+  [10-SECTOR-THREAT-NEWS.md](10-SECTOR-THREAT-NEWS.md).
+- ➕ **Feed lokal Indonesia**: Google News (ID), CNN Indonesia Teknologi, detikInet + keyword
+  bahasa Indonesia per sektor (perbankan/keuangan/penipuan/bocor/bssn/…).
+- ➕ **Review toggle 1-klik** + **filter status** + **bulk "mark all reviewed"** untuk tiap finding
+  bertstatus (VA vuln, leak, berita) — lihat [05-FINDING-STATUS.md](05-FINDING-STATUS.md) §4.
+- ✅ **G11 (sebagian) pagination server-side**: tabel leaks (filter+limit/offset di SQL) & vuln
+  (in-memory, set penuh dipakai diff) + komponen `<Pagination>`; daftar scans sudah paginated. Tab
+  scan kini URL-driven (`?tab=`) agar filter/paging tidak melempar balik ke tab awal.
+- ✅ **G16 seed/keywords**: profil default (Quick/Standard/Deep) kini membawa `interestingKeywords`
+  di config dan **dipakai** pipeline httpx (fallback ke default bila kosong); seed backfill config
+  ke preset lama tanpa menimpa kustomisasi.
+- ➕ **Notifikasi otomatis**: event `vuln.found` (high/critical saat scan selesai) & `ti.refreshed`
+  (delta leak baru) lewat webhook per-proyek (Telegram/Discord/Google Chat/Slack).
