@@ -286,16 +286,34 @@ export function findingCard(opts: {
         .map((r) => `<li class="mono">${escapeHtml(r)}</li>`)
         .join('')}</ul></div>`
     : '';
-  // Raw HTTP evidence (nuclei request/response) — capped so a large body can't blow up the PDF.
-  const cap = (s: string) => (s.length > 2500 ? `${s.slice(0, 2500)}\n… [truncated]` : s);
+  // Raw HTTP evidence (nuclei request/response): a tidy line-bounded excerpt so the PDF never chops
+  // content mid-line — the full raw pair stays available in the app.
+  const excerpt = (s: string): { text: string; cut: boolean } => {
+    const lines = s
+      .replace(/\r/g, '')
+      .replace(/\n{3,}/g, '\n\n')
+      .split('\n');
+    let cut = lines.length > 22;
+    let text = lines.slice(0, 22).join('\n');
+    if (text.length > 1600) {
+      text = text.slice(0, 1600);
+      cut = true;
+    }
+    return { text: text.trimEnd(), cut };
+  };
+  const evBlock = (label: string, raw: string): string => {
+    const { text, cut } = excerpt(raw);
+    const more = cut
+      ? `<div class="evmore">${escapeHtml(biText(opts.lang, '... dipotong - selengkapnya di aplikasi', '... truncated - full pair in app'))}</div>`
+      : '';
+    return `<div class="evlabel">${escapeHtml(label)}</div><pre class="evidence">${escapeHtml(text)}</pre>${more}`;
+  };
   const evParts = [
-    opts.request
-      ? `<div class="evlabel">Request</div><pre class="evidence">${escapeHtml(cap(opts.request))}</pre>`
-      : '',
-    opts.response
-      ? `<div class="evlabel">Response</div><pre class="evidence">${escapeHtml(cap(opts.response))}</pre>`
-      : '',
-  ].join('');
+    opts.request ? evBlock('Request', opts.request) : '',
+    opts.response ? evBlock('Response', opts.response) : '',
+  ]
+    .filter(Boolean)
+    .join('');
   const evidenceBlock = evParts
     ? `<div class="fblock"><div class="flabel">${escapeHtml(biText(opts.lang, 'Bukti (Request / Response)', 'Evidence (Request / Response)'))}</div>${evParts}</div>`
     : '';
