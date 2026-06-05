@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" fill="none" role="img" aria-label="VACTI">
+  <defs>
+    <linearGradient id="icon-v" x1="34" y1="40" x2="60" y2="96" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#8FD4FF" />
+      <stop offset="1" stop-color="#37B6FF" />
+    </linearGradient>
+    <clipPath id="icon-clip"><rect x="4" y="4" width="112" height="112" rx="26" /></clipPath>
+  </defs>
+  <rect x="4" y="4" width="112" height="112" rx="26" fill="#0A1B33" />
+  <g clip-path="url(#icon-clip)" stroke="#37B6FF" stroke-width="3" fill="none">
+    <circle cx="60" cy="58" r="16" opacity="0.45" />
+    <circle cx="60" cy="58" r="30" opacity="0.28" />
+  </g>
+  <path d="M34 42 L60 96 L86 42" stroke="url(#icon-v)" stroke-width="14" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+  <circle cx="60" cy="58" r="5" fill="#FFFFFF" />
+  <circle cx="88" cy="40" r="6" fill="#37B6FF" stroke="#0A1B33" stroke-width="2.5" />
+</svg>

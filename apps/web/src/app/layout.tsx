@@ -14,6 +14,9 @@ const mono = IBM_Plex_Mono({ subsets: ['latin'], weight: ['400', '500'], variabl
 export const metadata = {
   title: 'vacti',
   description: 'Vulnerability Assessment + Cyber Threat Intelligence platform',
+  icons: {
+    icon: '/icon.svg',
+  },
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

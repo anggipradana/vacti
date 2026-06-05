@@ -37,10 +37,10 @@ function isActive(pathname: string, href: string): boolean {
 function Brand() {
   return (
     <Link href="/dashboard" className="flex items-center gap-2">
-      <span className="flex size-7 items-center justify-center rounded-md bg-accent font-display text-sm font-bold text-accent-fg">
-        v
+      <img src="/logo.svg" alt="" aria-hidden="true" className="size-7" />
+      <span className="font-display text-[17px] font-semibold tracking-tight">
+        vac<span className="text-accent">ti</span>
       </span>
-      <span className="font-display text-[17px] font-semibold tracking-tight">vacti</span>
     </Link>
   );
 }
@@ -90,7 +90,7 @@ export function AppShell({
   return (
     <div className="min-h-screen">
       <header className="sticky top-0 z-40 border-b border-border bg-bg/85 backdrop-blur">
-        <div className="mx-auto flex h-14 max-w-[1240px] items-center gap-6 px-5 sm:px-6">
+        <div className="mx-auto flex h-14 w-full max-w-screen-2xl items-center gap-6 px-5 sm:px-6 lg:px-8">
           <Brand />
           <nav className="hidden h-14 items-center gap-1 md:flex">
             {nav.map((item) => {
@@ -148,7 +148,7 @@ export function AppShell({
           </nav>
         ) : null}
       </header>
-      <main className="mx-auto w-full max-w-[1240px] px-5 py-8 sm:px-6">{children}</main>
+      <main className="mx-auto w-full max-w-screen-2xl px-5 py-8 sm:px-6 lg:px-8">{children}</main>
     </div>
   );
 }
