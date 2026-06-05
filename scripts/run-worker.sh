@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
-# Supervised worker runner.
+# Supervised worker runner — for running the worker directly on a host (bare-metal / WSL dev).
+# The canonical production deployment is Docker Compose (docs/how-to/deploy.md), where the worker
+# service uses `restart: unless-stopped` for the same effect; this script is the non-Docker equivalent.
 #
 # The worker processes scans, threat-intel refreshes and the schedule tick. If it exits for any
 # reason (crash, OOM, host hiccup) with nothing to restart it, in-flight scans get orphaned and sit
