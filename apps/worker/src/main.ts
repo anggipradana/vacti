@@ -23,8 +23,11 @@ const tiJobSchema = z.object({ projectId: z.string().uuid() });
 const DEFAULT_PROFILE: ScanProfile = {
   tools: { subfinder: true, httpx: true, naabu: true, nuclei: true, wordfence: true },
   ports: 'top-100',
-  severities: ['critical', 'high', 'medium', 'low'],
-  timeoutSec: 600,
+  // Include 'info': a manual `nuclei -u` defaults to ALL severities, and info-level templates
+  // (exposed files/panels, tech + TLS + header checks) are the bulk of real findings. Excluding
+  // them made scans look near-empty versus a manual run.
+  severities: ['critical', 'high', 'medium', 'low', 'info'],
+  timeoutSec: 900,
 };
 
 async function main(): Promise<void> {
