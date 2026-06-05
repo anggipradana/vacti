@@ -1,10 +1,10 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { Permission, isNewsStatus, isLeakStatus, REVIEW_TOGGLE } from '@vacti/core';
-import { isSector } from '@vacti/threat-intel';
+import { isSector, fetchSectorNews } from '@vacti/threat-intel';
 import { manualIndicators, leakcheckData, projects, threatNews } from '@vacti/db';
 import { getDb } from './db';
 import { getQueue } from './queue';
@@ -21,13 +21,39 @@ export async function refreshTiAction(formData: FormData) {
   revalidatePath('/threat');
 }
 
-/** Set the project's news sector, then enqueue a TI refresh to repopulate the feed. */
+/** Set the project's news sector and populate that sector's news immediately (so it shows on switch). */
 export async function setSectorAction(formData: FormData) {
   await requirePermission(Permission.ModifyScanResults);
   const projectId = String(formData.get('projectId') ?? '');
   const sector = String(formData.get('sector') ?? '');
   if (!projectId || !isSector(sector)) return;
-  await getDb().update(projects).set({ sector, updatedAt: new Date() }).where(eq(projects.id, projectId));
+  const db = getDb();
+  await db.update(projects).set({ sector, updatedAt: new Date() }).where(eq(projects.id, projectId));
+  // Fetch the new sector's news synchronously (RSS, a few seconds) and upsert it, so switching
+  // sector shows data right away instead of waiting on the slower full TI refresh job.
+  try {
+    const news = await fetchSectorNews(sector);
+    if (news.length) {
+      await db
+        .insert(threatNews)
+        .values(
+          news.map((n) => ({
+            sector,
+            title: n.title.slice(0, 500),
+            link: n.link,
+            source: n.source,
+            summary: n.summary,
+            publishedAt: n.publishedAt,
+          })),
+        )
+        .onConflictDoUpdate({
+          target: [threatNews.sector, threatNews.link],
+          set: { title: sql`excluded.title`, source: sql`excluded.source`, fetchedAt: sql`now()` },
+        });
+    }
+  } catch {
+    // Best-effort; the enqueued refresh will retry.
+  }
   const q = await getQueue();
   await q.enqueue('ti-refresh', tiJob, { projectId });
   revalidatePath('/threat');
