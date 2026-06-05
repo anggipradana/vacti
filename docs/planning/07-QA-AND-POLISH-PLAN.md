@@ -65,3 +65,22 @@ Specs under `apps/web/e2e/`, split by area; each asserts the happy path + at lea
 
 Pixel-level subjective restyles, multi-browser (chromium only), load/perf testing. Deferred v1 items
 (proxy, multi-org, WHOIS, in-app feed) are not QA targets.
+
+## F. Multi-project scoping (root-cause addendum, 2026-06-05)
+
+**Why this section exists.** The Targets, Scans, Schedules, and Dashboard pages shipped showing
+_every_ project's rows at once, with no active-project filter. The e2e suite never caught it because
+every spec exercised a **single-project happy path**: with one project, "show all" and "show this
+project" are indistinguishable. The bug only appears with two or more projects.
+
+**Rule.** Any page or endpoint that lists data belonging to a project (targets, scans, schedules,
+vulnerabilities, leaks, indicators, TI, dashboard metrics) MUST:
+
+1. Scope its queries to an active project (the `?project=` switcher pattern, see
+   `apps/web/src/components/project-switcher.tsx`), never fetch across all projects.
+2. Be covered by a **multi-project** e2e assertion: create two projects with distinct data, switch
+   the active project, and assert each page shows only the selected project's data and never the
+   other's. The guard lives in `apps/web/e2e/05-multi-project.e2e.ts`.
+
+**QA dimension.** Single-project happy-path tests are necessary but not sufficient. Every list view
+gets a two-project scoping check; "works with one project" is not evidence it scopes.
