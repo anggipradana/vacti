@@ -1,7 +1,19 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
+import { Suspense } from 'react';
 import { desc, eq, inArray } from 'drizzle-orm';
-import { Crosshair, Radar, Globe, ShieldAlert, ShieldCheck, FileText, Plug, Radar as RadarIcon } from 'lucide-react';
+import {
+  Crosshair,
+  Radar,
+  Globe,
+  ShieldAlert,
+  ShieldCheck,
+  FileText,
+  Plug,
+  Radar as RadarIcon,
+  Gauge,
+  KeyRound,
+} from 'lucide-react';
 import { AppShell } from '../../components/shell/app-shell';
 import { PageHeader } from '../../components/ui/page-header';
 import { StatCard } from '../../components/ui/stat-card';
@@ -12,14 +24,18 @@ import { StatusPill } from '../../components/ui/status-pill';
 import { Table, THead, TBody, TR, TH, TD } from '../../components/ui/table';
 import { SeverityDonut } from '../../components/ui/severity-donut';
 import { TrendArea } from '../../components/ui/trend-area';
-import { Severity, VULN_ACTIVE_STATUSES } from '@vacti/core';
+import { Severity, VULN_ACTIVE_STATUSES, VULN_STATUS_LABEL, LEAK_STATUS_LABEL } from '@vacti/core';
+import type { SeverityValue, VulnStatusValue, LeakStatusValue } from '@vacti/core';
 import { SeverityBadge } from '../../components/ui/severity-badge';
-import type { SeverityValue } from '@vacti/core';
-import { targets, scans, endpoints, vulnerabilities, projects } from '@vacti/db';
+import { Badge } from '../../components/ui/badge';
+import { RiskGauge } from '../../components/ui/risk-gauge';
+import { targets, scans, endpoints, vulnerabilities, projects, leakcheckData } from '@vacti/db';
+import { computeProjectRisk } from '@vacti/threat-intel';
 import { getDb } from '../../lib/db';
 import { getCurrentUser } from '../../lib/session';
 import { ProjectSwitcher } from '../../components/project-switcher';
 import { getActiveProjectId } from '../../lib/active-project';
+import { RansomwareHighlight, RansomwareHighlightFallback } from './cti-overview';
 
 export const dynamic = 'force-dynamic';
 
@@ -44,6 +60,32 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
       ])
     : [[], []];
   const targetById = new Map(targetRows.map((t) => [t.id, t]));
+
+  // CTI overview (scoped to the active project): unified risk score + leaked-credential rows.
+  // computeProjectRisk runs purely off the DB; the network-fetch ransomware card streams via Suspense.
+  const [risk, leakRows] = projectId
+    ? await Promise.all([
+        computeProjectRisk(db, projectId),
+        db.select().from(leakcheckData).where(eq(leakcheckData.projectId, projectId)),
+      ])
+    : [{ score: 0 } as Awaited<ReturnType<typeof computeProjectRisk>>, []];
+  const leakUnchecked = leakRows.filter((l) => !l.checked).length;
+  const leakStatusCounts = leakRows.reduce<Map<string, number>>((m, l) => {
+    m.set(l.status, (m.get(l.status) ?? 0) + 1);
+    return m;
+  }, new Map());
+  const leakStatusBreakdown = (Object.keys(LEAK_STATUS_LABEL) as LeakStatusValue[])
+    .map((s) => ({ status: s, label: LEAK_STATUS_LABEL[s], count: leakStatusCounts.get(s) ?? 0 }))
+    .filter((s) => s.count > 0);
+
+  // VA review-status breakdown: project vulnerabilities grouped by triage status.
+  const vulnStatusCounts = vulnRows.reduce<Map<string, number>>((m, v) => {
+    m.set(v.status, (m.get(v.status) ?? 0) + 1);
+    return m;
+  }, new Map());
+  const vulnStatusBreakdown = (Object.keys(VULN_STATUS_LABEL) as VulnStatusValue[])
+    .map((s) => ({ status: s, label: VULN_STATUS_LABEL[s], count: vulnStatusCounts.get(s) ?? 0 }))
+    .filter((s) => s.count > 0);
 
   const sev = (v: number) => vulnRows.filter((x) => x.severity === v).length;
   const severityCounts: [number, number, number, number, number] = [
@@ -220,6 +262,100 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
             <TrendArea data={days} />
           </CardContent>
         </Card>
+      </div>
+
+      {/* VA review status — triage breakdown of this project's findings. */}
+      {vulnRows.length > 0 ? (
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle>VA review status</CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="flex flex-wrap gap-2">
+              {vulnStatusBreakdown.map((s) => (
+                <Badge
+                  key={s.status}
+                  variant={
+                    s.status === 'open' || s.status === 'reopened'
+                      ? 'danger'
+                      : s.status === 'in_progress'
+                        ? 'accent'
+                        : s.status === 'resolved'
+                          ? 'success'
+                          : 'neutral'
+                  }
+                >
+                  {s.label} · {s.count}
+                </Badge>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {/* CTI overview — unified risk, leaked credentials & ransomware highlight for this project. */}
+      <div className="mb-3 mt-8 flex items-center justify-between">
+        <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-fg-subtle">
+          Threat intelligence
+        </h2>
+        <Button asChild variant="ghost" size="sm">
+          <Link href={projectId ? `/threat?project=${projectId}` : '/threat'}>Open CTI →</Link>
+        </Button>
+      </div>
+      <div className="grid gap-4 lg:grid-cols-[280px_1fr]">
+        <Card>
+          <CardHeader>
+            <CardTitle>Unified risk score</CardTitle>
+          </CardHeader>
+          <CardContent className="flex justify-center py-4">
+            <RiskGauge score={risk.score} />
+          </CardContent>
+        </Card>
+        <div className="grid content-start gap-4">
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+            <StatCard label="Risk score" value={risk.score} icon={<Gauge />} />
+            <StatCard
+              label="Leaked creds"
+              value={leakRows.length}
+              icon={<KeyRound />}
+              hint={`${leakUnchecked} unchecked`}
+            />
+            <StatCard label="Targets" value={targetRows.length} icon={<Crosshair />} />
+          </div>
+          {leakStatusBreakdown.length > 0 ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>Leak triage status</CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="flex flex-wrap gap-2">
+                  {leakStatusBreakdown.map((s) => (
+                    <Badge
+                      key={s.status}
+                      variant={
+                        s.status === 'new'
+                          ? 'danger'
+                          : s.status === 'investigating' || s.status === 'confirmed'
+                            ? 'accent'
+                            : s.status === 'remediated'
+                              ? 'success'
+                              : 'neutral'
+                      }
+                    >
+                      {s.label} · {s.count}
+                    </Badge>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          ) : null}
+        </div>
+      </div>
+      {/* Ransomware highlight does a (cached) network fetch — stream it so it never blocks the dashboard. */}
+      <div className="mt-4">
+        <Suspense fallback={<RansomwareHighlightFallback />}>
+          <RansomwareHighlight />
+        </Suspense>
       </div>
 
       {/* Data-relevant analytics */}
