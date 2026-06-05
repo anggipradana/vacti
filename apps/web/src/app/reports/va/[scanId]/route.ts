@@ -94,7 +94,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ scanId: string 
       remediation: v.remediation,
     })),
   });
-  const pdf = await renderPdf(html);
+  const pdf = await renderPdf(html, { footer: settings.classification ?? settings.footerText ?? '' });
   const name = `va_report_${(target?.domain ?? 'scan').replace(/\./g, '_')}_${type}.pdf`;
   return new Response(new Uint8Array(pdf), {
     headers: { 'Content-Type': 'application/pdf', 'Content-Disposition': `inline; filename="${name}"` },
