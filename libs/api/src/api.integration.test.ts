@@ -38,6 +38,20 @@ describe.skipIf(!url)('@vacti/api', () => {
     expect((await app.request('/api/health')).status).toBe(200);
   });
 
+  it('serves a complete OpenAPI doc (public) with auth scheme + key endpoints', async () => {
+    const r = await app.request('/api/openapi.json');
+    expect(r.status).toBe(200);
+    const spec = (await r.json()) as {
+      components: { securitySchemes: Record<string, unknown> };
+      paths: Record<string, unknown>;
+    };
+    expect(spec.components.securitySchemes.bearerAuth).toBeTruthy();
+    for (const p of ['/api/scans/{id}/cancel', '/api/scans/{id}/diff', '/api/schedules', '/api/search']) {
+      expect(spec.paths[p]).toBeTruthy();
+    }
+    expect((await app.request('/api/docs')).status).toBe(200);
+  });
+
   it('requires a bearer token', async () => {
     expect((await app.request('/api/whoami')).status).toBe(401);
   });

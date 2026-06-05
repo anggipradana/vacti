@@ -16,9 +16,18 @@ describe('formatPayload', () => {
     expect(p.body).toHaveProperty('embeds');
     expect((p.body as { embeds: { title: string }[] }).embeds[0]!.title).toBe('Scan done');
   });
-  it('builds Slack/Google Chat text', () => {
+  it('builds Slack text', () => {
     expect((formatPayload('slack', ev).body as { text: string }).text).toContain('Scan done');
-    expect((formatPayload('google_chat', ev).body as { text: string }).text).toContain('example.com');
+  });
+  it('builds a Google Chat cardsV2 (header + fields) with text fallback', () => {
+    const body = formatPayload('google_chat', ev).body as {
+      text: string;
+      cardsV2: { card: { header: { title: string }; sections: { widgets: unknown[] }[] } }[];
+    };
+    expect(body.text).toContain('example.com'); // fallback text
+    const card = body.cardsV2[0]!.card;
+    expect(card.header.title).toContain('Scan done');
+    expect(card.sections[0]!.widgets.length).toBeGreaterThan(0);
   });
   it('routes Telegram to the bot API with chat_id', () => {
     const p = formatPayload('telegram', ev, { botToken: 'T', chatId: 'C' });
