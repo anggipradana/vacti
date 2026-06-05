@@ -3,9 +3,9 @@
 import { revalidatePath } from 'next/cache';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
-import { Permission } from '@vacti/core';
+import { Permission, isNewsStatus } from '@vacti/core';
 import { isSector } from '@vacti/threat-intel';
-import { manualIndicators, leakcheckData, projects } from '@vacti/db';
+import { manualIndicators, leakcheckData, projects, threatNews } from '@vacti/db';
 import { getDb } from './db';
 import { getQueue } from './queue';
 import { requirePermission } from './authz';
@@ -30,6 +30,16 @@ export async function setSectorAction(formData: FormData) {
   await getDb().update(projects).set({ sector, updatedAt: new Date() }).where(eq(projects.id, projectId));
   const q = await getQueue();
   await q.enqueue('ti-refresh', tiJob, { projectId });
+  revalidatePath('/threat');
+}
+
+/** Triage a sector security-news headline (status preserved across feed refreshes). */
+export async function setNewsStatusAction(formData: FormData) {
+  await requirePermission(Permission.ModifyScanResults);
+  const id = String(formData.get('id') ?? '');
+  const status = String(formData.get('status') ?? '');
+  if (!id || !isNewsStatus(status)) return;
+  await getDb().update(threatNews).set({ status }).where(eq(threatNews.id, id));
   revalidatePath('/threat');
 }
 

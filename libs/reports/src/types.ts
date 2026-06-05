@@ -81,7 +81,7 @@ export interface TiReportData {
   /** Project sector for the security-news section (e.g. 'banking'). */
   sector?: string;
   /** Curated sector security news (RSS), newest first. */
-  news?: { title: string; source: string; link: string; publishedAt: Date | null }[];
+  news?: { title: string; source: string; link: string; publishedAt: Date | null; status: string }[];
 }
 
 export const DEFAULT_VA_SETTINGS: ReportSettings = {

@@ -1,0 +1,1 @@
+ALTER TABLE "threat_news" ADD COLUMN "status" text DEFAULT 'new' NOT NULL;

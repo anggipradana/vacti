@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import {
   targets,
   manualIndicators,
@@ -97,17 +97,30 @@ export async function refreshThreatIntel(deps: RefreshDeps): Promise<void> {
     try {
       const news = await fetchSectorNews(sector, { fetchImpl: deps.newsFetch });
       if (news.length) {
-        await db.delete(threatNews).where(eq(threatNews.sector, sector));
-        await db.insert(threatNews).values(
-          news.map((n) => ({
-            sector,
-            title: n.title.slice(0, 500),
-            link: n.link,
-            source: n.source,
-            summary: n.summary,
-            publishedAt: n.publishedAt,
-          })),
-        );
+        // Upsert by (sector, link): refresh the content but PRESERVE any triage status
+        // an analyst has already set on a headline.
+        await db
+          .insert(threatNews)
+          .values(
+            news.map((n) => ({
+              sector,
+              title: n.title.slice(0, 500),
+              link: n.link,
+              source: n.source,
+              summary: n.summary,
+              publishedAt: n.publishedAt,
+            })),
+          )
+          .onConflictDoUpdate({
+            target: [threatNews.sector, threatNews.link],
+            set: {
+              title: sql`excluded.title`,
+              source: sql`excluded.source`,
+              summary: sql`excluded.summary`,
+              publishedAt: sql`excluded.published_at`,
+              fetchedAt: sql`now()`,
+            },
+          });
       }
     } catch {
       // News is best-effort — a feed outage must not fail the TI refresh.

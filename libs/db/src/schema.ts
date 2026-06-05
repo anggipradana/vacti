@@ -62,6 +62,8 @@ export const threatNews = pgTable(
     source: text('source').notNull(),
     summary: text('summary'),
     publishedAt: timestamp('published_at', { withTimezone: true }),
+    // Triage status (NewsStatus from @vacti/core) — preserved across feed refreshes.
+    status: text('status').notNull().default('new'),
     fetchedAt: createdAt(),
   },
   (t) => ({ uniqSectorLink: uniqueIndex('threat_news_sector_link_uniq').on(t.sector, t.link) }),

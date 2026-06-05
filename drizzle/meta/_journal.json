@@ -127,6 +127,13 @@
       "when": 1780628515870,
       "tag": "0017_sector_threat_news",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1780629392604,
+      "tag": "0018_news_status",
+      "breakpoints": true
     }
   ]
 }

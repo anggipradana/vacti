@@ -14,6 +14,14 @@ import {
 } from './shared';
 import type { TiReportData } from './types';
 
+const NEWS_STATUS_LABEL: Record<string, string> = {
+  new: 'New',
+  reviewed: 'Reviewed',
+  relevant: 'Relevant',
+  actioned: 'Actioned',
+  dismissed: 'Dismissed',
+};
+
 const COMPONENT_LABEL: Record<string, string> = {
   va: 'Vulnerability Assessment',
   leak: 'Credential Exposure',
@@ -184,12 +192,12 @@ export function renderTiReport(d: TiReportData): string {
             : `Recent attack news & security developments relevant to the${sectorLabel ? ` ${d.sector}` : ''} sector, aggregated from public intelligence sources.`,
         ),
       ),
-      `<table><thead><tr><th>${escapeHtml(lang === 'id' ? 'Judul' : 'Headline')}</th><th>${escapeHtml(lang === 'id' ? 'Sumber' : 'Source')}</th><th>${escapeHtml(lang === 'id' ? 'Tanggal' : 'Date')}</th></tr></thead><tbody>
+      `<table><thead><tr><th>${escapeHtml(lang === 'id' ? 'Judul' : 'Headline')}</th><th>${escapeHtml(lang === 'id' ? 'Sumber' : 'Source')}</th><th>${escapeHtml(lang === 'id' ? 'Tanggal' : 'Date')}</th><th>${escapeHtml(l.status)}</th></tr></thead><tbody>
         ${d.news
           .slice(0, 15)
           .map(
             (n) =>
-              `<tr><td>${escapeHtml(n.title)}</td><td>${escapeHtml(n.source)}</td><td class="mono">${n.publishedAt ? n.publishedAt.toISOString().slice(0, 10) : '—'}</td></tr>`,
+              `<tr><td>${escapeHtml(n.title)}</td><td>${escapeHtml(n.source)}</td><td class="mono">${n.publishedAt ? n.publishedAt.toISOString().slice(0, 10) : '—'}</td><td>${escapeHtml(NEWS_STATUS_LABEL[n.status] ?? n.status)}</td></tr>`,
           )
           .join('')}
         </tbody></table>`,
