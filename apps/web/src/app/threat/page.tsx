@@ -296,7 +296,7 @@ export default async function ThreatPage({
                       <ReviewToggle action={setNewsStatusAction} kind="news" id={n.id} status={n.status} />
                       <form action={setNewsStatusAction} className="flex items-center gap-1.5">
                         <input type="hidden" name="id" value={n.id} />
-                        <Select name="status" defaultValue={n.status} className="h-8 w-36 text-xs">
+                        <Select key={n.status} name="status" defaultValue={n.status} className="h-8 w-36 text-xs">
                           {Object.entries(NEWS_STATUS_LABEL).map(([val, label]) => (
                             <option key={val} value={val}>
                               {label}
@@ -409,7 +409,7 @@ export default async function ThreatPage({
                     <ReviewToggle action={setLeakStatusAction} kind="leak" id={l.id} status={l.status} />
                     <form action={setLeakStatusAction} className="flex items-center gap-1.5">
                       <input type="hidden" name="id" value={l.id} />
-                      <Select name="status" defaultValue={l.status} className="h-8 w-40 text-xs">
+                      <Select key={l.status} name="status" defaultValue={l.status} className="h-8 w-40 text-xs">
                         {Object.entries(LEAK_STATUS_LABEL).map(([val, label]) => (
                           <option key={val} value={val}>
                             {label}

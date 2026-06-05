@@ -469,7 +469,7 @@ export default async function ScanDetail({
                             <form action={setVulnStatusAction} className="flex items-center gap-1.5">
                               <input type="hidden" name="id" value={v.id} />
                               <input type="hidden" name="scanId" value={scan.id} />
-                              <Select name="status" defaultValue={v.status} className="h-8 w-36 text-xs">
+                              <Select key={v.status} name="status" defaultValue={v.status} className="h-8 w-36 text-xs">
                                 {Object.entries(VULN_STATUS_LABEL).map(([val, label]) => (
                                   <option key={val} value={val}>
                                     {label}

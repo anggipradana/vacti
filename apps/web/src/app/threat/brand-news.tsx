@@ -154,7 +154,7 @@ export async function BrandNews({
                     <ReviewToggle action={setBrandNewsStatusAction} kind="news" id={n.id} status={n.status} />
                     <form action={setBrandNewsStatusAction} className="flex items-center gap-1.5">
                       <input type="hidden" name="id" value={n.id} />
-                      <Select name="status" defaultValue={n.status} className="h-8 w-36 text-xs">
+                      <Select key={n.status} name="status" defaultValue={n.status} className="h-8 w-36 text-xs">
                         {Object.entries(NEWS_STATUS_LABEL).map(([val, label]) => (
                           <option key={val} value={val}>
                             {label}
