@@ -21,13 +21,6 @@ import { getActiveProjectId } from '../../lib/active-project';
 
 export const dynamic = 'force-dynamic';
 
-const PRESETS = [
-  { label: 'Daily 02:00', cron: '0 2 * * *' },
-  { label: 'Weekly (Mon 02:00)', cron: '0 2 * * 1' },
-  { label: 'Every 6 hours', cron: '0 */6 * * *' },
-  { label: 'Hourly', cron: '0 * * * *' },
-];
-
 export default async function SchedulesPage({ searchParams }: { searchParams: Promise<{ project?: string }> }) {
   const user = await getCurrentUser();
   if (!user) redirect('/login');
@@ -57,7 +50,7 @@ export default async function SchedulesPage({ searchParams }: { searchParams: Pr
       {canManage ? (
         <Card className="mb-6">
           <CardContent className="pt-5">
-            <form action={createScheduleAction} className="grid items-end gap-3 sm:grid-cols-[1fr_1fr_1.2fr_auto]">
+            <form action={createScheduleAction} className="grid items-end gap-3 sm:grid-cols-3 lg:grid-cols-6">
               <div className="space-y-1">
                 <Label htmlFor="targetId">Target</Label>
                 <Select id="targetId" name="targetId" required>
@@ -69,7 +62,7 @@ export default async function SchedulesPage({ searchParams }: { searchParams: Pr
                 </Select>
               </div>
               <div className="space-y-1">
-                <Label htmlFor="profileId">Profile (optional)</Label>
+                <Label htmlFor="profileId">Profile</Label>
                 <Select id="profileId" name="profileId">
                   <option value="">Default</option>
                   {profileRows.map((p) => (
@@ -80,20 +73,44 @@ export default async function SchedulesPage({ searchParams }: { searchParams: Pr
                 </Select>
               </div>
               <div className="space-y-1">
-                <Label htmlFor="cron">Cron (min hour dom mon dow)</Label>
-                <Input id="cron" name="cron" defaultValue="0 2 * * *" list="cron-presets" required />
-                <datalist id="cron-presets">
-                  {PRESETS.map((p) => (
-                    <option key={p.cron} value={p.cron}>
-                      {p.label}
+                <Label htmlFor="freq">Frequency</Label>
+                <Select id="freq" name="freq" defaultValue="daily">
+                  <option value="hourly">Hourly</option>
+                  <option value="daily">Daily</option>
+                  <option value="weekly">Weekly</option>
+                  <option value="monthly">Monthly</option>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="time">Time</Label>
+                <Input id="time" name="time" type="time" defaultValue="02:00" />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="dow">Day (weekly)</Label>
+                <Select id="dow" name="dow" defaultValue="1">
+                  {['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map((d, i) => (
+                    <option key={d} value={i}>
+                      {d}
                     </option>
                   ))}
-                </datalist>
+                </Select>
               </div>
-              <SubmitButton pendingText="Adding…">Add schedule</SubmitButton>
+              <div className="space-y-1">
+                <Label htmlFor="dom">Date (monthly)</Label>
+                <Select id="dom" name="dom" defaultValue="1">
+                  {Array.from({ length: 28 }, (_, i) => i + 1).map((d) => (
+                    <option key={d} value={d}>
+                      {d}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+              <SubmitButton pendingText="Adding…" className="lg:col-span-6">
+                Add schedule
+              </SubmitButton>
             </form>
             <p className="mt-2 text-xs text-fg-subtle">
-              Presets: {PRESETS.map((p) => `${p.label} = ${p.cron}`).join(' · ')}
+              Pick a frequency and time. Day applies to Weekly; Date applies to Monthly. Times use the server timezone.
             </p>
           </CardContent>
         </Card>
