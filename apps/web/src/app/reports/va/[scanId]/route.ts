@@ -17,8 +17,12 @@ import {
   reportSettings,
   reportSignatories,
 } from '@vacti/db';
+import { fetchKev, fetchEpss } from '@vacti/threat-intel';
 import { getDb } from '../../../../lib/db';
 import { getCurrentUser } from '../../../../lib/session';
+
+// Cache KEV/EPSS in Next's data cache (hourly) so the ~1MB KEV catalog isn't refetched per report.
+const cachedFetch = ((u: string) => fetch(u, { next: { revalidate: 3600 } })) as typeof fetch;
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -59,7 +63,24 @@ export async function GET(req: Request, ctx: { params: Promise<{ scanId: string 
       signatureImage: s.signatureImage,
     }));
 
+  // Threat-intel enrichment: flag finding CVEs that are actively exploited (CISA KEV) + EPSS scores.
+  const cves = [...new Set(vulns.flatMap((v) => v.cveIds ?? []).map((c) => c.toUpperCase()))];
+  const [kev, epss] = await Promise.all([
+    cves.length ? fetchKev({ fetchImpl: cachedFetch }) : Promise.resolve(new Map()),
+    cves.length ? fetchEpss(cves, { fetchImpl: cachedFetch }) : Promise.resolve(new Map()),
+  ]);
+  const kevCves = cves.filter((c) => kev.has(c));
+  const kevRansomwareCves = kevCves.filter((c) => kev.get(c)?.ransomware);
+  const epssObj: Record<string, number> = {};
+  for (const c of cves) {
+    const s = epss.get(c);
+    if (s) epssObj[c] = s.epss;
+  }
+
   const html = renderVaReport({
+    kevCves,
+    kevRansomwareCves,
+    epss: epssObj,
     lang,
     type,
     settings,

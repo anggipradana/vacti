@@ -382,19 +382,33 @@ export function renderVaReport(d: VaReportData): string {
     if (!grouped.length) {
       body.push(`<div class="empty">No vulnerabilities identified.</div>`);
     } else {
+      const kevSet = new Set((d.kevCves ?? []).map((c) => c.toUpperCase()));
+      const ransomSet = new Set((d.kevRansomwareCves ?? []).map((c) => c.toUpperCase()));
+      const epssMap = d.epss ?? {};
       grouped.forEach((g, i) => {
         const statuses = [...g.statuses].map((st) => VULN_STATUS_LABEL[st as VulnStatusValue] ?? st);
         // Prefer AI-enriched prose, fall back to the nuclei template's own text.
         const description = g.ai?.aiDescription ?? g.tpl?.description ?? '';
         const impact = g.ai?.aiImpact ?? '';
         const remediation = g.ai?.aiRemediation ?? g.tpl?.remediation ?? '';
+        // Threat-intel context: flag CVEs that are actively exploited (CISA KEV), ransomware-linked,
+        // and their EPSS exploit probability, so the reader can prioritise beyond raw severity.
+        const gCves = [...g.cves].map((c) => c.toUpperCase());
+        const isKev = gCves.some((c) => kevSet.has(c));
+        const isRansom = gCves.some((c) => ransomSet.has(c));
+        const maxEpss = gCves.reduce((m, c) => Math.max(m, epssMap[c] ?? 0), 0);
+        const intelTags = [
+          ...(isKev ? ['KEV: Actively Exploited'] : []),
+          ...(isRansom ? ['Ransomware'] : []),
+          ...(maxEpss > 0 ? [`EPSS ${(maxEpss * 100).toFixed(0)}%`] : []),
+        ];
         body.push(
           findingCard({
             index: i + 1,
             severity: g.severity,
             lang,
             title: g.name,
-            tags: [`${g.count}×`, ...(g.type ? [g.type] : []), ...statuses.slice(0, 2)],
+            tags: [`${g.count}×`, ...intelTags, ...(g.type ? [g.type] : []), ...statuses.slice(0, 2)],
             cvss: g.cvss,
             cves: [...g.cves],
             references: [...g.refs],
