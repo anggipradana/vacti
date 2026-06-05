@@ -6,16 +6,17 @@
   :root {
     --radius: 0.625rem;
 
-    /* VACTI light theme — cool navy-tinted surfaces on light cyan-blue bg */
-    --bg: 213 88% 97%; /* #f1f6fe */
+    /* Light theme keeps its original neutral white background; brand colour is applied via the
+       accent tokens only (the navy/blue palette lives in the dark theme). */
+    --bg: 0 0% 100%;
     --surface: 0 0% 100%;
-    --surface-2: 213 60% 96%;
-    --surface-3: 213 45% 91%;
-    --border: 213 38% 88%;
-    --border-strong: 214 30% 78%;
-    --fg: 215 66% 12%; /* #0a1b33 navy */
-    --fg-muted: 217 22% 54%; /* #6e84a8 */
-    --fg-subtle: 217 28% 67%; /* #94a6c2 */
+    --surface-2: 210 20% 98%;
+    --surface-3: 214 20% 94%;
+    --border: 214 20% 91%;
+    --border-strong: 214 16% 83%;
+    --fg: 222 47% 11%;
+    --fg-muted: 215 16% 42%;
+    --fg-subtle: 215 14% 60%;
 
     --accent: 217 78% 50%; /* #1e66e3 primary blue */
     --accent-hover: 218 74% 48%; /* #1f5bd6 */
