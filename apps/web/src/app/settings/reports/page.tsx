@@ -235,7 +235,7 @@ export default async function ReportSettingsPage({ searchParams }: { searchParam
                       ) : null}
                       <div>
                         <span className="font-medium">{s.name}</span>{' '}
-                        <span className="muted text-fg-subtle">{s.position}</span>
+                        <span className="text-fg-subtle">{s.position}</span>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">

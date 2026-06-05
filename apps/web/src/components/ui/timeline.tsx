@@ -1,4 +1,5 @@
 import { cn } from '../../lib/cn';
+import { humanize } from '../../lib/format';
 
 export function Timeline({ items }: { items: { stage: string; status: string; message?: string | null }[] }) {
   return (
@@ -18,8 +19,8 @@ export function Timeline({ items }: { items: { stage: string; status: string; me
             )}
           />
           <div className="text-sm">
-            <span className="font-medium capitalize">{it.stage}</span>
-            <span className="text-fg-muted"> · {it.status}</span>
+            <span className="font-medium">{humanize(it.stage)}</span>
+            <span className="text-fg-muted"> · {humanize(it.status)}</span>
             {it.message ? <span className="text-fg-subtle"> — {it.message}</span> : null}
           </div>
         </li>

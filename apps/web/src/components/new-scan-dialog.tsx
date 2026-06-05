@@ -1,6 +1,7 @@
 'use client';
 import { Plus } from 'lucide-react';
 import { Button } from './ui/button';
+import { SubmitButton } from './ui/submit-button';
 import { Select } from './ui/select';
 import { Label } from './ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from './ui/dialog';
@@ -52,9 +53,9 @@ export function NewScanDialog({
               </Select>
             </div>
           ) : null}
-          <Button type="submit" data-testid="start-scan" className="w-full">
+          <SubmitButton data-testid="start-scan" className="w-full" pendingText="Starting…">
             Start scan
-          </Button>
+          </SubmitButton>
         </form>
       </DialogContent>
     </Dialog>

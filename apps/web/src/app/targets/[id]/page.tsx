@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { desc, eq } from 'drizzle-orm';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Trash2 } from 'lucide-react';
 import { AppShell } from '../../../components/shell/app-shell';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card';
 import { Input } from '../../../components/ui/input';
@@ -108,8 +108,15 @@ export default async function TargetDetail({ params }: { params: Promise<{ id: s
                           <form action={deleteNoteAction}>
                             <input type="hidden" name="id" value={n.id} />
                             <input type="hidden" name="targetId" value={target.id} />
-                            <Button type="submit" variant="ghost" size="sm" className="text-danger hover:bg-danger/10">
-                              ✕
+                            <Button
+                              type="submit"
+                              variant="ghost"
+                              size="sm"
+                              className="text-danger hover:bg-danger/10"
+                              aria-label="Delete note"
+                              title="Delete note"
+                            >
+                              <Trash2 className="size-4" />
                             </Button>
                           </form>
                         </>
