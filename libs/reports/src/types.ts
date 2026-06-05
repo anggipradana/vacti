@@ -63,6 +63,9 @@ export interface VaReportData {
     references?: string[];
     description?: string | null;
     remediation?: string | null;
+    // Raw HTTP evidence captured by nuclei (proof of finding).
+    request?: string | null;
+    response?: string | null;
   }[];
   /** CVE ids (upper-case) present in the CISA KEV catalog (actively exploited). */
   kevCves?: string[];

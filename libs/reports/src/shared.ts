@@ -257,6 +257,8 @@ export function findingCard(opts: {
   cvss?: number | null;
   cves?: string[];
   references?: string[];
+  request?: string | null;
+  response?: string | null;
 }): string {
   const cls = sevClass(opts.severity);
   const hex = sevHex(opts.severity);
@@ -284,6 +286,20 @@ export function findingCard(opts: {
         .map((r) => `<li class="mono">${escapeHtml(r)}</li>`)
         .join('')}</ul></div>`
     : '';
+  // Raw HTTP evidence (nuclei request/response) — capped so a large body can't blow up the PDF.
+  const cap = (s: string) => (s.length > 2500 ? `${s.slice(0, 2500)}\n… [truncated]` : s);
+  const evParts = [
+    opts.request
+      ? `<div class="evlabel">Request</div><pre class="evidence">${escapeHtml(cap(opts.request))}</pre>`
+      : '',
+    opts.response
+      ? `<div class="evlabel">Response</div><pre class="evidence">${escapeHtml(cap(opts.response))}</pre>`
+      : '',
+  ].join('');
+  const evidenceBlock = evParts
+    ? `<div class="fblock"><div class="flabel">${escapeHtml(biText(opts.lang, 'Bukti (Request / Response)', 'Evidence (Request / Response)'))}</div>${evParts}</div>`
+    : '';
+  const bodyBlocks = blocks || urlsBlock || refsBlock || evidenceBlock;
   return `<div class="finding f-${cls}">
     <div class="finding-head">
       <span class="fid" style="background:${hex}">${opts.index}</span>
@@ -291,7 +307,7 @@ export function findingCard(opts: {
         <div class="fmeta"><span class="badge" style="background:${hex}">${escapeHtml(sevLabel(opts.severity, opts.lang))}</span>${cvssBadge}${cveTags}${tags}</div>
       </div>
     </div>
-    ${blocks || urlsBlock || refsBlock ? `<div class="finding-body">${blocks}${urlsBlock}${refsBlock}</div>` : ''}
+    ${bodyBlocks ? `<div class="finding-body">${blocks}${urlsBlock}${refsBlock}${evidenceBlock}</div>` : ''}
   </div>`;
 }
 

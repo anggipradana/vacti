@@ -145,6 +145,7 @@ export function renderVaReport(d: VaReportData): string {
       cvss?: number | null;
       ai?: Vuln;
       tpl?: Vuln;
+      evidence?: Vuln;
     }
   >();
   for (const v of d.vulns) {
@@ -167,6 +168,7 @@ export function renderVaReport(d: VaReportData): string {
     if (v.cvss != null) g.cvss = Math.max(g.cvss ?? 0, v.cvss);
     if (!g.ai && (v.aiDescription || v.aiImpact || v.aiRemediation)) g.ai = v;
     if (!g.tpl && (v.description || v.remediation)) g.tpl = v;
+    if (!g.evidence && (v.request || v.response)) g.evidence = v;
     byName.set(v.name, g);
   }
   const grouped = [...byName.values()].sort((a, b) => b.severity - a.severity || b.count - a.count);
@@ -419,6 +421,8 @@ export function renderVaReport(d: VaReportData): string {
               { label: bi(lang, 'remediation'), text: remediation },
             ],
             urls: [...g.urls],
+            request: g.evidence?.request ?? null,
+            response: g.evidence?.response ?? null,
           }),
         );
       });
