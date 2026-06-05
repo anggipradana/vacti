@@ -34,6 +34,8 @@ export default defineConfig({
       ENCRYPTION_KEY: process.env.ENCRYPTION_KEY ?? '',
       SESSION_SECRET: process.env.SESSION_SECRET ?? '',
       NODE_ENV: 'development',
+      // Isolated build dir when set, so the e2e server never shares .next with a running dev/live server.
+      NEXT_DIST_DIR: process.env.NEXT_DIST_DIR ?? '',
     },
   },
 });

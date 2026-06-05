@@ -1,6 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  // Allow an isolated build dir (e.g. e2e) so a second `next` instance never corrupts the live .next.
+  distDir: process.env.NEXT_DIST_DIR || '.next',
   // @vacti/* libs are TS source consumed directly from the monorepo.
   transpilePackages: [
     '@vacti/core',
