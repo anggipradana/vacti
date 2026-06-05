@@ -178,7 +178,11 @@ export default async function ThreatPage({
           ) : null}
         </CardHeader>
         <CardContent className="pt-0 text-sm leading-relaxed text-fg-muted">
-          {status?.aiNarrative ? status.aiNarrative : <span className="text-fg-subtle">Not generated yet.</span>}
+          {status?.aiNarrative ? (
+            status.aiNarrative.replace(/[—–]/g, '-')
+          ) : (
+            <span className="text-fg-subtle">Not generated yet.</span>
+          )}
         </CardContent>
       </Card>
 

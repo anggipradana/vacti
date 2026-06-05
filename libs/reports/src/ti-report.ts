@@ -138,7 +138,7 @@ export function renderTiReport(d: TiReportData): string {
   body.push(
     numberedSection(lang, tnum(2), pri(lang, 'iocTitle'), { pageBreak: true }),
     `<table><thead><tr><th>Indicator</th><th>Pulses</th><th>Malware</th><th>Reputation</th></tr></thead><tbody>
-      ${d.otx.map((o) => `<tr><td class="mono">${escapeHtml(o.indicator)}</td><td>${o.pulses}</td><td>${o.malwareCount}</td><td>${o.reputation}</td></tr>`).join('') || `<tr><td colspan="4" class="idx">${escapeHtml(l.none)} — configure OTX_API_KEY to populate.</td></tr>`}
+      ${d.otx.map((o) => `<tr><td class="mono">${escapeHtml(o.indicator)}</td><td>${o.pulses}</td><td>${o.malwareCount}</td><td>${o.reputation}</td></tr>`).join('') || `<tr><td colspan="4" class="idx">${escapeHtml(l.none)} - configure OTX_API_KEY to populate.</td></tr>`}
       </tbody></table>`,
     d.indicators.length
       ? `${miniHead(manualInd.primary, manualInd.secondary)}<table><thead><tr><th>Type</th><th>Value</th></tr></thead><tbody>${d.indicators.map((i) => `<tr><td>${escapeHtml(i.type)}</td><td class="mono">${escapeHtml(i.value)}</td></tr>`).join('')}</tbody></table>`
@@ -150,7 +150,7 @@ export function renderTiReport(d: TiReportData): string {
     numberedSection(lang, tnum(3), pri(lang, 'breachTitle'), { pageBreak: true }),
     `<p ${muted}>${d.leaks.length} leaked credential(s)${
       Object.keys(leakGroups).length
-        ? ` — ${Object.entries(leakGroups)
+        ? ` - ${Object.entries(leakGroups)
             .map(([k, nn]) => `${escapeHtml(k)}: ${nn}`)
             .join(' · ')}`
         : ''
@@ -165,7 +165,7 @@ export function renderTiReport(d: TiReportData): string {
             )
             .join('')}
           </tbody></table>`
-      : `<div class="empty">${escapeHtml(l.none)} — configure LEAKCHECK_API_KEY to populate.</div>`,
+      : `<div class="empty">${escapeHtml(l.none)} - configure LEAKCHECK_API_KEY to populate.</div>`,
   );
 
   // 04 Recommendations
@@ -197,13 +197,13 @@ export function renderTiReport(d: TiReportData): string {
           .slice(0, 15)
           .map(
             (n) =>
-              `<tr><td>${escapeHtml(n.title)}</td><td>${escapeHtml(n.source)}</td><td class="mono">${n.publishedAt ? n.publishedAt.toISOString().slice(0, 10) : '—'}</td><td>${escapeHtml(NEWS_STATUS_LABEL[n.status] ?? n.status)}</td></tr>`,
+              `<tr><td>${escapeHtml(n.title)}</td><td>${escapeHtml(n.source)}</td><td class="mono">${n.publishedAt ? n.publishedAt.toISOString().slice(0, 10) : '-'}</td><td>${escapeHtml(NEWS_STATUS_LABEL[n.status] ?? n.status)}</td></tr>`,
           )
           .join('')}
         </tbody></table>`,
     );
   }
 
-  body.push(`<div class="end">— ${escapeHtml(l.endOfReport)} —</div>`);
+  body.push(`<div class="end">${escapeHtml(l.endOfReport)}</div>`);
   return doc(l.tiTitle, css, body.join('\n'));
 }

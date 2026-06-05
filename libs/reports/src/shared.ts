@@ -16,7 +16,10 @@ export function sevLabel(sev: number, lang: Lang): string {
 }
 
 export function doc(title: string, css: string, body: string): string {
-  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>${escapeHtml(title)}</title><style>${css}</style></head><body><span class="doctitle">${escapeHtml(title)}</span>${body}</body></html>`;
+  // House style: reports never use em/en dashes. Normalise the whole rendered body to a plain hyphen
+  // as a final guarantee, regardless of source (templates, analyst text, AI narrative, stored data).
+  const clean = body.replace(/[—–]/g, '-');
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>${escapeHtml(title)}</title><style>${css}</style></head><body><span class="doctitle">${escapeHtml(title)}</span>${clean}</body></html>`;
 }
 
 export function cover(opts: {
