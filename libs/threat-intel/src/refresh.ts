@@ -81,6 +81,7 @@ export async function refreshThreatIntel(deps: RefreshDeps): Promise<void> {
             domain,
             source: l.source,
             identifier: l.identifier,
+            password: l.password,
             hashMd5: l.hashMd5,
             type: l.type,
           });

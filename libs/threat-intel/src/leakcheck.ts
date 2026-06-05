@@ -6,6 +6,8 @@ export interface LeakRecord {
   identifier: string;
   type: 'domain' | 'origin';
   hashMd5: string;
+  /** Plaintext leaked password when the source exposes one (LeakCheck returns it for stealer logs). */
+  password?: string;
 }
 
 const BASE = 'https://leakcheck.io/api/v2/query';
@@ -22,11 +24,14 @@ export async function fetchLeaks(
       headers: { 'X-API-Key': apiKey, Accept: 'application/json' },
     });
     if (!res.ok) return [];
-    const body = (await res.json()) as { result?: { source?: { name?: string }; email?: string; line?: string }[] };
+    const body = (await res.json()) as {
+      result?: { source?: { name?: string }; email?: string; line?: string; password?: string }[];
+    };
     return (body.result ?? []).map((r) => {
       const source = r.source?.name ?? 'unknown';
       const identifier = r.email ?? r.line ?? '';
-      return { source, identifier, type: 'domain' as const, hashMd5: md5(`${source}:${identifier}`) };
+      const password = r.password || undefined;
+      return { source, identifier, type: 'domain' as const, hashMd5: md5(`${source}:${identifier}`), password };
     });
   } catch {
     return [];
