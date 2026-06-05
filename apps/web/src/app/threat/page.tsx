@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation';
+import { Suspense } from 'react';
 import { and, desc, eq, count, sql } from 'drizzle-orm';
 import { RefreshCw, ShieldCheck, Bug, Activity, Plus } from 'lucide-react';
 import { AppShell } from '../../components/shell/app-shell';
@@ -31,6 +32,7 @@ import {
 } from '../../lib/threat-actions';
 import { setLeakStatusAction } from '../../lib/status-actions';
 import { generateThreatNarrativeAction } from '../../lib/ai-actions';
+import { CtiCards } from './cti-cards';
 
 export const dynamic = 'force-dynamic';
 
@@ -164,6 +166,12 @@ export default async function ThreatPage({
           <StatCard label="Indicators" value={indicators.length} icon={<Plus />} />
         </div>
       </div>
+
+      <Suspense
+        fallback={<div className="mt-4 text-sm text-fg-subtle">Loading threat landscape (KEV, EPSS, ransomware)…</div>}
+      >
+        <CtiCards projectId={projectId} />
+      </Suspense>
 
       <Card className="mt-4">
         <CardHeader className="flex flex-row items-center justify-between">
