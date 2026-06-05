@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { desc } from 'drizzle-orm';
+import { desc, eq } from 'drizzle-orm';
 import { Crosshair } from 'lucide-react';
 import { AppShell } from '../../components/shell/app-shell';
 import { PageHeader } from '../../components/ui/page-header';
@@ -16,22 +16,26 @@ import { projects, targets } from '@vacti/db';
 import { getDb } from '../../lib/db';
 import { getCurrentUser } from '../../lib/session';
 import { createTargetAction } from '../../lib/recon-actions';
+import { ProjectSwitcher } from '../../components/project-switcher';
 
 export const dynamic = 'force-dynamic';
 
-export default async function TargetsPage() {
+export default async function TargetsPage({ searchParams }: { searchParams: Promise<{ project?: string }> }) {
   const user = await getCurrentUser();
   if (!user) redirect('/login');
   const db = getDb();
-  const [projectRows, targetRows] = await Promise.all([
-    db.select().from(projects).orderBy(desc(projects.createdAt)),
-    db.select().from(targets).orderBy(desc(targets.createdAt)),
-  ]);
+  const projectRows = await db.select().from(projects).orderBy(desc(projects.createdAt));
+  const projectId = (await searchParams).project ?? projectRows[0]?.id;
+  // Scope targets to the active project (multi-project workspaces, like the Threat page).
+  const targetRows = projectId
+    ? await db.select().from(targets).where(eq(targets.projectId, projectId)).orderBy(desc(targets.createdAt))
+    : [];
   return (
     <AppShell user={{ email: user.email, isSysAdmin: user.isSysAdmin }}>
       <PageHeader
         title="Targets"
         description="Domains and organisations to assess. Predefined subdomains skip discovery."
+        actions={<ProjectSwitcher projects={projectRows} current={projectId} basePath="/targets" />}
       />
       <div className="grid gap-6 lg:grid-cols-[360px_1fr]">
         <Card>
@@ -39,7 +43,7 @@ export default async function TargetsPage() {
             <form action={createTargetAction} className="space-y-4">
               <div className="space-y-1.5">
                 <Label htmlFor="projectId">Project</Label>
-                <Select id="projectId" name="projectId" data-testid="target-project" required>
+                <Select id="projectId" name="projectId" data-testid="target-project" defaultValue={projectId} required>
                   {projectRows.map((p) => (
                     <option key={p.id} value={p.id}>
                       {p.name}
