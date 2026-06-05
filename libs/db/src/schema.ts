@@ -69,6 +69,28 @@ export const threatNews = pgTable(
   (t) => ({ uniqSectorLink: uniqueIndex('threat_news_sector_link_uniq').on(t.sector, t.link) }),
 );
 
+// Brand monitoring: public news mentioning a project's brand/domain (per project, triageable).
+export const brandNews = pgTable(
+  'brand_news',
+  {
+    id: id(),
+    projectId: uuid('project_id')
+      .notNull()
+      .references(() => projects.id, { onDelete: 'cascade' }),
+    title: text('title').notNull(),
+    link: text('link').notNull(),
+    source: text('source').notNull(),
+    summary: text('summary'),
+    publishedAt: timestamp('published_at', { withTimezone: true }),
+    // Whether the headline came from the security-biased query (vs a general brand mention).
+    security: boolean('security').notNull().default(false),
+    // Triage status (NewsStatus from @vacti/core) — preserved across feed refreshes.
+    status: text('status').notNull().default('new'),
+    fetchedAt: createdAt(),
+  },
+  (t) => ({ uniqProjectLink: uniqueIndex('brand_news_project_link_uniq').on(t.projectId, t.link) }),
+);
+
 export const projectMembers = pgTable(
   'project_members',
   {
@@ -106,4 +128,14 @@ export const auditLog = pgTable('audit_log', {
   createdAt: createdAt(),
 });
 
-export const schema = { users, sessions, apiTokens, projects, projectMembers, apiKeys, auditLog, threatNews };
+export const schema = {
+  users,
+  sessions,
+  apiTokens,
+  projects,
+  projectMembers,
+  apiKeys,
+  auditLog,
+  threatNews,
+  brandNews,
+};

@@ -7,11 +7,12 @@ import {
   threatIntelStatus,
   projects,
   threatNews,
+  brandNews,
   type Database,
 } from '@vacti/db';
 import { fetchOtxIndicator, type FetchLike } from './otx';
 import { fetchLeaks } from './leakcheck';
-import { fetchSectorNews } from './news';
+import { fetchSectorNews, fetchBrandNews } from './news';
 
 export interface RefreshDeps {
   db: Database;
@@ -132,6 +133,52 @@ export async function refreshThreatIntel(deps: RefreshDeps): Promise<void> {
       }
     } catch {
       // News is best-effort — a feed outage must not fail the TI refresh.
+    }
+
+    // Brand monitoring — public news mentioning the project's brand/domain (per project, triageable).
+    await setStatus('running', 96, 'fetching brand news');
+    const brand = (proj?.name ?? '').trim() || tgts[0]?.domain || '';
+    if (brand) {
+      try {
+        const [sec, gen] = await Promise.all([
+          fetchBrandNews(brand, { security: true, limit: 10, fetchImpl: deps.newsFetch }),
+          fetchBrandNews(brand, { security: false, limit: 10, fetchImpl: deps.newsFetch }),
+        ]);
+        const seen = new Set<string>();
+        const items = [
+          ...sec.map((n) => ({ ...n, security: true })),
+          ...gen.map((n) => ({ ...n, security: false })),
+        ].filter((n) => (seen.has(n.link) ? false : (seen.add(n.link), true)));
+        if (items.length) {
+          // Upsert by (projectId, link): refresh content but PRESERVE any analyst triage status.
+          await db
+            .insert(brandNews)
+            .values(
+              items.map((n) => ({
+                projectId,
+                title: n.title.slice(0, 500),
+                link: n.link,
+                source: n.source,
+                summary: n.summary,
+                publishedAt: n.publishedAt,
+                security: n.security,
+              })),
+            )
+            .onConflictDoUpdate({
+              target: [brandNews.projectId, brandNews.link],
+              set: {
+                title: sql`excluded.title`,
+                source: sql`excluded.source`,
+                summary: sql`excluded.summary`,
+                publishedAt: sql`excluded.published_at`,
+                security: sql`excluded.security`,
+                fetchedAt: sql`now()`,
+              },
+            });
+        }
+      } catch {
+        // Best-effort — a feed outage must not fail the TI refresh.
+      }
     }
 
     await setStatus('completed', 100, `${lookups.length} indicator(s)`);
