@@ -1,8 +1,17 @@
-import { eq } from 'drizzle-orm';
+import { and, count, eq, inArray } from 'drizzle-orm';
 import { z } from 'zod';
 import { loadEnv } from '@vacti/config';
-import { cronMatches } from '@vacti/core';
-import { createDb, runMigrations, scans, targets, scanProfiles, scanSchedules } from '@vacti/db';
+import { cronMatches, Severity, SEVERITY_LABEL, type SeverityValue } from '@vacti/core';
+import {
+  createDb,
+  runMigrations,
+  scans,
+  targets,
+  scanProfiles,
+  scanSchedules,
+  vulnerabilities,
+  leakcheckData,
+} from '@vacti/db';
 import { createQueue } from '@vacti/queue';
 import { runScanPipeline, type ScanProfile } from '@vacti/recon';
 import { refreshThreatIntel } from '@vacti/threat-intel';
@@ -92,6 +101,33 @@ async function main(): Promise<void> {
         severity: done.status === 'completed' ? 'success' : 'error',
         fields: { Status: done.status, Target: target.domain },
       });
+
+      // Dedicated high-severity alert so subscribers can be paged on the findings that matter.
+      if (done.status === 'completed') {
+        const sev = await db
+          .select()
+          .from(vulnerabilities)
+          .where(
+            and(
+              eq(vulnerabilities.scanId, scanId),
+              inArray(vulnerabilities.severity, [Severity.Critical, Severity.High]),
+            ),
+          );
+        if (sev.length) {
+          const crit = sev.filter((v) => v.severity === Severity.Critical).length;
+          const preview = sev
+            .slice(0, 5)
+            .map((v) => `${SEVERITY_LABEL[v.severity as SeverityValue].toUpperCase()} · ${v.name}`)
+            .join('\n');
+          await sendProjectNotifications(db, done.projectId, {
+            type: 'vuln.found',
+            title: `${sev.length} high/critical finding(s): ${target.domain}`,
+            message: preview + (sev.length > 5 ? `\n…and ${sev.length - 5} more` : ''),
+            severity: crit > 0 ? 'error' : 'warning',
+            fields: { Target: target.domain, Critical: String(crit), High: String(sev.length - crit) },
+          });
+        }
+      }
     }
   });
 
@@ -100,6 +136,10 @@ async function main(): Promise<void> {
     // Per-project vault keys override the environment defaults.
     const otxKey = (await getProjectSecret(db, projectId, 'otx', env.ENCRYPTION_KEY)) ?? env.OTX_API_KEY;
     const leakKey = (await getProjectSecret(db, projectId, 'leakcheck', env.ENCRYPTION_KEY)) ?? env.LEAKCHECK_API_KEY;
+    const leaksBefore = await db
+      .select({ n: count() })
+      .from(leakcheckData)
+      .where(eq(leakcheckData.projectId, projectId));
     await refreshThreatIntel({
       db,
       projectId,
@@ -107,6 +147,20 @@ async function main(): Promise<void> {
       leakKey,
       onProgress: (p, msg) => console.log(`[ti ${projectId}] ${p}% ${msg}`),
     });
+    const leaksAfter = await db
+      .select({ n: count() })
+      .from(leakcheckData)
+      .where(eq(leakcheckData.projectId, projectId));
+    const newLeaks = Number(leaksAfter[0]?.n ?? 0) - Number(leaksBefore[0]?.n ?? 0);
+    if (newLeaks > 0) {
+      await sendProjectNotifications(db, projectId, {
+        type: 'ti.refreshed',
+        title: `${newLeaks} new leaked credential(s)`,
+        message: `Threat-intel refresh surfaced ${newLeaks} newly leaked credential(s) for this project.`,
+        severity: 'warning',
+        fields: { 'New leaks': String(newLeaks) },
+      });
+    }
   });
 
   await queue.work('echo', z.object({ msg: z.string() }), async (p) => console.log(`[worker] echo: ${p.msg}`));
