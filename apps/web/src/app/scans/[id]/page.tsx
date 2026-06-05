@@ -21,6 +21,7 @@ import { getDb } from '../../../lib/db';
 import { getCurrentUser } from '../../../lib/session';
 import { setVulnStatusAction, bulkReviewVulnsAction } from '../../../lib/status-actions';
 import { ReviewToggle } from '../../../components/ui/review-toggle';
+import { Pagination } from '../../../components/ui/pagination';
 import { cancelScanAction, rescanAction } from '../../../lib/recon-actions';
 import { enrichVulnAction } from '../../../lib/ai-actions';
 import AutoRefresh from './auto-refresh';
@@ -34,12 +35,12 @@ export default async function ScanDetail({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ compare?: string; vuln?: string }>;
+  searchParams: Promise<{ compare?: string; vuln?: string; vpage?: string; tab?: string }>;
 }) {
   const user = await getCurrentUser();
   if (!user) redirect('/login');
   const { id } = await params;
-  const { compare, vuln: vulnFilter = 'all' } = await searchParams;
+  const { compare, vuln: vulnFilter = 'all', vpage, tab = 'endpoints' } = await searchParams;
   const db = getDb();
   const [scan] = await db.select().from(scans).where(eq(scans.id, id));
   if (!scan) notFound();
@@ -54,7 +55,12 @@ export default async function ScanDetail({
   const terminal = TERMINAL.includes(scan.status);
   const canScan = userCan(user, Permission.InitiateScans);
   const canTriage = userCan(user, Permission.ModifyScanResults);
-  const shownVulns = vulnFilter === 'all' ? vulns : vulns.filter((v) => v.status === vulnFilter);
+  const filteredVulns = vulnFilter === 'all' ? vulns : vulns.filter((v) => v.status === vulnFilter);
+  // The full vuln set is loaded for the scan-diff above, so the long table is paginated in-memory.
+  const VULN_PAGE_SIZE = 50;
+  const vulnPage = Math.max(1, Number(vpage ?? 1) || 1);
+  const vulnTotalPages = Math.max(1, Math.ceil(filteredVulns.length / VULN_PAGE_SIZE));
+  const shownVulns = filteredVulns.slice((vulnPage - 1) * VULN_PAGE_SIZE, vulnPage * VULN_PAGE_SIZE);
 
   // Sibling scans of the same target (for the compare dropdown) + optional diff.
   const siblings = (
@@ -205,7 +211,7 @@ export default async function ScanDetail({
         </Card>
       ) : null}
 
-      <Tabs defaultValue="endpoints">
+      <Tabs defaultValue={tab}>
         <TabsList>
           <TabsTrigger value="endpoints">
             <Globe className="size-3.5" /> Endpoints{' '}
@@ -299,6 +305,7 @@ export default async function ScanDetail({
             <>
               <div className="mb-3 flex flex-wrap items-center justify-end gap-2">
                 <form method="get" className="flex items-center gap-1.5">
+                  <input type="hidden" name="tab" value="vulns" />
                   {compare ? <input type="hidden" name="compare" value={compare} /> : null}
                   <Select
                     name="vuln"
@@ -326,7 +333,7 @@ export default async function ScanDetail({
                   </form>
                 ) : null}
               </div>
-              {shownVulns.length === 0 ? (
+              {filteredVulns.length === 0 ? (
                 <p className="text-sm text-fg-subtle">No findings match this status filter.</p>
               ) : (
                 <Table>
@@ -408,6 +415,17 @@ export default async function ScanDetail({
                   </TBody>
                 </Table>
               )}
+              {filteredVulns.length > 0 ? (
+                <Pagination
+                  page={vulnPage}
+                  totalPages={vulnTotalPages}
+                  total={filteredVulns.length}
+                  label="findings"
+                  makeHref={(p) =>
+                    `/scans/${scan.id}?tab=vulns&${compare ? `compare=${compare}&` : ''}vuln=${vulnFilter}&vpage=${p}`
+                  }
+                />
+              ) : null}
             </>
           ) : (
             <p className="text-sm text-fg-subtle">No vulnerabilities found.</p>

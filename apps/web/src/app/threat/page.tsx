@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
-import { desc, eq } from 'drizzle-orm';
+import { and, desc, eq, count, sql } from 'drizzle-orm';
 import { RefreshCw, ShieldCheck, Bug, Activity, Plus } from 'lucide-react';
 import { AppShell } from '../../components/shell/app-shell';
 import { PageHeader } from '../../components/ui/page-header';
@@ -14,6 +14,7 @@ import { Badge } from '../../components/ui/badge';
 import { Table, THead, TBody, TR, TH, TD } from '../../components/ui/table';
 import { EmptyState } from '../../components/ui/empty-state';
 import { ReviewToggle } from '../../components/ui/review-toggle';
+import { Pagination } from '../../components/ui/pagination';
 import { computeProjectRisk } from '@vacti/threat-intel';
 import { LEAK_STATUS_LABEL, NEWS_STATUS_LABEL, userCan, Permission } from '@vacti/core';
 import { SECTORS } from '@vacti/threat-intel';
@@ -36,7 +37,7 @@ export const dynamic = 'force-dynamic';
 export default async function ThreatPage({
   searchParams,
 }: {
-  searchParams: Promise<{ project?: string; leak?: string; news?: string }>;
+  searchParams: Promise<{ project?: string; leak?: string; news?: string; lpage?: string }>;
 }) {
   const user = await getCurrentUser();
   if (!user) redirect('/login');
@@ -46,6 +47,8 @@ export default async function ThreatPage({
   const projectId = sp.project ?? projectRows[0]?.id;
   const leakFilter = sp.leak ?? 'all';
   const newsFilter = sp.news ?? 'all';
+  const LEAK_PAGE_SIZE = 25;
+  const leakPage = Math.max(1, Number(sp.lpage ?? 1) || 1);
 
   if (!projectId) {
     return (
@@ -62,10 +65,26 @@ export default async function ThreatPage({
 
   const project = projectRows.find((p) => p.id === projectId);
   const sector = project?.sector ?? 'banking';
-  const [risk, otx, leaks, indicators, statusRows, news] = await Promise.all([
+  // Leaks are paginated server-side (the list can run to hundreds of rows); the filter is pushed into SQL.
+  const leakWhere = and(
+    eq(leakcheckData.projectId, projectId),
+    leakFilter !== 'all' ? eq(leakcheckData.status, leakFilter) : undefined,
+  );
+  const [risk, otx, leakStatRows, leaks, leakFilteredRows, indicators, statusRows, news] = await Promise.all([
     computeProjectRisk(db, projectId),
     db.select().from(otxThreatData).where(eq(otxThreatData.projectId, projectId)),
-    db.select().from(leakcheckData).where(eq(leakcheckData.projectId, projectId)),
+    db
+      .select({ total: count(), unchecked: sql<number>`count(*) filter (where ${leakcheckData.checked} = false)` })
+      .from(leakcheckData)
+      .where(eq(leakcheckData.projectId, projectId)),
+    db
+      .select()
+      .from(leakcheckData)
+      .where(leakWhere)
+      .orderBy(desc(leakcheckData.id))
+      .limit(LEAK_PAGE_SIZE)
+      .offset((leakPage - 1) * LEAK_PAGE_SIZE),
+    db.select({ n: count() }).from(leakcheckData).where(leakWhere),
     db.select().from(manualIndicators).where(eq(manualIndicators.projectId, projectId)),
     db.select().from(threatIntelStatus).where(eq(threatIntelStatus.projectId, projectId)),
     db.select().from(threatNews).where(eq(threatNews.sector, sector)).orderBy(desc(threatNews.publishedAt)).limit(15),
@@ -74,8 +93,10 @@ export default async function ThreatPage({
   const canTriage = userCan(user, Permission.ModifyScanResults);
   const pulses = otx.reduce((a, o) => a + o.pulses, 0);
   const malware = otx.reduce((a, o) => a + o.malwareCount, 0);
-  const unchecked = leaks.filter((l) => !l.checked).length;
-  const shownLeaks = leakFilter === 'all' ? leaks : leaks.filter((l) => l.status === leakFilter);
+  const leakTotal = Number(leakStatRows[0]?.total ?? 0);
+  const unchecked = Number(leakStatRows[0]?.unchecked ?? 0);
+  const leakFilteredTotal = Number(leakFilteredRows[0]?.n ?? 0);
+  const leakTotalPages = Math.max(1, Math.ceil(leakFilteredTotal / LEAK_PAGE_SIZE));
   const shownNews = newsFilter === 'all' ? news : news.filter((n) => n.status === newsFilter);
 
   return (
@@ -120,7 +141,7 @@ export default async function ThreatPage({
         ) : (
           <Badge variant="neutral">never refreshed</Badge>
         )}
-        {!otx.length && !leaks.length ? (
+        {!otx.length && leakTotal === 0 ? (
           <span className="text-xs text-fg-subtle">
             Set OTX_API_KEY / LEAKCHECK_API_KEY to populate live data — features degrade gracefully.
           </span>
@@ -139,7 +160,7 @@ export default async function ThreatPage({
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
           <StatCard label="OTX pulses" value={pulses} icon={<Activity />} />
           <StatCard label="Malware refs" value={malware} icon={<Bug />} />
-          <StatCard label="Leaked creds" value={leaks.length} icon={<ShieldCheck />} hint={`${unchecked} unchecked`} />
+          <StatCard label="Leaked creds" value={leakTotal} icon={<ShieldCheck />} hint={`${unchecked} unchecked`} />
           <StatCard label="Indicators" value={indicators.length} icon={<Plus />} />
         </div>
       </div>
@@ -268,7 +289,7 @@ export default async function ThreatPage({
         <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-fg-subtle">
           Leaked credentials
         </h2>
-        {leaks.length > 0 ? (
+        {leakTotal > 0 ? (
           <div className="flex flex-wrap items-center gap-2">
             <form method="get" className="flex items-center gap-1.5">
               <input type="hidden" name="project" value={projectId} />
@@ -301,11 +322,11 @@ export default async function ThreatPage({
           </div>
         ) : null}
       </div>
-      {leaks.length === 0 ? (
+      {leakTotal === 0 ? (
         <Card>
           <CardContent className="py-5 text-sm text-fg-muted">No leaked credentials found.</CardContent>
         </Card>
-      ) : shownLeaks.length === 0 ? (
+      ) : leakFilteredTotal === 0 ? (
         <Card>
           <CardContent className="py-5 text-sm text-fg-muted">No leaks match this status filter.</CardContent>
         </Card>
@@ -320,7 +341,7 @@ export default async function ThreatPage({
             </TR>
           </THead>
           <TBody>
-            {shownLeaks.map((l) => (
+            {leaks.map((l) => (
               <TR key={l.id}>
                 <TD className="font-mono text-xs">{l.identifier}</TD>
                 <TD>{l.source}</TD>
@@ -350,6 +371,15 @@ export default async function ThreatPage({
           </TBody>
         </Table>
       )}
+      {leakFilteredTotal > 0 ? (
+        <Pagination
+          page={leakPage}
+          totalPages={leakTotalPages}
+          total={leakFilteredTotal}
+          label="leaks"
+          makeHref={(p) => `/threat?project=${projectId}&leak=${leakFilter}&news=${newsFilter}&lpage=${p}`}
+        />
+      ) : null}
 
       <h2 className="mb-3 mt-8 font-display text-sm font-semibold uppercase tracking-wider text-fg-subtle">
         Manual indicators
