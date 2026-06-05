@@ -29,7 +29,8 @@ export async function CtiCards({ projectId }: { projectId: string }) {
 
   const [kev, ransomware, epss] = await Promise.all([
     fetchKev({ fetchImpl: cached }),
-    fetchRansomwareLandscape({ fetchImpl: cached, recentLimit: 12 }),
+    // Ransomware victims feed is ~25MB (over Next's cache limit); the lib memoises it in-process.
+    fetchRansomwareLandscape({ recentLimit: 12 }),
     projectCves.length ? fetchEpss(projectCves, { fetchImpl: cached }) : Promise.resolve(new Map()),
   ]);
 

@@ -44,14 +44,21 @@ function mapVictim(v: VictimRaw): RansomwareVictim {
   };
 }
 
+// The victims feed is ~25MB (too big for Next's fetch cache), so memoise the computed landscape in
+// the long-running process for an hour rather than refetching/reparsing it on every render.
+let cache: { at: number; data: RansomwareLandscape } | null = null;
+const CACHE_MS = 60 * 60 * 1000;
+
 /**
  * Fetch the ransomware landscape (stats + recent victims + top groups) from the ransomware-dashboard
  * data mirror. Degrades to empty results on error. `recentLimit` caps the recent/Indonesia lists.
+ * Result is process-cached for an hour (the victims feed is large); pass a `fetchImpl` in tests to bypass.
  */
 export async function fetchRansomwareLandscape(
-  opts: { fetchImpl?: FetchLike; timeoutMs?: number; recentLimit?: number } = {},
+  opts: { fetchImpl?: FetchLike; timeoutMs?: number; recentLimit?: number; now?: number } = {},
 ): Promise<RansomwareLandscape> {
-  const { fetchImpl = fetch, timeoutMs = 15000, recentLimit = 15 } = opts;
+  const { fetchImpl = fetch, timeoutMs = 20000, recentLimit = 15, now = Date.now() } = opts;
+  if (cache && now - cache.at < CACHE_MS) return cache.data;
   const empty: RansomwareLandscape = {
     stats: { victims: 0, groups: 0, press: 0, lastUpdate: '' },
     recent: [],
@@ -85,7 +92,7 @@ export async function fetchRansomwareLandscape(
       .sort((a, b) => b.count - a.count)
       .slice(0, 10);
 
-    return {
+    const data: RansomwareLandscape = {
       stats: {
         victims: s.stats?.victims ?? victims.length,
         groups: s.stats?.groups ?? counts.size,
@@ -96,7 +103,9 @@ export async function fetchRansomwareLandscape(
       indonesia: victims.filter((v) => v.country === 'ID').slice(0, recentLimit),
       topGroups,
     };
+    cache = { at: now, data };
+    return data;
   } catch {
-    return empty;
+    return cache?.data ?? empty;
   }
 }
