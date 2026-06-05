@@ -24,7 +24,7 @@ export default async function LoginPage() {
           </span>
           <div>
             <h1 className="font-display text-xl font-semibold tracking-tight">vacti</h1>
-            <p className="text-sm text-fg-muted">VA &amp; Threat Intelligence platform</p>
+            <p className="text-sm text-fg-muted">VA &amp; Cyber Threat Intelligence platform</p>
           </div>
         </div>
         <div className="rounded-lg border border-border bg-surface p-6 shadow-sm">
