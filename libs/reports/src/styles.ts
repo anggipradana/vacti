@@ -150,6 +150,8 @@ export function reportCss(primary: string, secondary: string, footer: string, cl
   .fblock p { font-size: 11.5px; color: #334a54; margin: 0; line-height: 1.62; }
   .fblock ul.refs { margin: 0; padding-left: 16px; }
   .fblock ul.refs li { font-size: 10px; color: #4a6470; line-height: 1.5; margin: 2px 0; word-break: break-all; }
+  .fblock .evlabel { font-family:'IBM Plex Mono'; font-size: 9px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); font-weight: 600; margin: 8px 0 3px; }
+  .fblock pre.evidence { font-family:'IBM Plex Mono'; font-size: 8.5px; line-height: 1.45; color: #2b3f47; background: var(--soft); border: 1px solid var(--line); border-radius: 4px; padding: 8px 10px; margin: 0; white-space: pre-wrap; word-break: break-all; max-height: 360px; overflow: hidden; }
 
   /* ---------- Approval ---------- */
   .approve-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; margin-top: 10px; }

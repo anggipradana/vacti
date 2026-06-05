@@ -113,6 +113,8 @@ export async function GET(req: Request, ctx: { params: Promise<{ scanId: string 
       references: v.references,
       description: v.description,
       remediation: v.remediation,
+      request: v.request,
+      response: v.response,
     })),
   });
   const pdf = await renderPdf(html, { footer: settings.classification ?? settings.footerText ?? '' });
