@@ -2,6 +2,7 @@ import { reportCss, escapeHtml, SEV_HEX } from './styles';
 import { labels, bi, biText, pri, sec } from './i18n';
 import {
   cover,
+  backCover,
   approvalCards,
   doc,
   section,
@@ -425,5 +426,6 @@ export function renderVaReport(d: VaReportData): string {
   }
 
   body.push(`<div class="end">${escapeHtml(l.endOfReport)}</div>`);
+  body.push(backCover({ settings: s, title: l.vaTitle, endText: l.endOfReport }));
   return doc(l.vaTitle, css, body.join('\n'));
 }

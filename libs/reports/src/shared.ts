@@ -61,6 +61,27 @@ export function cover(opts: {
   </section>`;
 }
 
+/** Full-page back cover at the very end of the report (mirrors the front cover styling). */
+export function backCover(opts: { settings: ReportSettings; title: string; endText: string; org?: string }): string {
+  const { settings: s, title, endText } = opts;
+  const initial = (s.companyName?.trim()?.[0] ?? 'V').toUpperCase();
+  const mark = s.companyLogo
+    ? `<div class="mark"><img class="logo" src="${escapeHtml(s.companyLogo)}" alt=""><span class="nm">${escapeHtml(s.companyName ?? 'vacti')}</span></div>`
+    : `<div class="mark"><span class="m">${escapeHtml(initial)}</span><span class="nm">${escapeHtml(s.companyName ?? 'vacti')}</span></div>`;
+  return `<section class="cover back-cover">
+    <div class="grid-bg"></div><div class="glow"></div>
+    <div class="cover-top">${mark}<span class="conf-pill">${escapeHtml((s.classification ?? '').trim() || 'Confidential')}</span></div>
+    <div class="cover-mid back-mid">
+      <div class="kicker">${escapeHtml(endText)}</div>
+      <h1>${escapeHtml(title)}</h1>
+      ${s.footerText ? `<div class="subtitle">${escapeHtml(s.footerText)}</div>` : ''}
+    </div>
+    <div class="cover-bot">
+      <div class="cover-foot"><div class="org">${escapeHtml(opts.org ?? s.companyName ?? 'vacti')}</div><div>${escapeHtml(s.classification ?? '')}</div></div>
+    </div>
+  </section>`;
+}
+
 /** Section head: eyebrow (bilingual) + numbered title (primary language). */
 export function section(
   num: string,

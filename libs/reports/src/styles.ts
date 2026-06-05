@@ -21,6 +21,7 @@ export function reportCss(primary: string, secondary: string, footer: string, cl
     @bottom-right { content: counter(page) " / " counter(pages); font-family:'IBM Plex Mono',monospace; font-size: 9px; letter-spacing:.1em; color: #9bafb7; }
   }
   @page :first { margin: 0; @top-left{content:none} @top-right{content:none} @bottom-left{content:none} @bottom-right{content:none} }
+  @page backcover { margin: 0; @top-left{content:none} @top-right{content:none} @bottom-left{content:none} @bottom-right{content:none} }
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; }
   body { font-family: 'IBM Plex Sans', system-ui, sans-serif; color: var(--ink); background: #fff; -webkit-font-smoothing: antialiased; font-size: 12px; line-height: 1.55; }
@@ -67,6 +68,8 @@ export function reportCss(primary: string, secondary: string, footer: string, cl
   .cover-meta .mv { font-family:'IBM Plex Mono'; font-size: 14px; color: #eaf4f7; margin-top: 6px; font-weight: 500; }
   .cover-foot { margin-top: 36px; font-size: 11px; color: #6f93a0; line-height: 1.7; display: flex; justify-content: space-between; align-items: flex-end; position: relative; }
   .cover-foot .org { color: #bcd7df; font-family:'Space Grotesk'; font-size: 13px; font-weight: 600; }
+  .back-cover { break-before: page; page: backcover; }
+  .back-cover .back-mid { display: flex; flex-direction: column; justify-content: center; flex: 1; }
 
   /* ---------- Stat cards ---------- */
   .stat-row { display: grid; grid-template-columns: repeat(2,1fr); gap: 14px; margin: 14px 0; }
