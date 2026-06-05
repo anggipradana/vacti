@@ -19,7 +19,10 @@ export async function renderPdf(html: string, opts: RenderOptions = {}): Promise
   try {
     const page = await browser.newPage();
     await page.setContent(html, { waitUntil: 'load' });
-    pdf = await page.pdf({ format: 'A4', printBackground: true });
+    // preferCSSPageSize makes Chromium honour the stylesheet's `@page` size + margins (including
+    // `@page :first { margin: 0 }`). Without it, Chromium imposes its own default margins, so the
+    // full-height (297mm) cover overflows onto a blank second page — the "page 1 pagination" bug.
+    pdf = await page.pdf({ printBackground: true, preferCSSPageSize: true });
   } finally {
     await browser.close();
   }
