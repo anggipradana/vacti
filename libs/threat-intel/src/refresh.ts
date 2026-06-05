@@ -32,15 +32,21 @@ export async function refreshThreatIntel(deps: RefreshDeps): Promise<void> {
     await setStatus('running', 0, 'starting');
     const tgts = await db.select().from(targets).where(eq(targets.projectId, projectId));
     const inds = await db.select().from(manualIndicators).where(eq(manualIndicators.projectId, projectId));
-    const domains = [
+    // OTX lookup set: domains (targets + domain/subdomain indicators) + IP indicators (IPv4 lookup).
+    const domainNames = [
       ...new Set([...tgts.map((t) => t.domain), ...inds.filter((i) => i.type !== 'ip').map((i) => i.value)]),
+    ];
+    const ipValues = [...new Set(inds.filter((i) => i.type === 'ip').map((i) => i.value))];
+    const lookups: { value: string; otxType: 'domain' | 'IPv4'; leak: boolean }[] = [
+      ...domainNames.map((value) => ({ value, otxType: 'domain' as const, leak: true })),
+      ...ipValues.map((value) => ({ value, otxType: 'IPv4' as const, leak: false })),
     ];
 
     await db.delete(otxThreatData).where(eq(otxThreatData.projectId, projectId));
 
     let i = 0;
-    for (const domain of domains) {
-      const otx = await fetchOtxIndicator(domain, { apiKey: deps.otxKey, type: 'domain' });
+    for (const { value: domain, otxType, leak } of lookups) {
+      const otx = await fetchOtxIndicator(domain, { apiKey: deps.otxKey, type: otxType });
       if (otx) {
         await db.insert(otxThreatData).values({
           projectId,
@@ -52,7 +58,7 @@ export async function refreshThreatIntel(deps: RefreshDeps): Promise<void> {
           urls: otx.urls,
         });
       }
-      for (const l of await fetchLeaks(domain, { apiKey: deps.leakKey })) {
+      for (const l of leak ? await fetchLeaks(domain, { apiKey: deps.leakKey }) : []) {
         const ex = await db
           .select({ id: leakcheckData.id })
           .from(leakcheckData)
@@ -69,9 +75,9 @@ export async function refreshThreatIntel(deps: RefreshDeps): Promise<void> {
         }
       }
       i += 1;
-      await setStatus('running', Math.round((i / Math.max(1, domains.length)) * 100), `processed ${domain}`);
+      await setStatus('running', Math.round((i / Math.max(1, lookups.length)) * 100), `processed ${domain}`);
     }
-    await setStatus('completed', 100, `${domains.length} indicator(s)`);
+    await setStatus('completed', 100, `${lookups.length} indicator(s)`);
   } catch (err) {
     await setStatus('failed', 0, err instanceof Error ? err.message : String(err));
     throw err;
