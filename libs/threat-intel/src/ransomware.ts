@@ -1,0 +1,102 @@
+type FetchLike = typeof fetch;
+
+export interface RansomwareVictim {
+  title: string;
+  group: string;
+  country: string;
+  website: string;
+  discovered: string;
+  published: string;
+  postUrl: string;
+}
+
+export interface RansomwareLandscape {
+  stats: { victims: number; groups: number; press: number; lastUpdate: string };
+  /** Most recently discovered victims, newest first. */
+  recent: RansomwareVictim[];
+  /** Recently discovered victims in Indonesia (country = ID), for local relevance. */
+  indonesia: RansomwareVictim[];
+  /** Most active groups by victim count in the fetched window. */
+  topGroups: { group: string; count: number }[];
+}
+
+const BASE = 'https://raw.githubusercontent.com/anggipradana/ransomware-dashboard/main/data';
+
+interface VictimRaw {
+  post_title?: string;
+  group_name?: string;
+  country?: string;
+  website?: string;
+  discovered?: string;
+  published?: string;
+  post_url?: string;
+}
+
+function mapVictim(v: VictimRaw): RansomwareVictim {
+  return {
+    title: v.post_title ?? '',
+    group: v.group_name ?? '',
+    country: (v.country ?? '').toUpperCase(),
+    website: v.website ?? '',
+    discovered: v.discovered ?? '',
+    published: v.published ?? '',
+    postUrl: v.post_url ?? '',
+  };
+}
+
+/**
+ * Fetch the ransomware landscape (stats + recent victims + top groups) from the ransomware-dashboard
+ * data mirror. Degrades to empty results on error. `recentLimit` caps the recent/Indonesia lists.
+ */
+export async function fetchRansomwareLandscape(
+  opts: { fetchImpl?: FetchLike; timeoutMs?: number; recentLimit?: number } = {},
+): Promise<RansomwareLandscape> {
+  const { fetchImpl = fetch, timeoutMs = 15000, recentLimit = 15 } = opts;
+  const empty: RansomwareLandscape = {
+    stats: { victims: 0, groups: 0, press: 0, lastUpdate: '' },
+    recent: [],
+    indonesia: [],
+    topGroups: [],
+  };
+  const get = async (path: string): Promise<unknown> => {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), timeoutMs);
+    try {
+      const res = await fetchImpl(`${BASE}/${path}`, { signal: ctrl.signal });
+      clearTimeout(t);
+      return res.ok ? await res.json() : null;
+    } catch {
+      clearTimeout(t);
+      return null;
+    }
+  };
+
+  try {
+    const [statsJson, victimsJson] = await Promise.all([get('stats.json'), get('victims.json')]);
+    const s =
+      (statsJson as { stats?: { victims?: number; groups?: number; press?: number }; last_update?: string }) ?? {};
+    const victims = (Array.isArray(victimsJson) ? (victimsJson as VictimRaw[]) : []).map(mapVictim);
+    victims.sort((a, b) => (b.discovered > a.discovered ? 1 : b.discovered < a.discovered ? -1 : 0));
+
+    const counts = new Map<string, number>();
+    for (const v of victims) if (v.group) counts.set(v.group, (counts.get(v.group) ?? 0) + 1);
+    const topGroups = [...counts.entries()]
+      .map(([group, count]) => ({ group, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10);
+
+    return {
+      stats: {
+        victims: s.stats?.victims ?? victims.length,
+        groups: s.stats?.groups ?? counts.size,
+        press: s.stats?.press ?? 0,
+        lastUpdate: s.last_update ?? '',
+      },
+      recent: victims.slice(0, recentLimit),
+      indonesia: victims.filter((v) => v.country === 'ID').slice(0, recentLimit),
+      topGroups,
+    };
+  } catch {
+    return empty;
+  }
+}
