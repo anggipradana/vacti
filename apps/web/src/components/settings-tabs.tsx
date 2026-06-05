@@ -3,6 +3,7 @@ import { cn } from '../lib/cn';
 
 const tabs = [
   { label: 'API Tokens', href: '/settings/tokens' },
+  { label: 'Scan Profiles', href: '/settings/profiles' },
   { label: 'Reports', href: '/settings/reports' },
   { label: 'Integrations', href: '/settings/integrations' },
   { label: 'Users', href: '/settings/users', sysAdminOnly: true },

@@ -13,9 +13,18 @@ export interface HttpxResult {
   cdn?: boolean;
 }
 
-export function httpxArgs(headers?: Record<string, string>): string[] {
+export interface HttpxOptions {
+  userAgent?: string;
+  rateLimit?: number;
+  threads?: number;
+}
+
+export function httpxArgs(headers?: Record<string, string>, opts: HttpxOptions = {}): string[] {
   const args = ['-json', '-silent', '-td', '-title', '-status-code', '-web-server', '-cdn', '-no-color'];
   for (const [k, v] of Object.entries(headers ?? {})) args.push('-H', `${k}: ${v}`);
+  if (opts.userAgent) args.push('-H', `User-Agent: ${opts.userAgent}`);
+  if (opts.rateLimit && opts.rateLimit > 0) args.push('-rl', String(opts.rateLimit));
+  if (opts.threads && opts.threads > 0) args.push('-threads', String(opts.threads));
   return args;
 }
 

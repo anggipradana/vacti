@@ -66,20 +66,20 @@
 
 ## 4. Manajemen Project & Target
 
-| #    | Fitur ReNgGinaNg                                            | Status | Epic  | Catatan                                                            |
-| ---- | ----------------------------------------------------------- | ------ | ----- | ------------------------------------------------------------------ |
-| 4.1  | Project / workspace (multi-project, scoping `/<slug>/`)     | ✅     | PF    | Multi-project, single-tenant org v1                                |
-| 4.2  | Target domain/organisasi                                    | ✅     | RE    |                                                                    |
-| 4.3  | Predefined subdomains                                       | ✅     | RE    | Memungkinkan skip subfinder                                        |
-| 4.4  | Custom request headers                                      | ✅     | RE    |                                                                    |
-| 4.5  | Scan Engine/Config (YAML reNgine, lusinan opsi)             | 🟡     | RE    | Profil ringkas: tool aktif, ports, severity, rate/threads, timeout |
-| 4.6  | Scan History (status, hasil per-scan)                       | ✅     | RE/UI |                                                                    |
-| 4.7  | Perbandingan antar-scan (diff)                              | 🟡     | RE/UI | Versi ringkas                                                      |
-| 4.8  | Scheduled Scans (Celery Beat)                               | 🟡     | RE    | Cron ringan via pg-boss, bukan celery-beat                         |
-| 4.9  | Recon Notes / Todo per target                               | 🟡     | UI    | Opsional ringan                                                    |
-| 4.10 | WHOIS / domain-info kompleks (Netlas/ViewDNS/historical IP) | ❌     | —     | Opsional kecil bila perlu nanti                                    |
-| 4.11 | Universal search                                            | 🟡     | UI    |                                                                    |
-| 4.12 | Interesting keywords/lookup (admin, ftp, cpanel)            | 🟡     | RE    | Versi ringkas                                                      |
+| #    | Fitur ReNgGinaNg                                            | Status | Epic  | Catatan                                                                                                                     |
+| ---- | ----------------------------------------------------------- | ------ | ----- | --------------------------------------------------------------------------------------------------------------------------- |
+| 4.1  | Project / workspace (multi-project, scoping `/<slug>/`)     | ✅     | PF    | Multi-project, single-tenant org v1                                                                                         |
+| 4.2  | Target domain/organisasi                                    | ✅     | RE    |                                                                                                                             |
+| 4.3  | Predefined subdomains                                       | ✅     | RE    | Memungkinkan skip subfinder                                                                                                 |
+| 4.4  | Custom request headers                                      | ✅     | RE    |                                                                                                                             |
+| 4.5  | Scan Engine/Config (YAML reNgine, lusinan opsi)             | 🟡➕   | RE    | Profil + **config jsonb** (UA/tags/templates/rate/exclude-subs/extra-args); recon #010, [09-SCAN-CONFIG](09-SCAN-CONFIG.md) |
+| 4.6  | Scan History (status, hasil per-scan)                       | ✅     | RE/UI |                                                                                                                             |
+| 4.7  | Perbandingan antar-scan (diff)                              | 🟡     | RE/UI | Versi ringkas                                                                                                               |
+| 4.8  | Scheduled Scans (Celery Beat)                               | 🟡     | RE    | Cron ringan via pg-boss, bukan celery-beat                                                                                  |
+| 4.9  | Recon Notes / Todo per target                               | 🟡     | UI    | Opsional ringan                                                                                                             |
+| 4.10 | WHOIS / domain-info kompleks (Netlas/ViewDNS/historical IP) | ❌     | —     | Opsional kecil bila perlu nanti                                                                                             |
+| 4.11 | Universal search                                            | 🟡     | UI    |                                                                                                                             |
+| 4.12 | Interesting keywords/lookup (admin, ftp, cpanel)            | 🟡     | RE    | Versi ringkas                                                                                                               |
 
 ## 5. Integrasi (WAJIB)
 

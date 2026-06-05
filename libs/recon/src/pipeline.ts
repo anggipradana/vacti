@@ -9,11 +9,26 @@ import { nucleiArgs, parseNucleiLine, type VulnResult } from './adapters/nuclei'
 import { isWordPress } from './wordpress';
 import { isInterestingEndpoint } from './keywords';
 
+/** Advanced per-tool options + scan scoping, persisted as scan_profiles.config (see 09-SCAN-CONFIG.md). */
+export interface ScanProfileConfig {
+  userAgent?: string;
+  headers?: Record<string, string>;
+  rateLimit?: number;
+  concurrency?: number;
+  retries?: number;
+  nucleiTags?: string[];
+  nucleiTemplates?: string[];
+  nucleiExcludeTags?: string[];
+  excludeSubdomains?: string[];
+  extraArgs?: { nuclei?: string[]; httpx?: string[]; subfinder?: string[]; naabu?: string[] };
+}
+
 export interface ScanProfile {
   tools: { subfinder?: boolean; httpx?: boolean; naabu?: boolean; nuclei?: boolean; wordfence?: boolean };
   ports: string;
   severities: string[];
   timeoutSec?: number;
+  config?: ScanProfileConfig;
 }
 
 export interface ScanInput {
@@ -38,6 +53,10 @@ export interface PipelineDeps {
 export async function runScanPipeline(input: ScanInput, deps: PipelineDeps): Promise<void> {
   const { db } = deps;
   const timeoutMs = (input.profile.timeoutSec ?? 600) * 1000;
+  const cfg = input.profile.config ?? {};
+  // Profile headers merge under the target's custom headers (target wins on conflict).
+  const reqHeaders = { ...(cfg.headers ?? {}), ...(input.customHeaders ?? {}) };
+  const excluded = new Set((cfg.excludeSubdomains ?? []).map((s) => s.toLowerCase()));
   const counts = { subdomains: 0, endpoints: 0, ports: 0, vulnerabilities: 0 };
   // Backstop for cancellation between stages (a running tool is killed via the AbortSignal directly).
   const checkAbort = () => {
@@ -103,13 +122,20 @@ export async function runScanPipeline(input: ScanInput, deps: PipelineDeps): Pro
       await activity('subfinder', 'completed', `${subs.length} subdomains`);
     }
     if (!hosts.length) hosts = [input.domain];
+    // Drop profile-excluded subdomains before probing.
+    if (excluded.size) hosts = hosts.filter((h) => !excluded.has(h.toLowerCase()));
+    if (!hosts.length) hosts = [input.domain];
 
     // Stage 2 — httpx probe + WordPress detection.
     checkAbort();
     const live: { url: string; host: string; isWp: boolean }[] = [];
     if (input.profile.tools.httpx !== false) {
       await activity('httpx', 'running');
-      const args = httpxArgs(input.customHeaders);
+      const args = httpxArgs(reqHeaders, {
+        userAgent: cfg.userAgent,
+        rateLimit: cfg.rateLimit,
+        threads: cfg.concurrency,
+      });
       const r = await runTool({ bin: 'httpx', args, input: hosts.join('\n') + '\n', timeoutMs, signal: input.signal });
       await record('httpx', args, r);
       const results = r.lines.map(parseHttpxLine).flatMap((x) => (x ? [x] : []));
@@ -168,7 +194,18 @@ export async function runScanPipeline(input: ScanInput, deps: PipelineDeps): Pro
     checkAbort();
     if (input.profile.tools.nuclei !== false && live.length) {
       await activity('nuclei', 'running');
-      const args = nucleiArgs({ severities: input.profile.severities });
+      const args = nucleiArgs({
+        severities: input.profile.severities,
+        tags: cfg.nucleiTags,
+        templates: cfg.nucleiTemplates,
+        excludeTags: cfg.nucleiExcludeTags,
+        headers: reqHeaders,
+        userAgent: cfg.userAgent,
+        rateLimit: cfg.rateLimit,
+        concurrency: cfg.concurrency,
+        retries: cfg.retries,
+        extraArgs: cfg.extraArgs?.nuclei,
+      });
       const r = await runTool({
         bin: 'nuclei',
         args,

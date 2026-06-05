@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { Permission, isValidCron } from '@vacti/core';
-import { targets, scans, scanSchedules, reconNotes } from '@vacti/db';
+import { targets, scans, scanSchedules, reconNotes, scanProfiles } from '@vacti/db';
 import { eq } from 'drizzle-orm';
 import { getDb } from './db';
 import { getQueue } from './queue';
@@ -12,6 +12,70 @@ import { requirePermission } from './authz';
 import { recordAudit } from './audit';
 
 const scanJob = z.object({ scanId: z.string().uuid() });
+
+/** Split a textarea/CSV field into a trimmed string[] (空 → []). */
+function list(v: FormDataEntryValue | null): string[] {
+  return String(v ?? '')
+    .split(/[\n,]+/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+const num = (v: FormDataEntryValue | null): number | undefined => {
+  const n = Number(String(v ?? '').trim());
+  return Number.isFinite(n) && n > 0 ? n : undefined;
+};
+
+const ALL_TOOL_KEYS = ['subfinder', 'httpx', 'naabu', 'nuclei', 'wordfence'] as const;
+const ALL_SEVERITIES = ['critical', 'high', 'medium', 'low', 'info'] as const;
+
+/** Create a scan profile with advanced per-tool config (modify_scan_config). */
+export async function saveProfileAction(formData: FormData) {
+  const actor = await requirePermission(Permission.ModifyScanConfig);
+  const name = String(formData.get('name') ?? '').trim();
+  if (!name) redirect('/settings/profiles?error=invalid');
+  const picked = new Set(formData.getAll('tools').map(String));
+  const tools = Object.fromEntries(ALL_TOOL_KEYS.map((t) => [t, picked.has(t)]));
+  const sev = formData.getAll('severities').map(String).filter(Boolean);
+  const config: Record<string, unknown> = {};
+  const ua = String(formData.get('userAgent') ?? '').trim();
+  if (ua) config.userAgent = ua;
+  const rate = num(formData.get('rateLimit'));
+  if (rate) config.rateLimit = rate;
+  const conc = num(formData.get('concurrency'));
+  if (conc) config.concurrency = conc;
+  const retries = num(formData.get('retries'));
+  if (retries !== undefined) config.retries = retries;
+  const nt = list(formData.get('nucleiTags'));
+  if (nt.length) config.nucleiTags = nt;
+  const ntpl = list(formData.get('nucleiTemplates'));
+  if (ntpl.length) config.nucleiTemplates = ntpl;
+  const net = list(formData.get('nucleiExcludeTags'));
+  if (net.length) config.nucleiExcludeTags = net;
+  const ex = list(formData.get('excludeSubdomains'));
+  if (ex.length) config.excludeSubdomains = ex;
+  const extra = list(formData.get('nucleiExtraArgs'));
+  if (extra.length) config.extraArgs = { nuclei: extra };
+
+  await getDb()
+    .insert(scanProfiles)
+    .values({
+      name,
+      tools,
+      ports: String(formData.get('ports') ?? 'top-100').trim() || 'top-100',
+      severities: sev.length ? sev : [...ALL_SEVERITIES.slice(0, 4)],
+      rate: rate ?? null,
+      config: Object.keys(config).length ? config : null,
+    });
+  await recordAudit({ actorId: actor.id, action: 'profile.create', resource: `profile:${name}` });
+  revalidatePath('/settings/profiles');
+}
+
+export async function deleteProfileAction(formData: FormData) {
+  await requirePermission(Permission.ModifyScanConfig);
+  const id = String(formData.get('id') ?? '');
+  if (id) await getDb().delete(scanProfiles).where(eq(scanProfiles.id, id));
+  revalidatePath('/settings/profiles');
+}
 
 /** Parse "Key: value" lines into a headers object (ignores blank/malformed lines). */
 function parseHeaders(raw: string): Record<string, string> | null {

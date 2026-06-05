@@ -44,6 +44,7 @@ async function main(): Promise<void> {
           tools: p.tools as ScanProfile['tools'],
           ports: p.ports,
           severities: p.severities,
+          config: (p.config as ScanProfile['config']) ?? undefined,
           timeoutSec: p.timeoutSec ?? undefined,
         };
     }
