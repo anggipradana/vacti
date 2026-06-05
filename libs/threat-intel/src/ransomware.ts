@@ -4,6 +4,8 @@ export interface RansomwareVictim {
   title: string;
   group: string;
   country: string;
+  /** Victim sector/industry (e.g. "Manufacturing"); empty when unknown. */
+  activity: string;
   website: string;
   discovered: string;
   published: string;
@@ -18,6 +20,12 @@ export interface RansomwareLandscape {
   indonesia: RansomwareVictim[];
   /** Most active groups by victim count in the fetched window. */
   topGroups: { group: string; count: number }[];
+  /** Larger recent slice (newest first) for client-side filtering by country/sector. */
+  victims: RansomwareVictim[];
+  /** Victim counts per country code, sorted descending. */
+  countries: { code: string; count: number }[];
+  /** Victim counts per known sector (excludes empty / "Not Found"), sorted descending. */
+  sectors: { name: string; count: number }[];
 }
 
 const BASE = 'https://raw.githubusercontent.com/anggipradana/ransomware-dashboard/main/data';
@@ -26,6 +34,7 @@ interface VictimRaw {
   post_title?: string;
   group_name?: string;
   country?: string;
+  activity?: string;
   website?: string;
   discovered?: string;
   published?: string;
@@ -37,6 +46,7 @@ function mapVictim(v: VictimRaw): RansomwareVictim {
     title: v.post_title ?? '',
     group: v.group_name ?? '',
     country: (v.country ?? '').toUpperCase(),
+    activity: v.activity ?? '',
     website: v.website ?? '',
     discovered: v.discovered ?? '',
     published: v.published ?? '',
@@ -64,6 +74,9 @@ export async function fetchRansomwareLandscape(
     recent: [],
     indonesia: [],
     topGroups: [],
+    victims: [],
+    countries: [],
+    sectors: [],
   };
   const get = async (path: string): Promise<unknown> => {
     const ctrl = new AbortController();
@@ -92,6 +105,22 @@ export async function fetchRansomwareLandscape(
       .sort((a, b) => b.count - a.count)
       .slice(0, 10);
 
+    // Larger recent slice for client-side country/sector filtering in the UI.
+    const slice = victims.slice(0, Math.max(recentLimit, 200));
+    const countryCounts = new Map<string, number>();
+    const sectorCounts = new Map<string, number>();
+    for (const v of slice) {
+      if (v.country) countryCounts.set(v.country, (countryCounts.get(v.country) ?? 0) + 1);
+      if (v.activity && v.activity !== 'Not Found')
+        sectorCounts.set(v.activity, (sectorCounts.get(v.activity) ?? 0) + 1);
+    }
+    const countries = [...countryCounts.entries()]
+      .map(([code, count]) => ({ code, count }))
+      .sort((a, b) => b.count - a.count);
+    const sectors = [...sectorCounts.entries()]
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count);
+
     const data: RansomwareLandscape = {
       stats: {
         victims: s.stats?.victims ?? victims.length,
@@ -102,6 +131,9 @@ export async function fetchRansomwareLandscape(
       recent: victims.slice(0, recentLimit),
       indonesia: victims.filter((v) => v.country === 'ID').slice(0, recentLimit),
       topGroups,
+      victims: slice,
+      countries,
+      sectors,
     };
     cache = { at: now, data };
     return data;

@@ -1,11 +1,12 @@
 import { eq, inArray } from 'drizzle-orm';
-import { Skull, ShieldAlert, Flame } from 'lucide-react';
+import { Skull, ShieldAlert } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
 import { StatCard } from '../../components/ui/stat-card';
 import { fetchKev, fetchEpss, fetchRansomwareLandscape } from '@vacti/threat-intel';
 import { scans, vulnerabilities } from '@vacti/db';
 import { getDb } from '../../lib/db';
+import { RansomwareFeed } from './ransomware-feed';
 
 // Cache the intel feeds in Next's data cache (refresh hourly) so big files aren't refetched per render.
 const cached = ((url: string) => fetch(url, { next: { revalidate: 3600 } })) as typeof fetch;
@@ -30,7 +31,7 @@ export async function CtiCards({ projectId }: { projectId: string }) {
   const [kev, ransomware, epss] = await Promise.all([
     fetchKev({ fetchImpl: cached }),
     // Ransomware victims feed is ~25MB (over Next's cache limit); the lib memoises it in-process.
-    fetchRansomwareLandscape({ recentLimit: 12 }),
+    fetchRansomwareLandscape({ recentLimit: 200 }),
     projectCves.length ? fetchEpss(projectCves, { fetchImpl: cached }) : Promise.resolve(new Map()),
   ]);
 
@@ -77,30 +78,8 @@ export async function CtiCards({ projectId }: { projectId: string }) {
               ))}
             </div>
           ) : null}
-          <div className="text-xs font-semibold uppercase tracking-wide text-fg-subtle">
-            {ransomware.indonesia.length ? 'Recently disclosed · Indonesia' : 'Recently disclosed'}
-          </div>
-          {(() => {
-            // Default to the Indonesia view; fall back to the global feed when no ID victims are in window.
-            const feed = ransomware.indonesia.length ? ransomware.indonesia : ransomware.recent;
-            return feed.length === 0 ? (
-              <p className="py-2 text-sm text-fg-muted">Feed unavailable.</p>
-            ) : (
-              <ul className="mt-1 divide-y divide-border">
-                {feed.slice(0, 8).map((v, i) => (
-                  <li key={`${v.title}-${i}`} className="flex items-center justify-between gap-2 py-1.5 text-sm">
-                    <span className="min-w-0 truncate">
-                      {v.country === 'ID' ? <Flame className="mr-1 inline size-3 text-danger" /> : null}
-                      {v.title || v.website || 'unknown'}
-                    </span>
-                    <span className="shrink-0 text-xs text-fg-subtle">
-                      {v.group} · {v.country} · {v.discovered.slice(0, 10)}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            );
-          })()}
+          <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-fg-subtle">Recently disclosed</div>
+          <RansomwareFeed victims={ransomware.victims} countries={ransomware.countries} sectors={ransomware.sectors} />
         </CardContent>
       </Card>
 
