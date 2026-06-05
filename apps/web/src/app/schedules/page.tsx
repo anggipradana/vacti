@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
-import { desc } from 'drizzle-orm';
+import { desc, eq } from 'drizzle-orm';
 import { CalendarClock } from 'lucide-react';
 import { AppShell } from '../../components/shell/app-shell';
 import { PageHeader } from '../../components/ui/page-header';
@@ -12,10 +12,11 @@ import { Select } from '../../components/ui/select';
 import { Badge } from '../../components/ui/badge';
 import { EmptyState } from '../../components/ui/empty-state';
 import { userCan, Permission } from '@vacti/core';
-import { targets, scanProfiles, scanSchedules } from '@vacti/db';
+import { targets, scanProfiles, scanSchedules, projects } from '@vacti/db';
 import { getDb } from '../../lib/db';
 import { getCurrentUser } from '../../lib/session';
 import { createScheduleAction, toggleScheduleAction, deleteScheduleAction } from '../../lib/recon-actions';
+import { ProjectSwitcher } from '../../components/project-switcher';
 
 export const dynamic = 'force-dynamic';
 
@@ -26,23 +27,30 @@ const PRESETS = [
   { label: 'Hourly', cron: '0 * * * *' },
 ];
 
-export default async function SchedulesPage() {
+export default async function SchedulesPage({ searchParams }: { searchParams: Promise<{ project?: string }> }) {
   const user = await getCurrentUser();
   if (!user) redirect('/login');
   const canManage = userCan(user, Permission.InitiateScans);
   const db = getDb();
-  const [targetRows, profileRows, scheduleRows] = await Promise.all([
-    db.select().from(targets).orderBy(desc(targets.createdAt)),
+  const projectRows = await db.select().from(projects).orderBy(desc(projects.createdAt));
+  const projectId = (await searchParams).project ?? projectRows[0]?.id;
+  // Schedules have no projectId of their own, so scope them via the active project's targets.
+  const [targetRows, profileRows, allSchedules] = await Promise.all([
+    projectId
+      ? db.select().from(targets).where(eq(targets.projectId, projectId)).orderBy(desc(targets.createdAt))
+      : Promise.resolve([]),
     db.select().from(scanProfiles),
     db.select().from(scanSchedules).orderBy(desc(scanSchedules.createdAt)),
   ]);
   const targetById = new Map(targetRows.map((t) => [t.id, t.domain]));
+  const scheduleRows = allSchedules.filter((s) => targetById.has(s.targetId));
 
   return (
     <AppShell user={{ email: user.email, isSysAdmin: user.isSysAdmin }}>
       <PageHeader
         title="Scheduled scans"
         description="Recurring scans via a lightweight cron tick (local server time)."
+        actions={<ProjectSwitcher projects={projectRows} current={projectId} basePath="/schedules" />}
       />
 
       {canManage ? (
