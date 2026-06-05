@@ -88,3 +88,23 @@ export const NEWS_STATUS_LABEL: Record<NewsStatusValue, string> = {
 export function isNewsStatus(s: string): s is NewsStatusValue {
   return (Object.values(NewsStatus) as string[]).includes(s);
 }
+
+/**
+ * One-click "reviewed/triaged" toggle target per finding type. Each is a two-state switch between
+ * the finding's untouched `base` status and the first analyst-triage `reviewed` status, so a single
+ * click marks a finding reviewed (and clicking again reverts). The full status dropdown still covers
+ * every other status. `label` is what the toggle button shows.
+ */
+export const REVIEW_TOGGLE = {
+  vuln: { base: VulnStatus.Open, reviewed: VulnStatus.InProgress, label: VULN_STATUS_LABEL.in_progress },
+  leak: { base: LeakStatus.New, reviewed: LeakStatus.Investigating, label: LEAK_STATUS_LABEL.investigating },
+  news: { base: NewsStatus.New, reviewed: NewsStatus.Reviewed, label: NEWS_STATUS_LABEL.reviewed },
+} as const;
+
+export type ReviewToggleKind = keyof typeof REVIEW_TOGGLE;
+
+/** The status a one-click review toggle should set, given the finding's current status. */
+export function reviewToggleTarget(kind: ReviewToggleKind, current: string): string {
+  const t = REVIEW_TOGGLE[kind];
+  return current === t.reviewed ? t.base : t.reviewed;
+}

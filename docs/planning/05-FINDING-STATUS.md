@@ -83,3 +83,17 @@ It replaces/extends the current `checked` boolean. OTX and other TI data have **
 - API: status-change endpoints (`PATCH /vulnerabilities/:id`, `PATCH /leaks/:id`) gated by RBAC.
 - UI: status pills + triage controls + table filters on the scan-detail vulns tab and the Threat
   Intel leaks table.
+
+## 4. One-click review toggle (2026-06-05)
+
+Every finding that carries a triage status — VA vulns, leaked credentials, and sector security-news
+headlines — gets a one-click **review toggle** beside its full status dropdown, so an analyst can mark
+something triaged without the two-step dropdown+Set flow. The toggle is a two-state switch between the
+finding's untouched `base` status and its first analyst-triage `reviewed` status (clicking again
+reverts); the dropdown still covers every other status.
+
+- `REVIEW_TOGGLE` + `reviewToggleTarget()` in `@vacti/core` define the base⇄reviewed pair per kind:
+  vuln `open ⇄ in_progress`, leak `new ⇄ investigating`, news `new ⇄ reviewed`.
+- Reusable `<ReviewToggle>` server component (`apps/web/.../ui/review-toggle.tsx`) posts the existing
+  status action with the toggled target; reused on the scan-detail vulns table and both Threat-Intel
+  tables (leaks + news).

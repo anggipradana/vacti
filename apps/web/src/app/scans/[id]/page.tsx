@@ -20,6 +20,7 @@ import { scans, targets, scanActivity, subdomains, endpoints, ports as portsTabl
 import { getDb } from '../../../lib/db';
 import { getCurrentUser } from '../../../lib/session';
 import { setVulnStatusAction } from '../../../lib/status-actions';
+import { ReviewToggle } from '../../../components/ui/review-toggle';
 import { cancelScanAction, rescanAction } from '../../../lib/recon-actions';
 import { enrichVulnAction } from '../../../lib/ai-actions';
 import AutoRefresh from './auto-refresh';
@@ -337,6 +338,13 @@ export default async function ScanDetail({
                     </TD>
                     <TD>
                       <div className="flex items-center gap-1.5">
+                        <ReviewToggle
+                          action={setVulnStatusAction}
+                          kind="vuln"
+                          id={v.id}
+                          status={v.status}
+                          scanId={scan.id}
+                        />
                         <form action={setVulnStatusAction} className="flex items-center gap-1.5">
                           <input type="hidden" name="id" value={v.id} />
                           <input type="hidden" name="scanId" value={scan.id} />
