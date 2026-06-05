@@ -134,6 +134,29 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
     .sort((a, b) => b.count - a.count)
     .slice(0, 5);
 
+  // Top vulnerable subdomains/hosts by active findings, top 8 (VA drill-down below target level).
+  const hostOf = (v: (typeof vulnRows)[number]): string => {
+    if (v.host?.trim()) return v.host.trim();
+    const src = v.url ?? v.matchedAt ?? '';
+    try {
+      return new URL(src).hostname;
+    } catch {
+      return src.replace(/^\w+:\/\//, '').split('/')[0] ?? '';
+    }
+  };
+  const byHost = vulnRows.reduce<Map<string, { count: number; severity: number }>>((m, v) => {
+    if (!activeSet.has(v.status)) return m;
+    const host = hostOf(v);
+    if (!host) return m;
+    const cur = m.get(host) ?? { count: 0, severity: v.severity };
+    m.set(host, { count: cur.count + 1, severity: Math.max(cur.severity, v.severity) });
+    return m;
+  }, new Map());
+  const topHosts = [...byHost.entries()]
+    .map(([host, x]) => ({ host, ...x }))
+    .sort((a, b) => b.count - a.count || b.severity - a.severity)
+    .slice(0, 8);
+
   const days: { label: string; value: number }[] = [];
   for (let i = 6; i >= 0; i--) {
     const d = new Date();
@@ -411,6 +434,37 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
       {/* Data-relevant analytics */}
       {vulnRows.length > 0 ? (
         <div className="mt-6 grid gap-4 lg:grid-cols-2">
+          <Card className="lg:col-span-2">
+            <CardHeader>
+              <CardTitle>Top vulnerable subdomains</CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              {topHosts.length ? (
+                <Table>
+                  <THead>
+                    <TR>
+                      <TH>Subdomain / host</TH>
+                      <TH>Top severity</TH>
+                      <TH className="text-right">Active findings</TH>
+                    </TR>
+                  </THead>
+                  <TBody>
+                    {topHosts.map((h) => (
+                      <TR key={h.host}>
+                        <TD className="font-mono text-sm">{h.host}</TD>
+                        <TD>
+                          <SeverityBadge severity={h.severity as SeverityValue} />
+                        </TD>
+                        <TD className="text-right tabular">{h.count}</TD>
+                      </TR>
+                    ))}
+                  </TBody>
+                </Table>
+              ) : (
+                <p className="py-4 text-sm text-fg-muted">No active findings.</p>
+              )}
+            </CardContent>
+          </Card>
           <Card>
             <CardHeader>
               <CardTitle>Most common vulnerabilities</CardTitle>
