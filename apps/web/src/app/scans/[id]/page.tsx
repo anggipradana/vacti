@@ -19,7 +19,7 @@ import { VULN_STATUS_LABEL, userCan, Permission, type SeverityValue } from '@vac
 import { scans, targets, scanActivity, subdomains, endpoints, ports as portsTable, vulnerabilities } from '@vacti/db';
 import { getDb } from '../../../lib/db';
 import { getCurrentUser } from '../../../lib/session';
-import { setVulnStatusAction } from '../../../lib/status-actions';
+import { setVulnStatusAction, bulkReviewVulnsAction } from '../../../lib/status-actions';
 import { ReviewToggle } from '../../../components/ui/review-toggle';
 import { cancelScanAction, rescanAction } from '../../../lib/recon-actions';
 import { enrichVulnAction } from '../../../lib/ai-actions';
@@ -34,12 +34,12 @@ export default async function ScanDetail({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ compare?: string }>;
+  searchParams: Promise<{ compare?: string; vuln?: string }>;
 }) {
   const user = await getCurrentUser();
   if (!user) redirect('/login');
   const { id } = await params;
-  const { compare } = await searchParams;
+  const { compare, vuln: vulnFilter = 'all' } = await searchParams;
   const db = getDb();
   const [scan] = await db.select().from(scans).where(eq(scans.id, id));
   if (!scan) notFound();
@@ -53,6 +53,8 @@ export default async function ScanDetail({
   ]);
   const terminal = TERMINAL.includes(scan.status);
   const canScan = userCan(user, Permission.InitiateScans);
+  const canTriage = userCan(user, Permission.ModifyScanResults);
+  const shownVulns = vulnFilter === 'all' ? vulns : vulns.filter((v) => v.status === vulnFilter);
 
   // Sibling scans of the same target (for the compare dropdown) + optional diff.
   const siblings = (
@@ -294,84 +296,119 @@ export default async function ScanDetail({
 
         <TabsContent value="vulns" className="mt-4">
           {vulns.length ? (
-            <Table>
-              <THead>
-                <TR>
-                  <TH>Severity</TH>
-                  <TH>Finding</TH>
-                  <TH>Status</TH>
-                  <TH>Change</TH>
-                </TR>
-              </THead>
-              <TBody>
-                {vulns.map((v) => (
-                  <TR key={v.id}>
-                    <TD>
-                      <SeverityBadge severity={v.severity as SeverityValue} />
-                    </TD>
-                    <TD>
-                      <div className="font-medium">{v.name}</div>
-                      <div className="font-mono text-xs text-fg-subtle">{v.matchedAt}</div>
-                      {v.isAiEnriched ? (
-                        <details className="mt-1 max-w-md text-xs text-fg-muted">
-                          <summary className="cursor-pointer text-accent">AI analysis</summary>
-                          {v.aiDescription ? (
-                            <p className="mt-1">
-                              <strong>Description:</strong> {v.aiDescription}
-                            </p>
+            <>
+              <div className="mb-3 flex flex-wrap items-center justify-end gap-2">
+                <form method="get" className="flex items-center gap-1.5">
+                  {compare ? <input type="hidden" name="compare" value={compare} /> : null}
+                  <Select
+                    name="vuln"
+                    defaultValue={vulnFilter}
+                    className="h-8 w-40 text-xs"
+                    aria-label="Filter findings by status"
+                  >
+                    <option value="all">All statuses</option>
+                    {Object.entries(VULN_STATUS_LABEL).map(([val, label]) => (
+                      <option key={val} value={val}>
+                        {label}
+                      </option>
+                    ))}
+                  </Select>
+                  <Button type="submit" variant="ghost" size="sm">
+                    Filter
+                  </Button>
+                </form>
+                {canTriage ? (
+                  <form action={bulkReviewVulnsAction}>
+                    <input type="hidden" name="scanId" value={scan.id} />
+                    <Button type="submit" variant="outline" size="sm">
+                      Mark all reviewed
+                    </Button>
+                  </form>
+                ) : null}
+              </div>
+              {shownVulns.length === 0 ? (
+                <p className="text-sm text-fg-subtle">No findings match this status filter.</p>
+              ) : (
+                <Table>
+                  <THead>
+                    <TR>
+                      <TH>Severity</TH>
+                      <TH>Finding</TH>
+                      <TH>Status</TH>
+                      <TH>Change</TH>
+                    </TR>
+                  </THead>
+                  <TBody>
+                    {shownVulns.map((v) => (
+                      <TR key={v.id}>
+                        <TD>
+                          <SeverityBadge severity={v.severity as SeverityValue} />
+                        </TD>
+                        <TD>
+                          <div className="font-medium">{v.name}</div>
+                          <div className="font-mono text-xs text-fg-subtle">{v.matchedAt}</div>
+                          {v.isAiEnriched ? (
+                            <details className="mt-1 max-w-md text-xs text-fg-muted">
+                              <summary className="cursor-pointer text-accent">AI analysis</summary>
+                              {v.aiDescription ? (
+                                <p className="mt-1">
+                                  <strong>Description:</strong> {v.aiDescription}
+                                </p>
+                              ) : null}
+                              {v.aiImpact ? (
+                                <p className="mt-1">
+                                  <strong>Impact:</strong> {v.aiImpact}
+                                </p>
+                              ) : null}
+                              {v.aiRemediation ? (
+                                <p className="mt-1">
+                                  <strong>Remediation:</strong> {v.aiRemediation}
+                                </p>
+                              ) : null}
+                            </details>
                           ) : null}
-                          {v.aiImpact ? (
-                            <p className="mt-1">
-                              <strong>Impact:</strong> {v.aiImpact}
-                            </p>
-                          ) : null}
-                          {v.aiRemediation ? (
-                            <p className="mt-1">
-                              <strong>Remediation:</strong> {v.aiRemediation}
-                            </p>
-                          ) : null}
-                        </details>
-                      ) : null}
-                    </TD>
-                    <TD>
-                      <VulnStatusBadge status={v.status} />
-                    </TD>
-                    <TD>
-                      <div className="flex items-center gap-1.5">
-                        <ReviewToggle
-                          action={setVulnStatusAction}
-                          kind="vuln"
-                          id={v.id}
-                          status={v.status}
-                          scanId={scan.id}
-                        />
-                        <form action={setVulnStatusAction} className="flex items-center gap-1.5">
-                          <input type="hidden" name="id" value={v.id} />
-                          <input type="hidden" name="scanId" value={scan.id} />
-                          <Select name="status" defaultValue={v.status} className="h-8 w-36 text-xs">
-                            {Object.entries(VULN_STATUS_LABEL).map(([val, label]) => (
-                              <option key={val} value={val}>
-                                {label}
-                              </option>
-                            ))}
-                          </Select>
-                          <Button type="submit" size="sm" variant="ghost">
-                            Set
-                          </Button>
-                        </form>
-                        <form action={enrichVulnAction}>
-                          <input type="hidden" name="id" value={v.id} />
-                          <input type="hidden" name="scanId" value={scan.id} />
-                          <Button type="submit" size="sm" variant="outline">
-                            AI
-                          </Button>
-                        </form>
-                      </div>
-                    </TD>
-                  </TR>
-                ))}
-              </TBody>
-            </Table>
+                        </TD>
+                        <TD>
+                          <VulnStatusBadge status={v.status} />
+                        </TD>
+                        <TD>
+                          <div className="flex items-center gap-1.5">
+                            <ReviewToggle
+                              action={setVulnStatusAction}
+                              kind="vuln"
+                              id={v.id}
+                              status={v.status}
+                              scanId={scan.id}
+                            />
+                            <form action={setVulnStatusAction} className="flex items-center gap-1.5">
+                              <input type="hidden" name="id" value={v.id} />
+                              <input type="hidden" name="scanId" value={scan.id} />
+                              <Select name="status" defaultValue={v.status} className="h-8 w-36 text-xs">
+                                {Object.entries(VULN_STATUS_LABEL).map(([val, label]) => (
+                                  <option key={val} value={val}>
+                                    {label}
+                                  </option>
+                                ))}
+                              </Select>
+                              <Button type="submit" size="sm" variant="ghost">
+                                Set
+                              </Button>
+                            </form>
+                            <form action={enrichVulnAction}>
+                              <input type="hidden" name="id" value={v.id} />
+                              <input type="hidden" name="scanId" value={scan.id} />
+                              <Button type="submit" size="sm" variant="outline">
+                                AI
+                              </Button>
+                            </form>
+                          </div>
+                        </TD>
+                      </TR>
+                    ))}
+                  </TBody>
+                </Table>
+              )}
+            </>
           ) : (
             <p className="text-sm text-fg-subtle">No vulnerabilities found.</p>
           )}

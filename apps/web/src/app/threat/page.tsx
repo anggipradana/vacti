@@ -20,19 +20,32 @@ import { SECTORS } from '@vacti/threat-intel';
 import { projects, otxThreatData, leakcheckData, manualIndicators, threatIntelStatus, threatNews } from '@vacti/db';
 import { getDb } from '../../lib/db';
 import { getCurrentUser } from '../../lib/session';
-import { refreshTiAction, addIndicatorAction, setSectorAction, setNewsStatusAction } from '../../lib/threat-actions';
+import {
+  refreshTiAction,
+  addIndicatorAction,
+  setSectorAction,
+  setNewsStatusAction,
+  bulkReviewNewsAction,
+  bulkReviewLeaksAction,
+} from '../../lib/threat-actions';
 import { setLeakStatusAction } from '../../lib/status-actions';
 import { generateThreatNarrativeAction } from '../../lib/ai-actions';
 
 export const dynamic = 'force-dynamic';
 
-export default async function ThreatPage({ searchParams }: { searchParams: Promise<{ project?: string }> }) {
+export default async function ThreatPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ project?: string; leak?: string; news?: string }>;
+}) {
   const user = await getCurrentUser();
   if (!user) redirect('/login');
   const db = getDb();
   const projectRows = await db.select().from(projects).orderBy(desc(projects.createdAt));
   const sp = await searchParams;
   const projectId = sp.project ?? projectRows[0]?.id;
+  const leakFilter = sp.leak ?? 'all';
+  const newsFilter = sp.news ?? 'all';
 
   if (!projectId) {
     return (
@@ -62,6 +75,8 @@ export default async function ThreatPage({ searchParams }: { searchParams: Promi
   const pulses = otx.reduce((a, o) => a + o.pulses, 0);
   const malware = otx.reduce((a, o) => a + o.malwareCount, 0);
   const unchecked = leaks.filter((l) => !l.checked).length;
+  const shownLeaks = leakFilter === 'all' ? leaks : leaks.filter((l) => l.status === leakFilter);
+  const shownNews = newsFilter === 'all' ? news : news.filter((n) => n.status === newsFilter);
 
   return (
     <AppShell user={{ email: user.email, isSysAdmin: user.isSysAdmin }}>
@@ -147,32 +162,64 @@ export default async function ThreatPage({ searchParams }: { searchParams: Promi
       </Card>
 
       <Card className="mt-4">
-        <CardHeader className="flex flex-row items-center justify-between gap-3">
+        <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3">
           <CardTitle>Security news · {sector}</CardTitle>
-          {canTriage ? (
-            <form action={setSectorAction} className="flex items-center gap-2">
-              <input type="hidden" name="projectId" value={projectId} />
-              <Select name="sector" defaultValue={sector} className="w-44">
-                {Object.keys(SECTORS).map((s) => (
-                  <option key={s} value={s}>
-                    {s}
+          <div className="flex flex-wrap items-center gap-2">
+            <form method="get" className="flex items-center gap-1.5">
+              <input type="hidden" name="project" value={projectId} />
+              <input type="hidden" name="leak" value={leakFilter} />
+              <Select
+                name="news"
+                defaultValue={newsFilter}
+                className="h-8 w-36 text-xs"
+                aria-label="Filter news by status"
+              >
+                <option value="all">All statuses</option>
+                {Object.entries(NEWS_STATUS_LABEL).map(([val, label]) => (
+                  <option key={val} value={val}>
+                    {label}
                   </option>
                 ))}
               </Select>
-              <Button type="submit" variant="outline" size="sm">
-                Apply sector
+              <Button type="submit" variant="ghost" size="sm">
+                Filter
               </Button>
             </form>
-          ) : null}
+            {canTriage ? (
+              <>
+                <form action={bulkReviewNewsAction}>
+                  <input type="hidden" name="sector" value={sector} />
+                  <Button type="submit" variant="outline" size="sm">
+                    Mark all reviewed
+                  </Button>
+                </form>
+                <form action={setSectorAction} className="flex items-center gap-2">
+                  <input type="hidden" name="projectId" value={projectId} />
+                  <Select name="sector" defaultValue={sector} className="w-40">
+                    {Object.keys(SECTORS).map((s) => (
+                      <option key={s} value={s}>
+                        {s}
+                      </option>
+                    ))}
+                  </Select>
+                  <Button type="submit" variant="outline" size="sm">
+                    Apply sector
+                  </Button>
+                </form>
+              </>
+            ) : null}
+          </div>
         </CardHeader>
         <CardContent className="pt-0">
           {news.length === 0 ? (
             <p className="py-2 text-sm text-fg-muted">
               No news yet — pick a sector and refresh to pull the latest security headlines.
             </p>
+          ) : shownNews.length === 0 ? (
+            <p className="py-2 text-sm text-fg-muted">No headlines match this status filter.</p>
           ) : (
             <ul className="divide-y divide-border">
-              {news.map((n) => (
+              {shownNews.map((n) => (
                 <li key={n.id} className="flex items-start justify-between gap-3 py-2.5">
                   <div className="min-w-0">
                     <a
@@ -217,12 +264,50 @@ export default async function ThreatPage({ searchParams }: { searchParams: Promi
         </CardContent>
       </Card>
 
-      <h2 className="mb-3 mt-8 font-display text-sm font-semibold uppercase tracking-wider text-fg-subtle">
-        Leaked credentials
-      </h2>
+      <div className="mb-3 mt-8 flex flex-wrap items-center justify-between gap-3">
+        <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-fg-subtle">
+          Leaked credentials
+        </h2>
+        {leaks.length > 0 ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <form method="get" className="flex items-center gap-1.5">
+              <input type="hidden" name="project" value={projectId} />
+              <input type="hidden" name="news" value={newsFilter} />
+              <Select
+                name="leak"
+                defaultValue={leakFilter}
+                className="h-8 w-40 text-xs"
+                aria-label="Filter leaks by status"
+              >
+                <option value="all">All statuses</option>
+                {Object.entries(LEAK_STATUS_LABEL).map(([val, label]) => (
+                  <option key={val} value={val}>
+                    {label}
+                  </option>
+                ))}
+              </Select>
+              <Button type="submit" variant="ghost" size="sm">
+                Filter
+              </Button>
+            </form>
+            {canTriage ? (
+              <form action={bulkReviewLeaksAction}>
+                <input type="hidden" name="projectId" value={projectId} />
+                <Button type="submit" variant="outline" size="sm">
+                  Mark all reviewed
+                </Button>
+              </form>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
       {leaks.length === 0 ? (
         <Card>
           <CardContent className="py-5 text-sm text-fg-muted">No leaked credentials found.</CardContent>
+        </Card>
+      ) : shownLeaks.length === 0 ? (
+        <Card>
+          <CardContent className="py-5 text-sm text-fg-muted">No leaks match this status filter.</CardContent>
         </Card>
       ) : (
         <Table>
@@ -235,7 +320,7 @@ export default async function ThreatPage({ searchParams }: { searchParams: Promi
             </TR>
           </THead>
           <TBody>
-            {leaks.map((l) => (
+            {shownLeaks.map((l) => (
               <TR key={l.id}>
                 <TD className="font-mono text-xs">{l.identifier}</TD>
                 <TD>{l.source}</TD>
