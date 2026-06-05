@@ -4,3 +4,5 @@ export * from './leakcheck';
 export * from './risk-aggregate';
 export * from './refresh';
 export * from './news';
+export * from './cve-intel';
+export * from './ransomware';
