@@ -81,7 +81,13 @@ export async function GET(req: Request, ctx: { params: Promise<{ projectId: stri
     leaks: leaks.map((x) => ({ identifier: x.identifier ?? '', source: x.source, status: x.status })),
     indicators: indicators.map((i) => ({ type: i.type, value: i.value })),
     sector,
-    news: news.map((n) => ({ title: n.title, source: n.source, link: n.link, publishedAt: n.publishedAt })),
+    news: news.map((n) => ({
+      title: n.title,
+      source: n.source,
+      link: n.link,
+      publishedAt: n.publishedAt,
+      status: n.status,
+    })),
   });
   const pdf = await renderPdf(html, { footer: settings.classification ?? settings.footerText ?? '' });
   const name = `ti_report_${project.slug}.pdf`;

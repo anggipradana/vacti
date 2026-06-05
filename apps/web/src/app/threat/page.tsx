@@ -14,12 +14,12 @@ import { Badge } from '../../components/ui/badge';
 import { Table, THead, TBody, TR, TH, TD } from '../../components/ui/table';
 import { EmptyState } from '../../components/ui/empty-state';
 import { computeProjectRisk } from '@vacti/threat-intel';
-import { LEAK_STATUS_LABEL, userCan, Permission } from '@vacti/core';
+import { LEAK_STATUS_LABEL, NEWS_STATUS_LABEL, userCan, Permission } from '@vacti/core';
 import { SECTORS } from '@vacti/threat-intel';
 import { projects, otxThreatData, leakcheckData, manualIndicators, threatIntelStatus, threatNews } from '@vacti/db';
 import { getDb } from '../../lib/db';
 import { getCurrentUser } from '../../lib/session';
-import { refreshTiAction, addIndicatorAction, setSectorAction } from '../../lib/threat-actions';
+import { refreshTiAction, addIndicatorAction, setSectorAction, setNewsStatusAction } from '../../lib/threat-actions';
 import { setLeakStatusAction } from '../../lib/status-actions';
 import { generateThreatNarrativeAction } from '../../lib/ai-actions';
 
@@ -172,19 +172,40 @@ export default async function ThreatPage({ searchParams }: { searchParams: Promi
           ) : (
             <ul className="divide-y divide-border">
               {news.map((n) => (
-                <li key={n.id} className="py-2.5">
-                  <a
-                    href={n.link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-sm font-medium text-accent hover:underline"
-                  >
-                    {n.title}
-                  </a>
-                  <div className="mt-0.5 text-xs text-fg-subtle">
-                    {n.source}
-                    {n.publishedAt ? ` · ${new Date(n.publishedAt).toISOString().slice(0, 10)}` : ''}
+                <li key={n.id} className="flex items-start justify-between gap-3 py-2.5">
+                  <div className="min-w-0">
+                    <a
+                      href={n.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm font-medium text-accent hover:underline"
+                    >
+                      {n.title}
+                    </a>
+                    <div className="mt-0.5 text-xs text-fg-subtle">
+                      {n.source}
+                      {n.publishedAt ? ` · ${new Date(n.publishedAt).toISOString().slice(0, 10)}` : ''}
+                    </div>
                   </div>
+                  {canTriage ? (
+                    <form action={setNewsStatusAction} className="flex shrink-0 items-center gap-1.5">
+                      <input type="hidden" name="id" value={n.id} />
+                      <Select name="status" defaultValue={n.status} className="h-8 w-36 text-xs">
+                        {Object.entries(NEWS_STATUS_LABEL).map(([val, label]) => (
+                          <option key={val} value={val}>
+                            {label}
+                          </option>
+                        ))}
+                      </Select>
+                      <Button type="submit" size="sm" variant="ghost">
+                        Set
+                      </Button>
+                    </form>
+                  ) : (
+                    <Badge variant="neutral" className="shrink-0">
+                      {NEWS_STATUS_LABEL[n.status as keyof typeof NEWS_STATUS_LABEL] ?? n.status}
+                    </Badge>
+                  )}
                 </li>
               ))}
             </ul>

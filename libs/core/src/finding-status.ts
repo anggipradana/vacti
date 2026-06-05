@@ -65,3 +65,26 @@ export const LEAK_UNRESOLVED_STATUSES: LeakStatusValue[] = [
 export function isLeakStatus(s: string): s is LeakStatusValue {
   return (Object.values(LeakStatus) as string[]).includes(s);
 }
+
+/** Sector security-news triage status (applies to threat-news headlines). */
+export const NewsStatus = {
+  New: 'new',
+  Reviewed: 'reviewed',
+  Relevant: 'relevant',
+  Actioned: 'actioned',
+  Dismissed: 'dismissed',
+} as const;
+
+export type NewsStatusValue = (typeof NewsStatus)[keyof typeof NewsStatus];
+
+export const NEWS_STATUS_LABEL: Record<NewsStatusValue, string> = {
+  new: 'New',
+  reviewed: 'Reviewed',
+  relevant: 'Relevant',
+  actioned: 'Actioned',
+  dismissed: 'Dismissed',
+};
+
+export function isNewsStatus(s: string): s is NewsStatusValue {
+  return (Object.values(NewsStatus) as string[]).includes(s);
+}
