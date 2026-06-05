@@ -33,12 +33,15 @@ async function stampPageNumbers(pdf: Buffer, footer?: string): Promise<Buffer> {
     const font = await doc.embedFont(StandardFonts.Helvetica);
     const pages = doc.getPages();
     const total = pages.length;
+    // The cover (page index 0) is unnumbered, so content pages number 1..(total-1) and the total
+    // excludes the cover. Otherwise the first numbered page reads "2 / 9", which looks like a bug.
+    const contentTotal = Math.max(1, total - 1);
     const grey = rgb(0.42, 0.5, 0.55);
-    const orange = rgb(0.886, 0.345, 0.047); // sev-high — matches the report's footer accent
+    const orange = rgb(0.886, 0.345, 0.047); // sev-high accent, matches the report footer
     for (let i = 1; i < total; i++) {
       const p = pages[i]!;
       const { width } = p.getSize();
-      const label = `${i + 1} / ${total}`;
+      const label = `${i} / ${contentTotal}`;
       const size = 8;
       const w = font.widthOfTextAtSize(label, size);
       p.drawText(label, { x: width - 40 - w, y: 22, size, font, color: grey });
