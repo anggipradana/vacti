@@ -21,3 +21,6 @@ tmp/
 # TS incremental build info
 *.tsbuildinfo
 /.scratch/
+
+# Playwright auth storage state (contains a session cookie)
+apps/web/e2e/.auth/
