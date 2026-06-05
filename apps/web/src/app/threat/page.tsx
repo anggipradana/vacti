@@ -14,7 +14,7 @@ import { Select } from '../../components/ui/select';
 import { Badge } from '../../components/ui/badge';
 import { Table, THead, TBody, TR, TH, TD } from '../../components/ui/table';
 import { EmptyState } from '../../components/ui/empty-state';
-import { ReviewToggle } from '../../components/ui/review-toggle';
+import { NewsStatusBadge, LeakStatusBadge } from '../../components/ui/finding-status';
 import { Pagination } from '../../components/ui/pagination';
 import { Reveal } from '../../components/ui/reveal';
 import { computeProjectRisk } from '@vacti/threat-intel';
@@ -293,7 +293,7 @@ export default async function ThreatPage({
                   </div>
                   {canTriage ? (
                     <div className="flex shrink-0 items-center gap-1.5">
-                      <ReviewToggle action={setNewsStatusAction} kind="news" id={n.id} status={n.status} />
+                      <NewsStatusBadge status={n.status} />
                       <form action={setNewsStatusAction} className="flex items-center gap-1.5">
                         <input type="hidden" name="id" value={n.id} />
                         <Select key={n.status} name="status" defaultValue={n.status} className="h-8 w-36 text-xs">
@@ -406,7 +406,7 @@ export default async function ThreatPage({
                 </TD>
                 <TD>
                   <div className="flex items-center justify-end gap-1.5">
-                    <ReviewToggle action={setLeakStatusAction} kind="leak" id={l.id} status={l.status} />
+                    <LeakStatusBadge status={l.status} />
                     <form action={setLeakStatusAction} className="flex items-center gap-1.5">
                       <input type="hidden" name="id" value={l.id} />
                       <Select key={l.status} name="status" defaultValue={l.status} className="h-8 w-40 text-xs">

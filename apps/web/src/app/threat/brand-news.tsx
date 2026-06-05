@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/ca
 import { Select } from '../../components/ui/select';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
-import { ReviewToggle } from '../../components/ui/review-toggle';
+import { NewsStatusBadge } from '../../components/ui/finding-status';
 import { NEWS_STATUS_LABEL } from '@vacti/core';
 import { fetchBrandNews } from '@vacti/threat-intel';
 import { brandNews } from '@vacti/db';
@@ -151,7 +151,7 @@ export async function BrandNews({
                 </div>
                 {canTriage ? (
                   <div className="flex shrink-0 items-center gap-1.5">
-                    <ReviewToggle action={setBrandNewsStatusAction} kind="news" id={n.id} status={n.status} />
+                    <NewsStatusBadge status={n.status} />
                     <form action={setBrandNewsStatusAction} className="flex items-center gap-1.5">
                       <input type="hidden" name="id" value={n.id} />
                       <Select key={n.status} name="status" defaultValue={n.status} className="h-8 w-36 text-xs">
