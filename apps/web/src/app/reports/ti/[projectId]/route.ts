@@ -78,7 +78,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ projectId: stri
     leaks: leaks.map((x) => ({ identifier: x.identifier ?? '', source: x.source, status: x.status })),
     indicators: indicators.map((i) => ({ type: i.type, value: i.value })),
   });
-  const pdf = await renderPdf(html);
+  const pdf = await renderPdf(html, { footer: settings.classification ?? settings.footerText ?? '' });
   const name = `ti_report_${project.slug}.pdf`;
   return new Response(new Uint8Array(pdf), {
     headers: { 'Content-Type': 'application/pdf', 'Content-Disposition': `inline; filename="${name}"` },
