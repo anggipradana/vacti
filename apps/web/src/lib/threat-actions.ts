@@ -5,7 +5,7 @@ import { and, eq, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { Permission, isNewsStatus, isLeakStatus, REVIEW_TOGGLE } from '@vacti/core';
 import { isSector, fetchSectorNews } from '@vacti/threat-intel';
-import { manualIndicators, leakcheckData, projects, threatNews } from '@vacti/db';
+import { manualIndicators, leakcheckData, projects, threatNews, brandNews } from '@vacti/db';
 import { getDb } from './db';
 import { getQueue } from './queue';
 import { requirePermission } from './authz';
@@ -102,6 +102,35 @@ export async function bulkReviewLeaksAction(formData: FormData) {
       and(
         eq(leakcheckData.projectId, projectId),
         filter !== 'all' && isLeakStatus(filter) ? eq(leakcheckData.status, filter) : undefined,
+      ),
+    );
+  revalidatePath('/threat');
+}
+
+/** Triage a brand-monitoring headline (status preserved across feed refreshes). */
+export async function setBrandNewsStatusAction(formData: FormData) {
+  await requirePermission(Permission.ModifyScanResults);
+  const id = String(formData.get('id') ?? '');
+  const status = String(formData.get('status') ?? '');
+  if (!id || !isNewsStatus(status)) return;
+  await getDb().update(brandNews).set({ status }).where(eq(brandNews.id, id));
+  revalidatePath('/threat');
+}
+
+/** Bulk-set a project's brand-monitoring headlines to a CHOSEN status; honours the status filter. */
+export async function bulkReviewBrandNewsAction(formData: FormData) {
+  await requirePermission(Permission.ModifyScanResults);
+  const projectId = String(formData.get('projectId') ?? '');
+  const status = String(formData.get('status') || REVIEW_TOGGLE.news.reviewed);
+  const filter = String(formData.get('filter') ?? 'all');
+  if (!projectId || !isNewsStatus(status)) return;
+  await getDb()
+    .update(brandNews)
+    .set({ status })
+    .where(
+      and(
+        eq(brandNews.projectId, projectId),
+        filter !== 'all' && isNewsStatus(filter) ? eq(brandNews.status, filter) : undefined,
       ),
     );
   revalidatePath('/threat');

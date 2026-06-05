@@ -42,7 +42,7 @@ export const dynamic = 'force-dynamic';
 export default async function ThreatPage({
   searchParams,
 }: {
-  searchParams: Promise<{ project?: string; leak?: string; news?: string; lpage?: string }>;
+  searchParams: Promise<{ project?: string; leak?: string; news?: string; bnews?: string; lpage?: string }>;
 }) {
   const user = await getCurrentUser();
   if (!user) redirect('/login');
@@ -52,6 +52,7 @@ export default async function ThreatPage({
   const projectId = await getActiveProjectId(sp.project, projectRows);
   const leakFilter = sp.leak ?? 'all';
   const newsFilter = sp.news ?? 'all';
+  const brandFilter = sp.bnews ?? 'all';
   const LEAK_PAGE_SIZE = 25;
   const leakPage = Math.max(1, Number(sp.lpage ?? 1) || 1);
 
@@ -177,7 +178,14 @@ export default async function ThreatPage({
       </Suspense>
 
       <Suspense fallback={<div className="mt-4 text-sm text-fg-subtle">Loading brand news…</div>}>
-        <BrandNews brand={project?.name ?? 'brand'} />
+        <BrandNews
+          projectId={projectId}
+          brand={project?.name ?? 'brand'}
+          canTriage={canTriage}
+          filter={brandFilter}
+          newsFilter={newsFilter}
+          leakFilter={leakFilter}
+        />
       </Suspense>
 
       <Card className="mt-4">
