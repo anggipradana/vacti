@@ -19,9 +19,7 @@ export default async function LoginPage() {
       </div>
       <div className="w-full max-w-sm">
         <div className="mb-6 flex flex-col items-center gap-3 text-center">
-          <span className="flex size-11 items-center justify-center rounded-xl bg-accent font-display text-lg font-bold text-accent-fg">
-            v
-          </span>
+          <img src="/logo.svg" alt="VACTI" className="size-14" />
           <div>
             <h1 className="font-display text-xl font-semibold tracking-tight">vacti</h1>
             <p className="text-sm text-fg-muted">VA &amp; Cyber Threat Intelligence platform</p>
