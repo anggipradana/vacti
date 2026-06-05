@@ -41,8 +41,10 @@ const DEFAULT_PROFILES = [
     name: 'Standard',
     tools: { subfinder: true, httpx: true, naabu: true, nuclei: true, wordfence: true },
     ports: 'top-100',
-    severities: ['critical', 'high', 'medium', 'low'],
-    timeoutSec: 600,
+    // Include 'info' so a Standard scan matches a manual `nuclei -u` (all severities) instead of
+    // silently dropping the info-level templates that make up most real findings.
+    severities: ['critical', 'high', 'medium', 'low', 'info'],
+    timeoutSec: 900,
     config: { interestingKeywords: INTERESTING_KEYWORDS },
   },
   {
