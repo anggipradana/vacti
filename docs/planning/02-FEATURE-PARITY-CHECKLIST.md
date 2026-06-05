@@ -83,15 +83,15 @@
 
 ## 5. Integrasi (WAJIB)
 
-| #   | Fitur ReNgGinaNg                                                    | Status | Epic  | Catatan                                                           |
-| --- | ------------------------------------------------------------------- | ------ | ----- | ----------------------------------------------------------------- |
-| 5.1 | Notifications webhook (Discord, Slack, Telegram, Google Chat, Lark) | ✅     | AI    | Pemicu per-event configurable                                     |
-| 5.2 | AI enrichment vuln (description/impact/remediation)                 | ✅     | AI    | Hasil di-cache                                                    |
-| 5.3 | AI executive summary report                                         | ✅     | AI    |                                                                   |
-| 5.4 | AI threat analysis/ringkasan                                        | ✅     | AI    |                                                                   |
-| 5.5 | Provider AI                                                         | ➕     | AI    | **Vercel AI SDK**: Claude default + OpenAI + Ollama (abstraction) |
-| 5.6 | API Key Vault (OTX, LeakCheck, AI) terenkripsi                      | ✅     | AI/PF | Enkripsi at-rest                                                  |
-| 5.7 | HackerOne / Bug bounty sync-import-submit                           | ❌     | —     | Dibuang                                                           |
+| #   | Fitur ReNgGinaNg                                                    | Status | Epic  | Catatan                                                              |
+| --- | ------------------------------------------------------------------- | ------ | ----- | -------------------------------------------------------------------- |
+| 5.1 | Notifications webhook (Discord, Slack, Telegram, Google Chat, Lark) | ✅     | AI    | Per-event; **Discord rich embed + Google Chat cardsV2** (2026-06-05) |
+| 5.2 | AI enrichment vuln (description/impact/remediation)                 | ✅     | AI    | Hasil di-cache                                                       |
+| 5.3 | AI executive summary report                                         | ✅     | AI    |                                                                      |
+| 5.4 | AI threat analysis/ringkasan                                        | ✅     | AI    |                                                                      |
+| 5.5 | Provider AI                                                         | ➕     | AI    | **Vercel AI SDK**: Claude default + OpenAI + Ollama (abstraction)    |
+| 5.6 | API Key Vault (OTX, LeakCheck, AI) terenkripsi                      | ✅     | AI/PF | Enkripsi at-rest                                                     |
+| 5.7 | HackerOne / Bug bounty sync-import-submit                           | ❌     | —     | Dibuang                                                              |
 
 ## 6. API (WAJIB — warga kelas satu)
 
@@ -102,20 +102,20 @@
 | 6.3 | Auth session + API token                                                                      | ✅     | PF/AI | Token utk otomasi/CI eksternal                                                                                           |
 | 6.4 | RBAC (SysAdmin / PenetrationTester / Auditor)                                                 | ✅     | PF    | Permission: modify_system_config, modify_scan_config, modify_scan_results, modify_report, initiate_scans, modify_targets |
 | 6.5 | Realtime progress (SSE/WebSocket)                                                             | ✅     | RE/AI | SSE                                                                                                                      |
-| 6.6 | Datatables server-side (operator `= & \| > < !`)                                              | 🟡     | UI/AI | Filter/sort/paginate server-side                                                                                         |
+| 6.6 | Datatables server-side (operator `= & \| > < !`)                                              | ✅     | UI/AI | Server-side pagination (scans `?limit/offset/total`)                                                                     |
 | 6.7 | Mind-map visualisasi                                                                          | ❌     | —     | Dibuang (nice-to-have)                                                                                                   |
 
 ## 7. Dashboard & UI
 
-| #   | Fitur ReNgGinaNg                                            | Status | Epic | Catatan                          |
-| --- | ----------------------------------------------------------- | ------ | ---- | -------------------------------- |
-| 7.1 | Dashboard ringkasan (counts target/subdomain/endpoint/vuln) | ✅     | UI   |                                  |
-| 7.2 | Severity breakdown + tren 7 hari                            | ✅     | UI   |                                  |
-| 7.3 | Kartu Threat Intel + risk score                             | ✅     | UI   |                                  |
-| 7.4 | IoC/CVE/leak analytics                                      | ✅     | UI   |                                  |
-| 7.5 | Charts                                                      | ➕     | UI   | Recharts/Visx (bukan ApexCharts) |
-| 7.6 | Dark mode + WCAG AA                                         | ➕     | UI   | Desain baru shadcn/ui            |
-| 7.7 | Onboarding                                                  | 🟡     | UI   | Ringkas                          |
+| #   | Fitur ReNgGinaNg                                            | Status | Epic | Catatan                           |
+| --- | ----------------------------------------------------------- | ------ | ---- | --------------------------------- |
+| 7.1 | Dashboard ringkasan (counts target/subdomain/endpoint/vuln) | ✅     | UI   |                                   |
+| 7.2 | Severity breakdown + tren 7 hari                            | ✅     | UI   |                                   |
+| 7.3 | Kartu Threat Intel + risk score                             | ✅     | UI   |                                   |
+| 7.4 | IoC/CVE/leak analytics                                      | ✅     | UI   |                                   |
+| 7.5 | Charts                                                      | ➕     | UI   | Recharts/Visx (bukan ApexCharts)  |
+| 7.6 | Dark mode + WCAG AA                                         | ➕     | UI   | Desain baru shadcn/ui             |
+| 7.7 | Onboarding                                                  | ✅     | UI   | Dashboard "Get started" checklist |
 
 ## 8. Platform / Infra / Governance (fondasi)
 
@@ -130,7 +130,7 @@
 | 8.7  | CI (build multi-arch, CodeQL, auto-release, pages)        | ➕     | PF    | GitHub Actions dynamic-detection + reusable, typecheck/lint/unit/integration/e2e gate |
 | 8.8  | Husky pre-commit lint-staged + commit-msg commitlint      | ✅➕   | PF    | + pre-push gate + git-identity + no-`.env` guard (model ose-primer 3-stage)           |
 | 8.9  | Governance docs                                           | ➕     | PF    | Model 6-lapis ose-primer + Diátaxis                                                   |
-| 8.10 | Fixtures (default scan engines, external tools, keywords) | 🟡     | PF/RE | Seed ringkas: 1-3 profil scan default + keyword                                       |
+| 8.10 | Fixtures (default scan engines, external tools, keywords) | ✅     | PF/RE | `npm run db:seed` — Quick/Standard/Deep profiles + keyword list                       |
 
 ---
 
@@ -188,11 +188,16 @@ Berikut status **implementasi nyata** hasil audit kode. Baris ✅ = sudah jalan;
   AI enrichment vuln (cache `ai_cache`) + UI; AI provider abstraction (Vercel AI SDK
   Anthropic/OpenAI/Ollama) + UI; API key vault terenkripsi AES-256-GCM (`libs/auth/vault.ts`).
 - API: Hono REST semua resource + OpenAPI (`/api/docs`) + token API (`vct_`) + UI token; SSE.
-- Auth: session cookie + API token; password hashing (scrypt sementara).
+- Auth: session cookie + API token; password hashing **argon2id** (scrypt hashes auto-upgrade on login).
 - UI: dashboard (counts/severity/tren + analytics), TI page, charts (recharts), dark mode,
   settings (tokens/integrations/reports).
 
-### Belum dibangun / sisa gap (⬜) — backlog v1
+### Backlog v1 — STATUS 2026-06-05: ALL COMPLETE ✅
+
+The G1–G17 backlog below (catalogued 2026-06-04) is now **fully shipped & CI-green** — see the
+completion table in [06-GAP-ANALYSIS.md §J](06-GAP-ANALYSIS.md). The table is kept for historical
+mapping (gap → epic/task). Only items explicitly out of v1 remain deferred (proxy, multi-org, WHOIS,
+in-app feed).
 
 | #   | Gap                               | Epic  | Catatan / rencana                                                                                                                                |
 | --- | --------------------------------- | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -216,3 +221,14 @@ Berikut status **implementasi nyata** hasil audit kode. Baris ✅ = sudah jalan;
 
 **Urutan saran:** G1 (RBAC, keamanan) → G2 (scan cancel UI) → G3 (scheduled) → G6 (key vault UI) →
 G4/G5 (diff/sub-scan) → sisanya. Proxy support & multi-org tetap di luar v1.
+
+## Addendum — Integrasi, dokumentasi & output-QA (2026-06-05)
+
+- ➕ **Google Chat** notifikasi naik dari teks polos ke **cardsV2** (header + dot severity, widget
+  key/value, tombol View) + fallback teks; Discord sudah rich embed. Lihat
+  [08-INTEGRATIONS-DOCS-OUTPUT-QA.md](08-INTEGRATIONS-DOCS-OUTPUT-QA.md).
+- ➕ **OpenAPI lengkap**: securityScheme bearer + semua 23 endpoint (cancel/diff/schedules/search/leak
+  toggle/deletes/pagination) + schema request/response + 401/403/404; Redoc di `/api/docs`.
+- ➕ **README GitHub** ditulis ulang (fitur, quickstart+env, contoh API curl, route report, testing, deploy).
+- ✅ **Output-QA**: scan nyata ke **testfire.net** (target uji terotorisasi) → report VA PDF dirender →
+  paginasi/komponen diperiksa per-halaman (pdftoppm) + alur diuji Playwright.
