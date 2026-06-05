@@ -148,6 +148,13 @@
       "when": 1780652903342,
       "tag": "0020_leak_origin",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1780655127991,
+      "tag": "0021_naive_lionheart",
+      "breakpoints": true
     }
   ]
 }
