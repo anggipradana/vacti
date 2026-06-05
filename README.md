@@ -1,6 +1,10 @@
-# vacti
+<p align="center">
+  <img src="apps/web/public/logo.svg" alt="VACTI" width="96" height="106" />
+</p>
 
-> Lightweight, modern, reliable **Vulnerability Assessment + Threat Intelligence** platform.
+<h1 align="center">vacti</h1>
+
+> Lightweight, modern, reliable **Vulnerability Assessment + Cyber Threat Intelligence** platform.
 > A focused rewrite of [ReNgGinaNg](https://github.com/anggipradana/rengginang) (a hardened reNgine
 > fork) with the same essential value at a fraction of the weight.
 
