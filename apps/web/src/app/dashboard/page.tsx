@@ -29,7 +29,7 @@ import type { SeverityValue, VulnStatusValue, LeakStatusValue } from '@vacti/cor
 import { SeverityBadge } from '../../components/ui/severity-badge';
 import { Badge } from '../../components/ui/badge';
 import { RiskGauge } from '../../components/ui/risk-gauge';
-import { targets, scans, endpoints, vulnerabilities, projects, leakcheckData } from '@vacti/db';
+import { targets, scans, endpoints, vulnerabilities, projects, leakcheckData, threatNews, brandNews } from '@vacti/db';
 import { computeProjectRisk } from '@vacti/threat-intel';
 import { getDb } from '../../lib/db';
 import { getCurrentUser } from '../../lib/session';
@@ -70,6 +70,21 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
       ])
     : [{ score: 0 } as Awaited<ReturnType<typeof computeProjectRisk>>, []];
   const leakUnchecked = leakRows.filter((l) => !l.checked).length;
+
+  // "Needs review" — items still in their initial untriaged state, aggregated across modules.
+  const dashProject = projectRows.find((p) => p.id === projectId);
+  const dashSector = dashProject?.sector ?? 'banking';
+  const [newsRows, brandRows] = projectId
+    ? await Promise.all([
+        db.select({ status: threatNews.status }).from(threatNews).where(eq(threatNews.sector, dashSector)),
+        db.select({ status: brandNews.status }).from(brandNews).where(eq(brandNews.projectId, projectId)),
+      ])
+    : [[], []];
+  const reviewVulns = vulnRows.filter((v) => v.status === 'open').length;
+  const reviewLeaks = leakRows.filter((l) => l.status === 'new').length;
+  const reviewNews = newsRows.filter((n) => n.status === 'new').length;
+  const reviewBrand = brandRows.filter((n) => n.status === 'new').length;
+  const reviewTotal = reviewVulns + reviewLeaks + reviewNews + reviewBrand;
   const leakStatusCounts = leakRows.reduce<Map<string, number>>((m, l) => {
     m.set(l.status, (m.get(l.status) ?? 0) + 1);
     return m;
@@ -206,6 +221,41 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
         <StatCard label="Live endpoints" value={endpointRows.length} icon={<Globe />} />
         <StatCard label="Vulnerabilities" value={vulnRows.length} icon={<ShieldAlert />} />
       </div>
+
+      {/* Needs review — untriaged items across every module, all in one place */}
+      <Card className="mt-4">
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="flex items-center gap-2">
+            <ShieldAlert className="size-4 text-accent" /> Needs review
+          </CardTitle>
+          <Badge variant={reviewTotal > 0 ? 'accent' : 'neutral'}>{reviewTotal} pending</Badge>
+        </CardHeader>
+        <CardContent>
+          {reviewTotal === 0 ? (
+            <p className="py-1 text-sm text-fg-muted">Nothing pending — all findings, leaks and news are triaged. 🎉</p>
+          ) : (
+            <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+              {[
+                { label: 'Open vulnerabilities', count: reviewVulns, href: '/scans' },
+                { label: 'New leaked creds', count: reviewLeaks, href: '/threat?leak=new' },
+                { label: 'New sector news', count: reviewNews, href: '/threat?news=new' },
+                { label: 'New brand news', count: reviewBrand, href: '/threat?bnews=new' },
+              ].map((r) => (
+                <Link
+                  key={r.label}
+                  href={r.href}
+                  className="rounded-lg border border-border p-3 transition-colors hover:border-accent hover:bg-bg-subtle"
+                >
+                  <div className={`text-2xl font-semibold ${r.count > 0 ? 'text-fg' : 'text-fg-subtle'}`}>
+                    {r.count}
+                  </div>
+                  <div className="mt-0.5 text-xs text-fg-muted">{r.label}</div>
+                </Link>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Modules */}
       <h2 className="mb-3 mt-8 font-display text-sm font-semibold uppercase tracking-wider text-fg-subtle">Modules</h2>
