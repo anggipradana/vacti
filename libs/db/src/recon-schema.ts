@@ -25,6 +25,8 @@ export const scanProfiles = pgTable('scan_profiles', {
   severities: text('severities').array().notNull().default(['critical', 'high', 'medium', 'low']),
   rate: integer('rate'),
   timeoutSec: integer('timeout_sec'),
+  // Advanced per-tool options + scan scoping (see ScanProfileConfig in @vacti/recon).
+  config: jsonb('config'),
   createdAt: createdAt(),
 });
 

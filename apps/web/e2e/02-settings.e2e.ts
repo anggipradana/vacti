@@ -50,6 +50,16 @@ test.describe.serial('settings', () => {
     await expect(page.getByText('Jane Analyst')).toBeVisible();
   });
 
+  test('create a scan profile with advanced config', async ({ page }) => {
+    await page.goto('/settings/profiles');
+    await page.getByLabel('Name').fill('QA Deep UA');
+    await page.getByLabel('User-Agent').fill('vacti-qa/1.0');
+    await page.getByLabel('Exclude subdomains').fill('dev.example.com');
+    await page.getByRole('button', { name: 'Create profile' }).click();
+    await expect(page.getByText('QA Deep UA')).toBeVisible();
+    await expect(page.getByText('UA set')).toBeVisible();
+  });
+
   test('users page lists the admin with a role selector', async ({ page }) => {
     await page.goto('/settings/users');
     // The email also appears in the topbar user-menu, so scope to the users card.

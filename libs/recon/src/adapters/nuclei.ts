@@ -29,16 +29,63 @@ export interface NucleiOptions {
   tags?: string[];
   /** explicit template paths */
   templates?: string[];
+  /** tags to exclude (safety: dos/intrusive/fuzzing off by default) */
+  excludeTags?: string[];
   /** custom request headers (per target) */
   headers?: Record<string, string>;
+  userAgent?: string;
+  rateLimit?: number;
+  concurrency?: number;
+  retries?: number;
+  /** allow-listed extra flags (see ALLOWED_NUCLEI_FLAGS) */
+  extraArgs?: string[];
+}
+
+/** Allow-listed nuclei flags accepted from a profile's extraArgs (value-less or value flags). */
+export const ALLOWED_NUCLEI_FLAGS = new Set([
+  '-follow-redirects',
+  '-fr',
+  '-include-tags',
+  '-etags',
+  '-exclude-tags',
+  '-itags',
+  '-timeout',
+  '-max-host-error',
+  '-mhe',
+  '-scan-strategy',
+  '-headless',
+]);
+
+/** Keep only allow-listed flags (+ their immediate value tokens). */
+export function filterExtraArgs(args: string[], allow: Set<string>): string[] {
+  const out: string[] = [];
+  for (let i = 0; i < args.length; i++) {
+    const a = args[i]!;
+    if (allow.has(a)) {
+      out.push(a);
+      const nxt = args[i + 1];
+      if (nxt && !nxt.startsWith('-')) {
+        out.push(nxt);
+        i++;
+      }
+    }
+    // Unknown tokens are dropped (no arbitrary flag injection).
+  }
+  return out;
 }
 
 export function nucleiArgs(opts: NucleiOptions = {}): string[] {
   const args = ['-jsonl', '-silent', '-no-interactsh', '-no-color'];
   if (opts.severities?.length) args.push('-severity', opts.severities.join(','));
   if (opts.tags?.length) args.push('-tags', opts.tags.join(','));
+  if (opts.excludeTags?.length) args.push('-exclude-tags', opts.excludeTags.join(','));
   for (const t of opts.templates ?? []) args.push('-t', t);
   for (const [k, v] of Object.entries(opts.headers ?? {})) args.push('-H', `${k}: ${v}`);
+  if (opts.userAgent) args.push('-H', `User-Agent: ${opts.userAgent}`);
+  if (opts.rateLimit && opts.rateLimit > 0) args.push('-rate-limit', String(opts.rateLimit));
+  if (opts.concurrency && opts.concurrency > 0) args.push('-c', String(opts.concurrency));
+  if (opts.retries && opts.retries >= 0) args.push('-retries', String(opts.retries));
+  if (opts.extraArgs?.length) args.push(...filterExtraArgs(opts.extraArgs, ALLOWED_NUCLEI_FLAGS));
   return args;
 }
 

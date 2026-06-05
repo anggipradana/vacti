@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { parseSubfinderLine } from './adapters/subfinder';
 import { parseHttpxLine } from './adapters/httpx';
 import { parseNaabuLine } from './adapters/naabu';
-import { parseNucleiLine } from './adapters/nuclei';
+import { parseNucleiLine, nucleiArgs } from './adapters/nuclei';
 import { isWordPress } from './wordpress';
 import { mapNucleiSeverity } from './severity';
 import { Severity } from '@vacti/core';
@@ -60,6 +60,32 @@ describe('nuclei parser', () => {
     expect(r.references).toEqual(['https://a.test', 'https://b.test']);
     expect(r.description).toBe('A bug.');
     expect(r.remediation).toBe('Patch it.');
+  });
+});
+
+describe('nuclei profile options + allow-list', () => {
+  it('emits UA, rate, concurrency, retries, exclude-tags', () => {
+    const args = nucleiArgs({
+      severities: ['high'],
+      userAgent: 'vacti/1.0',
+      rateLimit: 100,
+      concurrency: 25,
+      retries: 2,
+      excludeTags: ['dos', 'intrusive'],
+    }).join(' ');
+    expect(args).toContain('-H User-Agent: vacti/1.0');
+    expect(args).toContain('-rate-limit 100');
+    expect(args).toContain('-c 25');
+    expect(args).toContain('-retries 2');
+    expect(args).toContain('-exclude-tags dos,intrusive');
+  });
+  it('drops non-allow-listed extra args (no flag injection)', () => {
+    const args = nucleiArgs({ extraArgs: ['-follow-redirects', '-evil', '/etc/passwd', '-timeout', '10'] });
+    expect(args).toContain('-follow-redirects');
+    expect(args).toContain('-timeout');
+    expect(args).toContain('10');
+    expect(args).not.toContain('-evil');
+    expect(args).not.toContain('/etc/passwd');
   });
 });
 
