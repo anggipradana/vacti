@@ -120,6 +120,13 @@
       "when": 1780626622329,
       "tag": "0016_scan_profile_config",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1780628515870,
+      "tag": "0017_sector_threat_news",
+      "breakpoints": true
     }
   ]
 }

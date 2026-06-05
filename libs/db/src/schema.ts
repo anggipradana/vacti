@@ -45,9 +45,27 @@ export const projects = pgTable('projects', {
   id: id(),
   slug: text('slug').notNull().unique(),
   name: text('name').notNull(),
+  // Chosen sector for the threat-news feed (SectorName from @vacti/threat-intel).
+  sector: text('sector').notNull().default('banking'),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 });
+
+/** Aggregated sector security-news (RSS), keyed by sector + link. */
+export const threatNews = pgTable(
+  'threat_news',
+  {
+    id: id(),
+    sector: text('sector').notNull(),
+    title: text('title').notNull(),
+    link: text('link').notNull(),
+    source: text('source').notNull(),
+    summary: text('summary'),
+    publishedAt: timestamp('published_at', { withTimezone: true }),
+    fetchedAt: createdAt(),
+  },
+  (t) => ({ uniqSectorLink: uniqueIndex('threat_news_sector_link_uniq').on(t.sector, t.link) }),
+);
 
 export const projectMembers = pgTable(
   'project_members',
@@ -86,4 +104,4 @@ export const auditLog = pgTable('audit_log', {
   createdAt: createdAt(),
 });
 
-export const schema = { users, sessions, apiTokens, projects, projectMembers, apiKeys, auditLog };
+export const schema = { users, sessions, apiTokens, projects, projectMembers, apiKeys, auditLog, threatNews };
