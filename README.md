@@ -37,9 +37,16 @@ Three services (app, worker, Postgres). No Redis, no Celery, no Ruby. End-to-end
 - **Recon / VA**: one straight pipeline, `subfinder (optional) -> httpx -> naabu -> nuclei`, plus
   conditional **nuclei wordfence** templates for hosts detected as WordPress. All-Go tools.
   Per-finding CVSS / CVE / references, AI enrichment, and a triage status workflow.
+- **Passive recon & exposure (Attack Surface)**: key-less OSINT discovery — **VirusTotal** (passive
+  DNS: subdomains, undetected URLs, IP resolutions / origin-behind-WAF) + **Wayback Machine** (archived
+  URLs). Discovered URLs are categorised by file type (backups / configs / keys / db-dumps / …) and
+  scanned by a 23-rule **exposure detector** (AWS / GCP / GitHub / Slack / Stripe keys, JWTs, private
+  keys, DB URLs, basic-auth, stealer/combo creds, …). Scan **modes**: `active` (binaries), `passive`
+  (OSINT only, no traffic to target), `full` (passive → feed → active). Exposure findings feed the
+  unified risk score; credential-class hits cross-link to leaked credentials.
 - **Threat Intelligence**: OTX AlienVault + LeakCheck + manual indicators + sector security news
-  (RSS, including Indonesian sources) + a unified **risk score** that is identical across the
-  dashboard, the TI page, and the reports.
+  (RSS, including Indonesian sources) + a unified **risk score** (with a passive **Exposure**
+  component) that is identical across the dashboard, the TI page, and the reports.
 - **Reports**: redesigned bilingual (EN/ID) PDF reports for VA and TI (cover, table of contents,
   donut + bar charts, subdomain inventory, vulnerability summary, finding cards, approval sheet),
   rendered with headless Chromium. Per-project branding (logo, colours, classification, signatories,
@@ -68,7 +75,8 @@ flowchart TD
     Web -->|"read / write"| PG[("PostgreSQL: data + pg-boss job queue")]
     Web -->|"enqueue scan / TI jobs"| PG
     Worker["worker (pg-boss consumer)"] -->|"poll jobs"| PG
-    Worker -->|"recon pipeline"| Tools["subfinder / httpx / naabu / nuclei (Go on PATH)"]
+    Worker -->|"active recon pipeline"| Tools["subfinder / httpx / naabu / nuclei (Go on PATH)"]
+    Worker -->|"passive recon"| OSINT["VirusTotal / Wayback Machine (HTTP APIs)"]
     Worker -->|"threat intel"| TI["OTX / LeakCheck / RSS feeds"]
     Worker -->|"persist results"| PG
 ```
@@ -165,15 +173,16 @@ A five-minute walkthrough once the app is running at <http://localhost:3100>.
 
 ## Using the platform
 
-| Area             | What you can do                                                                            |
-| ---------------- | ------------------------------------------------------------------------------------------ |
-| **Projects**     | Create multiple workspaces; targets, scans, findings, and TI are all scoped per project.   |
-| **Targets**      | Add domains, predefined subdomains, and per-target custom request headers; recon notes.    |
-| **Scans**        | Start, cancel, schedule (cron), sub-scan (partial rescan), and diff two scans.             |
-| **Findings**     | Triage with statuses, one-click review toggle, filters, bulk review, and AI enrichment.    |
-| **Threat Intel** | OTX + LeakCheck + manual indicators + sector security news, all feeding one risk score.    |
-| **Reports**      | Branded EN/ID PDF for VA and TI, with signatories, classification, and executive summary.  |
-| **Settings**     | Scan profiles (advanced tool options), API tokens, webhooks, AI provider, key vault, RBAC. |
+| Area               | What you can do                                                                                                           |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------- |
+| **Projects**       | Create multiple workspaces; targets, scans, findings, and TI are all scoped per project.                                  |
+| **Targets**        | Add domains, predefined subdomains, and per-target custom request headers; recon notes.                                   |
+| **Scans**          | Start (active / passive / full mode), cancel, schedule (cron), sub-scan, and diff two scans.                              |
+| **Findings**       | Triage with statuses, one-click review toggle, filters, bulk review, and AI enrichment.                                   |
+| **Attack Surface** | Passive OSINT results: discovered URLs (file-category filter), exposure findings (masked snippet + triage), IP directory. |
+| **Threat Intel**   | OTX + LeakCheck + manual indicators + sector news + passive exposure, all feeding one risk score.                         |
+| **Reports**        | Branded EN/ID PDF for VA and TI, with signatories, classification, and executive summary.                                 |
+| **Settings**       | Scan profiles (advanced tool options), API tokens, webhooks, AI provider, key vault, RBAC.                                |
 
 RBAC: **SysAdmin** (full control), **PenetrationTester** (run scans, modify findings),
 **Auditor** (read-only). Enforced server-side on every mutation.
@@ -203,36 +212,39 @@ json=(-H 'content-type: application/json')
 
 ### Authenticated
 
-| Method | Path                              | Purpose                                                              |
-| ------ | --------------------------------- | -------------------------------------------------------------------- |
-| GET    | `/api/whoami`                     | Current token's user                                                 |
-| GET    | `/api/search?q=`                  | Universal search across resources                                    |
-| GET    | `/api/targets`                    | List targets                                                         |
-| POST   | `/api/targets`                    | Create a target (`projectId`, `domain`, ...)                         |
-| GET    | `/api/profiles`                   | List scan profiles                                                   |
-| POST   | `/api/profiles`                   | Create a scan profile                                                |
-| POST   | `/api/scans`                      | Start a scan (`targetId`, optional `profileId`)                      |
-| GET    | `/api/scans`                      | List scans                                                           |
-| GET    | `/api/scans/:id`                  | Scan detail                                                          |
-| GET    | `/api/scans/:id/results`          | Subdomains, endpoints, ports, vulnerabilities                        |
-| GET    | `/api/scans/:id/events`           | Live progress (Server-Sent Events)                                   |
-| POST   | `/api/scans/:id/cancel`           | Request cancellation                                                 |
-| GET    | `/api/scans/:id/diff?against=`    | Diff this scan against an earlier one (`against` = baseline scan id) |
-| GET    | `/api/schedules`                  | List scheduled scans                                                 |
-| POST   | `/api/schedules`                  | Create a cron schedule                                               |
-| DELETE | `/api/schedules/:id`              | Delete a schedule                                                    |
-| GET    | `/api/threat-intel`               | TI snapshot for a project (risk, OTX, leaks)                         |
-| POST   | `/api/threat-intel/refresh`       | Enqueue a TI refresh                                                 |
-| GET    | `/api/indicators`                 | List manual indicators                                               |
-| POST   | `/api/indicators`                 | Add a manual indicator                                               |
-| DELETE | `/api/indicators/:id`             | Delete an indicator                                                  |
-| POST   | `/api/vulnerabilities/:id/status` | Set a vulnerability's triage status                                  |
-| POST   | `/api/leaks/:id/status`           | Set a leaked-credential triage status                                |
-| POST   | `/api/leaks/:id/toggle`           | Toggle a leak's checked flag                                         |
-| GET    | `/api/webhooks`                   | List webhooks                                                        |
-| POST   | `/api/webhooks`                   | Create a webhook                                                     |
-| DELETE | `/api/webhooks/:id`               | Delete a webhook                                                     |
-| POST   | `/api/webhooks/:id/test`          | Send a test notification                                             |
+| Method | Path                               | Purpose                                                                      |
+| ------ | ---------------------------------- | ---------------------------------------------------------------------------- |
+| GET    | `/api/whoami`                      | Current token's user                                                         |
+| GET    | `/api/search?q=`                   | Universal search across resources                                            |
+| GET    | `/api/targets`                     | List targets                                                                 |
+| POST   | `/api/targets`                     | Create a target (`projectId`, `domain`, ...)                                 |
+| GET    | `/api/profiles`                    | List scan profiles                                                           |
+| POST   | `/api/profiles`                    | Create a scan profile                                                        |
+| POST   | `/api/scans`                       | Start a scan (`targetId`, optional `profileId`, `mode`: active/passive/full) |
+| GET    | `/api/scans`                       | List scans                                                                   |
+| GET    | `/api/scans/:id`                   | Scan detail                                                                  |
+| GET    | `/api/scans/:id/results`           | Subdomains, endpoints, ports, vulnerabilities                                |
+| GET    | `/api/surface/urls?projectId=`     | Passively discovered URLs (optional `category`, paginated)                   |
+| GET    | `/api/surface/findings?projectId=` | Exposure findings (optional `type`)                                          |
+| GET    | `/api/surface/ips?projectId=`      | Passive-DNS IP resolutions                                                   |
+| GET    | `/api/scans/:id/events`            | Live progress (Server-Sent Events)                                           |
+| POST   | `/api/scans/:id/cancel`            | Request cancellation                                                         |
+| GET    | `/api/scans/:id/diff?against=`     | Diff this scan against an earlier one (`against` = baseline scan id)         |
+| GET    | `/api/schedules`                   | List scheduled scans                                                         |
+| POST   | `/api/schedules`                   | Create a cron schedule                                                       |
+| DELETE | `/api/schedules/:id`               | Delete a schedule                                                            |
+| GET    | `/api/threat-intel`                | TI snapshot for a project (risk, OTX, leaks)                                 |
+| POST   | `/api/threat-intel/refresh`        | Enqueue a TI refresh                                                         |
+| GET    | `/api/indicators`                  | List manual indicators                                                       |
+| POST   | `/api/indicators`                  | Add a manual indicator                                                       |
+| DELETE | `/api/indicators/:id`              | Delete an indicator                                                          |
+| POST   | `/api/vulnerabilities/:id/status`  | Set a vulnerability's triage status                                          |
+| POST   | `/api/leaks/:id/status`            | Set a leaked-credential triage status                                        |
+| POST   | `/api/leaks/:id/toggle`            | Toggle a leak's checked flag                                                 |
+| GET    | `/api/webhooks`                    | List webhooks                                                                |
+| POST   | `/api/webhooks`                    | Create a webhook                                                             |
+| DELETE | `/api/webhooks/:id`                | Delete a webhook                                                             |
+| POST   | `/api/webhooks/:id/test`           | Send a test notification                                                     |
 
 ### Example: scan a target end to end
 
@@ -275,13 +287,14 @@ and the layout follows the BPRS-Hijra reference design.
 
 ## Configuration
 
-| Var                                                        | Required | Purpose                                               |
-| ---------------------------------------------------------- | -------- | ----------------------------------------------------- |
-| `DATABASE_URL`                                             | yes      | Postgres connection string                            |
-| `ENCRYPTION_KEY`                                           | yes      | 32-byte base64, AES-256-GCM vault key                 |
-| `SESSION_SECRET`                                           | yes      | session signing secret                                |
-| `OTX_API_KEY`, `LEAKCHECK_API_KEY`                         | no       | threat-intel sources (degrade gracefully if unset)    |
-| `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` / `OLLAMA_BASE_URL` | no       | AI provider (per-project keys can override via vault) |
+| Var                                                        | Required | Purpose                                                             |
+| ---------------------------------------------------------- | -------- | ------------------------------------------------------------------- |
+| `DATABASE_URL`                                             | yes      | Postgres connection string                                          |
+| `ENCRYPTION_KEY`                                           | yes      | 32-byte base64, AES-256-GCM vault key                               |
+| `SESSION_SECRET`                                           | yes      | session signing secret                                              |
+| `OTX_API_KEY`, `LEAKCHECK_API_KEY`                         | no       | threat-intel sources (degrade gracefully if unset)                  |
+| `VT_API_KEY`                                               | no       | VirusTotal passive DNS for passive recon (Wayback works without it) |
+| `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` / `OLLAMA_BASE_URL` | no       | AI provider (per-project keys can override via vault)               |
 
 Per-project keys set in the encrypted vault (Settings -> Integrations) take precedence over these
 environment defaults.
