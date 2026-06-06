@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { Suspense } from 'react';
-import { desc, eq, inArray } from 'drizzle-orm';
+import { desc, eq, inArray, and, count, sql } from 'drizzle-orm';
 import {
   Crosshair,
   Radar,
@@ -29,7 +29,18 @@ import type { SeverityValue, VulnStatusValue, LeakStatusValue } from '@vacti/cor
 import { SeverityBadge } from '../../components/ui/severity-badge';
 import { Badge } from '../../components/ui/badge';
 import { RiskGauge } from '../../components/ui/risk-gauge';
-import { targets, scans, endpoints, vulnerabilities, projects, leakcheckData, threatNews, brandNews } from '@vacti/db';
+import {
+  targets,
+  scans,
+  endpoints,
+  vulnerabilities,
+  projects,
+  leakcheckData,
+  threatNews,
+  brandNews,
+  subdomains,
+  exposureFindings,
+} from '@vacti/db';
 import { computeProjectRisk } from '@vacti/threat-intel';
 import { getDb } from '../../lib/db';
 import { getCurrentUser } from '../../lib/session';
@@ -60,6 +71,21 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
       ])
     : [[], []];
   const targetById = new Map(targetRows.map((t) => [t.id, t]));
+
+  // Passive recon surfacing (CTI/VA crossover): exposure findings + passively-discovered subdomains.
+  const [expCount, passiveSubCount] = projectId
+    ? await Promise.all([
+        db.select({ n: count() }).from(exposureFindings).where(eq(exposureFindings.projectId, projectId)),
+        scanIds.length
+          ? db
+              .select({ n: sql<number>`count(distinct ${subdomains.host})` })
+              .from(subdomains)
+              .where(and(inArray(subdomains.scanId, scanIds), eq(subdomains.source, 'passive')))
+          : Promise.resolve([{ n: 0 }]),
+      ])
+    : [[{ n: 0 }], [{ n: 0 }]];
+  const exposureFindingsCount = Number(expCount[0]?.n ?? 0);
+  const passiveSubdomains = Number(passiveSubCount[0]?.n ?? 0);
 
   // CTI overview (scoped to the active project): unified risk score + leaked-credential rows.
   // computeProjectRisk runs purely off the DB; the network-fetch ransomware card streams via Suspense.
@@ -238,11 +264,17 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
       ) : null}
 
       {/* Metric tiles */}
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
         <StatCard label="Targets" value={targetRows.length} icon={<Crosshair />} testId="stat-targets" />
         <StatCard label="Scans" value={scanRows.length} icon={<Radar />} />
         <StatCard label="Live endpoints" value={endpointRows.length} icon={<Globe />} />
         <StatCard label="Vulnerabilities" value={vulnRows.length} icon={<ShieldAlert />} />
+        <Link href="/surface">
+          <StatCard label="Passive subdomains" value={passiveSubdomains} icon={<RadarIcon />} />
+        </Link>
+        <Link href="/surface">
+          <StatCard label="Exposure findings" value={exposureFindingsCount} icon={<KeyRound />} />
+        </Link>
       </div>
 
       {/* Needs review — untriaged items across every module, all in one place */}

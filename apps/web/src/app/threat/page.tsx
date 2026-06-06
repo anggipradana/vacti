@@ -20,7 +20,15 @@ import { Reveal } from '../../components/ui/reveal';
 import { computeProjectRisk } from '@vacti/threat-intel';
 import { LEAK_STATUS_LABEL, NEWS_STATUS_LABEL, userCan, Permission } from '@vacti/core';
 import { SECTORS } from '@vacti/threat-intel';
-import { projects, otxThreatData, leakcheckData, manualIndicators, threatIntelStatus, threatNews } from '@vacti/db';
+import {
+  projects,
+  otxThreatData,
+  leakcheckData,
+  manualIndicators,
+  threatIntelStatus,
+  threatNews,
+  exposureFindings,
+} from '@vacti/db';
 import { getDb } from '../../lib/db';
 import { getCurrentUser } from '../../lib/session';
 import {
@@ -76,25 +84,36 @@ export default async function ThreatPage({
     eq(leakcheckData.projectId, projectId),
     leakFilter !== 'all' ? eq(leakcheckData.status, leakFilter) : undefined,
   );
-  const [risk, otx, leakStatRows, leaks, leakFilteredRows, indicators, statusRows, news] = await Promise.all([
-    computeProjectRisk(db, projectId),
-    db.select().from(otxThreatData).where(eq(otxThreatData.projectId, projectId)),
-    db
-      .select({ total: count(), unchecked: sql<number>`count(*) filter (where ${leakcheckData.checked} = false)` })
-      .from(leakcheckData)
-      .where(eq(leakcheckData.projectId, projectId)),
-    db
-      .select()
-      .from(leakcheckData)
-      .where(leakWhere)
-      .orderBy(desc(leakcheckData.id))
-      .limit(LEAK_PAGE_SIZE)
-      .offset((leakPage - 1) * LEAK_PAGE_SIZE),
-    db.select({ n: count() }).from(leakcheckData).where(leakWhere),
-    db.select().from(manualIndicators).where(eq(manualIndicators.projectId, projectId)),
-    db.select().from(threatIntelStatus).where(eq(threatIntelStatus.projectId, projectId)),
-    db.select().from(threatNews).where(eq(threatNews.sector, sector)).orderBy(desc(threatNews.publishedAt)).limit(15),
-  ]);
+  const [risk, otx, leakStatRows, leaks, leakFilteredRows, indicators, statusRows, news, exposureTypes] =
+    await Promise.all([
+      computeProjectRisk(db, projectId),
+      db.select().from(otxThreatData).where(eq(otxThreatData.projectId, projectId)),
+      db
+        .select({ total: count(), unchecked: sql<number>`count(*) filter (where ${leakcheckData.checked} = false)` })
+        .from(leakcheckData)
+        .where(eq(leakcheckData.projectId, projectId)),
+      db
+        .select()
+        .from(leakcheckData)
+        .where(leakWhere)
+        .orderBy(desc(leakcheckData.id))
+        .limit(LEAK_PAGE_SIZE)
+        .offset((leakPage - 1) * LEAK_PAGE_SIZE),
+      db.select({ n: count() }).from(leakcheckData).where(leakWhere),
+      db.select().from(manualIndicators).where(eq(manualIndicators.projectId, projectId)),
+      db.select().from(threatIntelStatus).where(eq(threatIntelStatus.projectId, projectId)),
+      db.select().from(threatNews).where(eq(threatNews.sector, sector)).orderBy(desc(threatNews.publishedAt)).limit(15),
+      db
+        .select({ type: exposureFindings.findingType, n: count() })
+        .from(exposureFindings)
+        .where(eq(exposureFindings.projectId, projectId))
+        .groupBy(exposureFindings.findingType),
+    ]);
+  // Passive exposure findings summary (CTI surfacing). Credential-class types overlap LeakCheck.
+  const exposureTotal = exposureTypes.reduce((a, t) => a + Number(t.n), 0);
+  const CRED_TYPES = new Set(['combo-list-cred', 'basic-auth-url', 'credential-like', 'email', 'db-connection']);
+  const exposureCredTotal = exposureTypes.filter((t) => CRED_TYPES.has(t.type)).reduce((a, t) => a + Number(t.n), 0);
+  const exposureTop = [...exposureTypes].sort((a, b) => Number(b.n) - Number(a.n)).slice(0, 6);
   const status = statusRows[0];
   const canTriage = userCan(user, Permission.ModifyScanResults);
   const pulses = otx.reduce((a, o) => a + o.pulses, 0);
@@ -316,6 +335,43 @@ export default async function ThreatPage({
                 </li>
               ))}
             </ul>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Passive exposure (from Attack Surface) — credential-class types overlap leaked credentials. */}
+      <Card className="mt-4">
+        <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3">
+          <CardTitle className="flex items-center gap-2">
+            <Bug className="size-4 text-accent" /> Exposure (passive) · {exposureTotal}
+          </CardTitle>
+          <a href={`/surface?project=${projectId}`} className="text-xs text-accent hover:underline">
+            View in Attack Surface →
+          </a>
+        </CardHeader>
+        <CardContent className="pt-0">
+          {exposureTotal === 0 ? (
+            <p className="py-1 text-sm text-fg-muted">
+              No passive exposure findings yet — run a passive or full scan from Scans.
+            </p>
+          ) : (
+            <div className="space-y-2">
+              <div className="flex flex-wrap gap-1.5">
+                {exposureTop.map((t) => (
+                  <a key={t.type} href={`/surface?project=${projectId}&etype=${t.type}`} title="Open in Attack Surface">
+                    <Badge variant="danger">
+                      {t.type} · {Number(t.n)}
+                    </Badge>
+                  </a>
+                ))}
+              </div>
+              {exposureCredTotal > 0 ? (
+                <p className="text-xs text-fg-muted">
+                  {exposureCredTotal} credential-class finding(s) overlap leaked credentials below — feeds the Exposure
+                  component of the risk score.
+                </p>
+              ) : null}
+            </div>
           )}
         </CardContent>
       </Card>
