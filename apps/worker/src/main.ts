@@ -6,14 +6,17 @@ import {
   createDb,
   runMigrations,
   scans,
+  scanActivity,
   targets,
   scanProfiles,
   scanSchedules,
   vulnerabilities,
   leakcheckData,
+  extensionCategories,
+  extensionSuffixRules,
 } from '@vacti/db';
 import { createQueue } from '@vacti/queue';
-import { runScanPipeline, type ScanProfile } from '@vacti/recon';
+import { runScanPipeline, runPassiveScan, DEFAULT_CATEGORIES, type ScanProfile } from '@vacti/recon';
 import { refreshThreatIntel } from '@vacti/threat-intel';
 import { sendProjectNotifications, getProjectSecret } from '@vacti/integrations';
 
@@ -61,6 +64,20 @@ async function main(): Promise<void> {
   }, 60_000);
   watchdog.unref();
 
+  // Seed/refresh the editable file-category buckets (idempotent) from the canonical defaults.
+  for (const cat of DEFAULT_CATEGORIES) {
+    const [row] = await db
+      .insert(extensionCategories)
+      .values({ slug: cat.slug, displayName: cat.displayName })
+      .onConflictDoUpdate({ target: extensionCategories.slug, set: { displayName: cat.displayName } })
+      .returning({ id: extensionCategories.id });
+    if (row) {
+      for (const suffix of cat.suffixes) {
+        await db.insert(extensionSuffixRules).values({ categoryId: row.id, suffix }).onConflictDoNothing();
+      }
+    }
+  }
+
   const queue = createQueue(env.DATABASE_URL);
   await queue.start();
 
@@ -105,28 +122,87 @@ async function main(): Promise<void> {
           }
         });
     }, 2000);
+    const mode = scan.mode ?? 'active';
     try {
-      await runScanPipeline(
-        {
-          scanId,
-          domain: target.domain,
-          predefinedSubdomains: target.predefinedSubdomains,
-          profile,
-          customHeaders: (target.customHeaders as Record<string, string> | null) ?? undefined,
-          signal: controller.signal,
-        },
-        { db, onProgress: (stage, msg) => console.log(`[scan ${scanId}] ${stage}: ${msg}`) },
-      );
+      // Passive phase (mode passive|full): OSINT discovery + exposure, no binaries.
+      let passiveHosts: string[] = [];
+      if (mode === 'passive' || mode === 'full') {
+        await db
+          .update(scans)
+          .set({ status: 'running', stage: 'passive', startedAt: new Date() })
+          .where(eq(scans.id, scanId));
+        try {
+          const vtKey =
+            (await getProjectSecret(db, scan.projectId, 'virustotal', env.ENCRYPTION_KEY)) ?? env.VT_API_KEY ?? null;
+          const res = await runPassiveScan(
+            {
+              scanId,
+              projectId: scan.projectId,
+              targetId: scan.targetId,
+              domain: target.domain,
+              vtApiKey: vtKey,
+              signal: controller.signal,
+            },
+            { db, onProgress: (stage, msg) => console.log(`[passive ${scanId}] ${stage}: ${msg}`) },
+          );
+          passiveHosts = res.hosts;
+        } catch (err) {
+          const aborted = controller.signal.aborted;
+          const msg = err instanceof Error ? err.message : String(err);
+          await db
+            .insert(scanActivity)
+            .values({ scanId, stage: 'done', status: aborted ? 'cancelled' : 'failed', message: msg });
+          await db
+            .update(scans)
+            .set({
+              status: aborted ? 'cancelled' : 'failed',
+              stage: aborted ? 'cancelled' : 'failed',
+              error: msg,
+              finishedAt: new Date(),
+            })
+            .where(eq(scans.id, scanId));
+          throw err;
+        }
+      }
+      if (mode === 'passive') {
+        await db
+          .insert(scanActivity)
+          .values({ scanId, stage: 'done', status: 'completed', message: 'passive scan complete' });
+        await db
+          .update(scans)
+          .set({ status: 'completed', stage: 'done', finishedAt: new Date() })
+          .where(eq(scans.id, scanId));
+      } else {
+        // active|full → binary pipeline (full feeds the passively-discovered hosts in as predefined).
+        const predefined =
+          mode === 'full'
+            ? [...new Set([...(target.predefinedSubdomains ?? []), ...passiveHosts.filter((h) => h !== target.domain)])]
+            : target.predefinedSubdomains;
+        await runScanPipeline(
+          {
+            scanId,
+            domain: target.domain,
+            predefinedSubdomains: predefined,
+            profile,
+            customHeaders: (target.customHeaders as Record<string, string> | null) ?? undefined,
+            signal: controller.signal,
+          },
+          { db, onProgress: (stage, msg) => console.log(`[scan ${scanId}] ${stage}: ${msg}`) },
+        );
+      }
     } finally {
       clearInterval(poll);
     }
     const [done] = await db.select().from(scans).where(eq(scans.id, scanId));
     if (done && done.status !== 'cancelled') {
       const counts = (done.counts ?? {}) as Record<string, number>;
+      const passiveMsg = counts.discoveredUrls
+        ? ` · ${counts.discoveredUrls} URLs · ${counts.exposureFindings ?? 0} exposures · ${counts.ipResolutions ?? 0} IPs`
+        : '';
       await sendProjectNotifications(db, done.projectId, {
         type: done.status === 'completed' ? 'scan.completed' : 'scan.failed',
         title: `Scan ${done.status}: ${target.domain}`,
-        message: `${counts.endpoints ?? 0} endpoints · ${counts.ports ?? 0} ports · ${counts.vulnerabilities ?? 0} vulns`,
+        message: `${counts.endpoints ?? 0} endpoints · ${counts.ports ?? 0} ports · ${counts.vulnerabilities ?? 0} vulns${passiveMsg}`,
         severity: done.status === 'completed' ? 'success' : 'error',
         fields: { Status: done.status, Target: target.domain },
       });

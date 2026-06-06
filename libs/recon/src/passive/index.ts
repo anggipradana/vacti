@@ -3,3 +3,4 @@ export * from './categorize';
 export * from './ssrf';
 export * from './wayback';
 export * from './virustotal';
+export * from './pipeline';
