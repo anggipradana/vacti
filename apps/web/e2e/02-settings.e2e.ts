@@ -53,7 +53,8 @@ test.describe.serial('settings', () => {
   test('create a scan profile with advanced config', async ({ page }) => {
     await page.goto('/settings/profiles');
     await page.getByLabel('Name').fill('QA Deep UA');
-    await page.getByLabel('User-Agent').fill('vacti-qa/1.0');
+    // Per-tool fieldsets now expose separate httpx/nuclei User-Agent fields.
+    await page.locator('#httpxUserAgent').fill('vacti-qa/1.0');
     await page.getByLabel('Exclude subdomains').fill('dev.example.com');
     await page.getByRole('button', { name: 'Create profile' }).click();
     await expect(page.getByText('QA Deep UA')).toBeVisible();
