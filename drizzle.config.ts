@@ -4,6 +4,7 @@ export default defineConfig({
   schema: [
     './libs/db/src/schema.ts',
     './libs/db/src/recon-schema.ts',
+    './libs/db/src/passive-schema.ts',
     './libs/db/src/threat-intel-schema.ts',
     './libs/db/src/reports-schema.ts',
     './libs/db/src/integrations-schema.ts',
