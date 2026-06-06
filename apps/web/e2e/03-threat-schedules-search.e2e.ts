@@ -18,9 +18,9 @@ test.describe.serial('threat / schedules / search', () => {
     await expect(page.getByText('AI risk analysis')).toBeVisible();
   });
 
-  test('schedules: create (cron preset), pause, enable, delete', async ({ page }) => {
+  test('schedules: create (friendly picker), pause, enable, delete', async ({ page }) => {
     await page.goto('/schedules');
-    await page.getByLabel('Cron (min hour dom mon dow)').fill('0 2 * * *');
+    // Friendly pickers (freq/time/day) replaced the raw cron field; defaults are valid.
     await page.getByRole('button', { name: 'Add schedule' }).click();
     await expect(page.getByTestId('schedule-row')).toHaveCount(1);
     await expect(page.getByTestId('schedule-row').getByText('enabled')).toBeVisible();
@@ -32,12 +32,13 @@ test.describe.serial('threat / schedules / search', () => {
     await expect(page.getByTestId('schedule-row')).toHaveCount(0);
   });
 
-  test('schedules: invalid cron is rejected', async ({ page }) => {
+  test('schedules: weekly frequency picker (no raw cron field)', async ({ page }) => {
     await page.goto('/schedules');
-    await page.getByLabel('Cron (min hour dom mon dow)').fill('not a cron');
+    await expect(page.locator('select[name="freq"]')).toBeVisible();
+    await page.locator('select[name="freq"]').selectOption('weekly');
     await page.getByRole('button', { name: 'Add schedule' }).click();
-    // Action redirects with ?error=invalid; no schedule row is added.
-    await expect(page).toHaveURL(/\/schedules/);
+    await expect(page.getByTestId('schedule-row')).toHaveCount(1);
+    await page.getByRole('button', { name: 'Delete' }).first().click();
     await expect(page.getByTestId('schedule-row')).toHaveCount(0);
   });
 
