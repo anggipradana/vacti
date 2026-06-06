@@ -134,10 +134,43 @@
 
 ---
 
+## 9. Passive Recon & Exposure (➕ baru — studi SCOPTIX, 2026-06-06)
+
+Sumber: **Omnitarium/scoptix** (Apache-2.0). Semua engine = OSINT **pasif** (HTTP API), bukan
+scanner aktif → tidak menambah biner & tidak melanggar set tool aktif. Spec penuh:
+[11-PASSIVE-RECON-AND-EXPOSURE.md](11-PASSIVE-RECON-AND-EXPOSURE.md). Status: 🔭 roadmap (belum
+diimplementasikan; ditambahkan ke rencana atas permintaan).
+
+| #    | Fitur (ex-SCOPTIX)                                        | Status | Modul   | Catatan                                                                   |
+| ---- | --------------------------------------------------------- | ------ | ------- | ------------------------------------------------------------------------- |
+| 9.1  | Passive subdomain (VirusTotal passive DNS)                | 🔭➕   | RE      | Melengkapi subfinder; mode scan `passive`                                 |
+| 9.2  | Passive archived-URL (Wayback CDX)                        | 🔭➕   | RE      | Arsip pasif (1 API call), **bukan** crawler — merevisi 1.9                |
+| 9.3  | VT undetected-URLs (+tanggal) → DiscoveredUrl             | 🔭➕   | RE      | Kandidat URL + `external_seen_at`                                         |
+| 9.4  | Passive DNS / IP resolution history (origin di balik WAF) | 🔭➕   | RE/TI   | Cross-link OTX passive DNS                                                |
+| 9.5  | Exposure findings (regex secret detection, pure-TS)       | 🔭➕   | RE(+TI) | Mengisi komponen **Exposure** risk score; cross-link LeakCheck            |
+| 9.6  | Content analysis / kategori file by-ekstensi (editable)   | 🔭➕   | RE      | backup/config/keys/dokumen; aturan suffix di settings                     |
+| 9.7  | Endpoint/parameter discovery (turunan analisis URL)       | 🔭➕   | RE      | Subset ringan                                                             |
+| 9.8  | Deep-fetch konten (opt-in) + **SSRF guard wajib**         | 🔭➕   | RE      | Cap ukuran + proxy SOCKS opsional; scan body via regex                    |
+| 9.9  | Multi-key rotation + kuota + backoff                      | 🔭➕   | PF      | **Di Postgres** (`next_available_at`, counter d/w/m), BUKAN Redis         |
+| 9.10 | SOCKS proxy (global + per-key) untuk OSINT/deep-fetch     | 🔭➕   | PF      |                                                                           |
+| 9.11 | Scan diff diperluas (finding + IP + arsip)                | 🔭➕   | RE      | `diffScans` sudah ada → tambah dimensi                                    |
+| 9.12 | Export CSV/ZIP hasil scan                                 | 🔭➕   | RE/UI   | Pelengkap report PDF                                                      |
+| 9.13 | Dashboard discovery-over-time + by-source                 | 🔭     | UI      | Setelah model data ada                                                    |
+| 9.14 | Engine URLScan.io (ketiga)                                | 🔭     | RE/TI   | Setelah VT+Wayback stabil                                                 |
+| 9.x  | Redis/BullMQ + rotator Redis + posture "no-auth"          | ❌     | —       | Bertentangan prinsip ringan/security → pakai pg-boss+Postgres, tetap RBAC |
+
+Fase: **v1.1** = 9.1–9.6, 9.9, 9.11 (pure-TS + HTTP, ringan) · **v1.2** = 9.7, 9.8, 9.10, 9.12 ·
+**roadmap** = 9.13, 9.14.
+
+---
+
 ## Ringkasan keputusan
 
 - **IKUT/SEDERHANAKAN/BARU (wajib ada task):** seluruh baris ✅ 🟡 ➕ di atas.
-- **DIBUANG (tidak boleh muncul sebagai task v1):** 1.2, 1.5, 1.9–1.14, 4.10, 5.7, 6.7.
+- **ROADMAP (➕🔭, belum jadi task v1):** seluruh baris seksi 9 (passive recon & exposure).
+- **DIBUANG (tidak boleh muncul sebagai task v1):** 1.2, 1.5, 1.10–1.14, 4.10, 5.7, 6.7, 9.x.
+  Catatan: **1.9 direvisi** — discovery URL **pasif** (Wayback/VT) kini MASUK via 9.2/9.3; yang tetap
+  dibuang hanya **crawler aktif** (gospider/hakrawler/katana).
 - Setiap epic harus menutup baris yang dipetakan ke kodenya. Definition-of-done epic = semua baris
   IKUT/SEDERHANAKAN miliknya punya task + lulus CI gate.
 

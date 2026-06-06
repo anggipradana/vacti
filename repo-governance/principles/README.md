@@ -17,3 +17,18 @@ Values that govern every convention and practice below.
 8. **API-first.** Every operation is exposed via a typed REST API (Bearer-token auth) from the
    start, so the platform is scriptable, testable, and integrable. A new resource ships with its
    endpoint in the same change. See [API & deploy](../../docs/planning/03-API-AND-DEPLOY.md).
+
+9. **Active scanners are frozen; passive OSINT is HTTP-only.** The active scanning toolset is fixed
+   at **subfinder / httpx / naabu / nuclei (+ nuclei wordfence)** — no new active-scanning binaries.
+   **Passive OSINT sources** are a separate, permitted category but must be **HTTP-API clients only**
+   (no new heavy runtime/binary): currently **VirusTotal** and **Wayback Machine** (URLScan optional),
+   for passive subdomain/URL/IP discovery and exposure analysis. Constraints:
+   - Passive discovery (Wayback CDX, VT undetected-URLs) is allowed; **active crawlers**
+     (gospider/hakrawler/katana) remain out.
+   - **Deep-fetch** of discovered content is opt-in and **MUST** pass the SSRF guard (block
+     localhost/`.local`/cloud-metadata/private+reserved IPs), be size-capped, and may route via proxy.
+   - API-key **rotation, quota, and backoff live in Postgres** (e.g. `next_available_at` + usage
+     counters) — **never** introduce Redis/BullMQ for them (principle 2 still holds).
+   - **Exposure findings** (regex-detected secrets/credentials) are confidential PII (principle 5):
+     stored for triage, masked in the UI, CONFIDENTIAL in reports, never logged.
+     See [Passive Recon & Exposure](../../docs/planning/11-PASSIVE-RECON-AND-EXPOSURE.md).
