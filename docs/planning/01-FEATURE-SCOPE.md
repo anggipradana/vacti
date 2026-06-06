@@ -74,12 +74,32 @@ subfinder (opsional, skip bila predefined subs)
   initiate_scans, modify_targets (auditor = read + report saja).
 - **Realtime**: progres scan via SSE/WebSocket.
 
+### 7. Passive Recon & Exposure Discovery (➕ baru — studi SCOPTIX)
+
+Sumber OSINT **pasif** (HTTP API, bukan scanner aktif/biner) yang memperkaya attack surface VA dan
+sebagian CTI. Detail penuh: [11-PASSIVE-RECON-AND-EXPOSURE.md](11-PASSIVE-RECON-AND-EXPOSURE.md).
+
+- **Passive engines**: VirusTotal (passive DNS: subdomain, domain-siblings, undetected-URLs+tanggal,
+  resolutions IP↔hostname) + Wayback Machine CDX (URL arsip). (URLScan opsional roadmap.)
+- **Mode scan `passive`** (OSINT-only, tanpa biner) selain `active` & `full` (passive→feed→active).
+- **Passive DNS / IP history**: temukan **origin di balik WAF**; melengkapi OTX (CTI).
+- **Exposure findings** (regex pure-TS): AWS/GCP/GitHub/Slack/Stripe key, JWT, private key, DB-URL,
+  basic-auth URL, combo-list/stealer cred, dll — mengisi komponen **Exposure** Unified Risk Score;
+  beririsan LeakCheck → cross-link.
+- **Content analysis**: kategori file by-ekstensi (backup/config/keys/dokumen) dgn aturan editable.
+- **Deep-fetch (opt-in)**: ambil konten URL, **wajib SSRF-guard** + cap ukuran + proxy opsional.
+- **Diff diperluas** (finding/IP/arsip) + **export CSV/ZIP**.
+- **Tetap ringan**: engine = klien HTTP, rotasi/kuota kunci API di **Postgres (bukan Redis)**,
+  tanpa biner baru, tetap tiga service.
+
 ## B. KELUAR (sengaja dibuang)
 
 - ❌ **Bug Bounty mode + HackerOne** (sync program, import, submit report).
 - ❌ **Screenshot** (EyeWitness/Selenium/Firefox/geckodriver) — beban berat dihapus.
 - ❌ **Tool subdomain berlebih**: amass, sublist3r, oneforall, ctfr, tlsx, netlas, chaos → cukup subfinder.
-- ❌ **URL fetching/crawler**: gospider, gau, waybackurls, hakrawler, katana + GF patterns.
+- ❌ **URL fetching/crawler aktif**: gospider, hakrawler, katana + GF patterns (crawling aktif berat).
+  → Catatan: **discovery URL PASIF** (Wayback CDX, VirusTotal undetected-URLs) kini **MASUK** (lihat A.7) —
+  pasif = satu panggilan API arsip, bukan crawler. `gau/waybackurls` digantikan engine pasif internal.
 - ❌ **Dir/file fuzzing**: ffuf.
 - ❌ **Scanner ekstra**: dalfox, crlfuzz, s3scanner, nmap+NSE.
 - ❌ **OSINT berat**: theHarvester, dorking/GooFuzz, h8mail, metafinder, CMSeeK, WAF detection.
