@@ -1,6 +1,14 @@
-import { eq, inArray } from 'drizzle-orm';
+import { eq, inArray, count } from 'drizzle-orm';
 import { Severity, VULN_ACTIVE_STATUSES, LEAK_UNRESOLVED_STATUSES } from '@vacti/core';
-import { scans, vulnerabilities, targets, leakcheckData, otxThreatData, type Database } from '@vacti/db';
+import {
+  scans,
+  vulnerabilities,
+  targets,
+  leakcheckData,
+  otxThreatData,
+  exposureFindings,
+  type Database,
+} from '@vacti/db';
 import { calculateRiskScore, type RiskResult } from './risk-score';
 
 const activeVuln = new Set<string>(VULN_ACTIVE_STATUSES);
@@ -29,6 +37,7 @@ export async function computeProjectRisk(db: Database, projectId: string): Promi
   const targetRows = await db.select({ id: targets.id }).from(targets).where(eq(targets.projectId, projectId));
   const leaks = await db.select().from(leakcheckData).where(eq(leakcheckData.projectId, projectId));
   const otx = await db.select().from(otxThreatData).where(eq(otxThreatData.projectId, projectId));
+  const [exp] = await db.select({ n: count() }).from(exposureFindings).where(eq(exposureFindings.projectId, projectId));
 
   return calculateRiskScore({
     hasVa: scanIds.length > 0,
@@ -38,5 +47,6 @@ export async function computeProjectRisk(db: Database, projectId: string): Promi
     threatIndicators: otx.reduce((a, o) => a + o.pulses, 0),
     reputation: otx.length ? Math.max(...otx.map((o) => o.reputation)) / 100 : 0,
     malwareCount: otx.reduce((a, o) => a + o.malwareCount, 0),
+    exposureFindings: Number(exp?.n ?? 0),
   });
 }

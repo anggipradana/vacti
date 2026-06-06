@@ -21,6 +21,8 @@ export interface RiskInput {
   /** OTX reputation normalised to 0..1 (1 = worst). */
   reputation: number;
   malwareCount: number;
+  /** Passive exposure findings (secrets/credentials in discovered URLs/bodies). Optional. */
+  exposureFindings?: number;
 }
 
 export type RiskColor = 'green' | 'yellow' | 'red';
@@ -51,7 +53,7 @@ export function calculateRiskScore(input: RiskInput): RiskResult {
   const components: Record<string, number> = {
     va: input.hasVa ? weights.va * vaSubScore(input) : 0,
     leak: weights.leak * sat(input.uncheckedLeaks / CAP.leak),
-    exposure: weights.exposure * sat(input.threatIndicators / CAP.exposure),
+    exposure: weights.exposure * sat((input.threatIndicators + (input.exposureFindings ?? 0)) / CAP.exposure),
     reputation: weights.reputation * sat(input.reputation),
     malware: weights.malware * sat(input.malwareCount / CAP.malware),
   };

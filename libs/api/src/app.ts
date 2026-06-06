@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { desc, eq, count as sqlCount } from 'drizzle-orm';
+import { and, desc, eq, count as sqlCount } from 'drizzle-orm';
 import { z } from 'zod';
 import { hashToken } from '@vacti/auth';
 import {
@@ -34,6 +34,9 @@ import {
   webhooks,
   scanSchedules,
   searchAll,
+  discoveredUrls,
+  exposureFindings,
+  ipResolutions,
   type Database,
 } from '@vacti/db';
 
@@ -70,7 +73,11 @@ const createProfileSchema = z.object({
   ports: z.string().default('top-100'),
   severities: z.array(z.string()).default(['critical', 'high', 'medium', 'low']),
 });
-const createScanSchema = z.object({ targetId: z.string().uuid(), profileId: z.string().uuid().optional() });
+const createScanSchema = z.object({
+  targetId: z.string().uuid(),
+  profileId: z.string().uuid().optional(),
+  mode: z.enum(['active', 'passive', 'full']).optional(),
+});
 
 /**
  * API-first REST surface (Hono). Every recon operation is callable here for testing & tool
@@ -156,7 +163,12 @@ export function buildApi(deps: ApiDeps): Hono<{ Variables: Vars }> {
     if (!target) return c.json({ error: 'target not found' }, 404);
     const [scan] = await db
       .insert(scans)
-      .values({ projectId: target.projectId, targetId: target.id, profileId: parsed.data.profileId ?? null })
+      .values({
+        projectId: target.projectId,
+        targetId: target.id,
+        profileId: parsed.data.profileId ?? null,
+        mode: parsed.data.mode ?? 'active',
+      })
       .returning();
     await deps.enqueueScan(scan!.id);
     return c.json({ scan }, 202);
@@ -195,6 +207,51 @@ export function buildApi(deps: ApiDeps): Hono<{ Variables: Vars }> {
       db.select().from(vulnerabilities).where(eq(vulnerabilities.scanId, id)),
     ]);
     return c.json({ subdomains: subs, endpoints: eps, ports: prt, vulnerabilities: vulns });
+  });
+
+  // Attack-surface (passive recon) read endpoints — scoped to a project.
+  app.get('/surface/urls', async (c) => {
+    const projectId = c.req.query('projectId');
+    if (!projectId) return c.json({ error: 'projectId required' }, 400);
+    const limit = Math.min(500, Math.max(1, Number(c.req.query('limit') ?? 100) || 100));
+    const offset = Math.max(0, Number(c.req.query('offset') ?? 0) || 0);
+    const cat = c.req.query('category');
+    const where = and(eq(discoveredUrls.projectId, projectId), cat ? eq(discoveredUrls.categorySlug, cat) : undefined);
+    const rows = await db
+      .select()
+      .from(discoveredUrls)
+      .where(where)
+      .orderBy(desc(discoveredUrls.createdAt))
+      .limit(limit)
+      .offset(offset);
+    const tot = await db.select({ n: sqlCount() }).from(discoveredUrls).where(where);
+    return c.json({ urls: rows, total: Number(tot[0]?.n ?? 0), limit, offset });
+  });
+  app.get('/surface/findings', async (c) => {
+    const projectId = c.req.query('projectId');
+    if (!projectId) return c.json({ error: 'projectId required' }, 400);
+    const type = c.req.query('type');
+    const where = and(
+      eq(exposureFindings.projectId, projectId),
+      type ? eq(exposureFindings.findingType, type) : undefined,
+    );
+    const rows = await db
+      .select()
+      .from(exposureFindings)
+      .where(where)
+      .orderBy(desc(exposureFindings.createdAt))
+      .limit(500);
+    return c.json({ findings: rows });
+  });
+  app.get('/surface/ips', async (c) => {
+    const projectId = c.req.query('projectId');
+    if (!projectId) return c.json({ error: 'projectId required' }, 400);
+    const rows = await db
+      .select()
+      .from(ipResolutions)
+      .where(eq(ipResolutions.projectId, projectId))
+      .orderBy(desc(ipResolutions.latestResolvedAt));
+    return c.json({ ips: rows });
   });
 
   // SSE progress — streams scan activity, polling the DB.

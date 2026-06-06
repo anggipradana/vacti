@@ -22,6 +22,7 @@ const nav = [
   { label: 'Dashboard', href: '/dashboard' },
   { label: 'Targets', href: '/targets' },
   { label: 'Scans', href: '/scans' },
+  { label: 'Attack Surface', href: '/surface' },
   { label: 'Schedules', href: '/schedules' },
   { label: 'Cyber Threat Intel', href: '/threat' },
   { label: 'Search', href: '/search' },
