@@ -18,6 +18,7 @@ export const envSchema = z.object({
   // Optional external integrations — features degrade gracefully when absent.
   OTX_API_KEY: z.string().optional(),
   LEAKCHECK_API_KEY: z.string().optional(),
+  VT_API_KEY: z.string().optional(),
   ANTHROPIC_API_KEY: z.string().optional(),
   OPENAI_API_KEY: z.string().optional(),
   OLLAMA_BASE_URL: z.string().url().optional(),
