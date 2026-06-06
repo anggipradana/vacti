@@ -40,6 +40,8 @@ export const scans = pgTable('scans', {
     .references(() => targets.id, { onDelete: 'cascade' }),
   profileId: uuid('profile_id').references(() => scanProfiles.id, { onDelete: 'set null' }),
   status: text('status').notNull().default('queued'), // queued|running|completed|failed|cancelled
+  // active = binary recon pipeline; passive = OSINT-only (VT/Wayback); full = passive → feed → active.
+  mode: text('mode').notNull().default('active'),
   stage: text('stage'),
   // Cross-process cancellation flag: the API/web sets it, the worker polls it and aborts the run.
   cancelRequested: boolean('cancel_requested').notNull().default(false),
