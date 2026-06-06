@@ -26,7 +26,8 @@ export function NewScanDialog({
         <DialogHeader>
           <DialogTitle>Start a scan</DialogTitle>
           <DialogDescription>
-            Runs subfinder → httpx → naabu → nuclei (+ WordPress checks on detected hosts).
+            Active runs subfinder → httpx → naabu → nuclei. Passive pulls OSINT (VirusTotal + Wayback) for
+            URLs/IPs/exposures with no traffic to the target. Full does both.
           </DialogDescription>
         </DialogHeader>
         <form action={startScanAction} className="space-y-4">
@@ -38,6 +39,14 @@ export function NewScanDialog({
                   {t.domain}
                 </option>
               ))}
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="mode">Mode</Label>
+            <Select id="mode" name="mode" data-testid="scan-mode" defaultValue="active">
+              <option value="active">Active (binary recon pipeline)</option>
+              <option value="passive">Passive (OSINT only — no traffic to target)</option>
+              <option value="full">Full (passive discovery → active)</option>
             </Select>
           </div>
           {profiles.length ? (
