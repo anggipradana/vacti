@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { isVulnStatus, isLeakStatus, Permission, REVIEW_TOGGLE } from '@vacti/core';
 import { vulnerabilities, leakcheckData } from '@vacti/db';
 import { getDb } from './db';
@@ -37,6 +37,20 @@ export async function bulkReviewVulnsAction(formData: FormData) {
       ),
     );
   revalidatePath(`/scans/${scanId}`);
+}
+
+/** Set the status of a SELECTED set of vulnerabilities (checkbox multi-select). */
+export async function bulkSetVulnStatusByIdsAction(formData: FormData) {
+  await requirePermission(Permission.ModifyScanResults);
+  const scanId = String(formData.get('scanId') ?? '');
+  const status = String(formData.get('status') ?? '');
+  const ids = formData.getAll('ids').map(String).filter(Boolean);
+  if (!ids.length || !isVulnStatus(status)) return;
+  await getDb()
+    .update(vulnerabilities)
+    .set({ status, statusChangedAt: new Date() })
+    .where(inArray(vulnerabilities.id, ids));
+  if (scanId) revalidatePath(`/scans/${scanId}`);
 }
 
 export async function setLeakStatusAction(formData: FormData) {
