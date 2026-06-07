@@ -9,9 +9,10 @@ import {
   vulnerabilities,
   threatIntelStatus,
   otxThreatData,
+  brandNews,
   type Database,
 } from '@vacti/db';
-import { refreshThreatIntel } from './refresh';
+import { refreshThreatIntel, pruneOldNews } from './refresh';
 import { computeProjectRisk } from './risk-aggregate';
 
 const url = process.env.DATABASE_URL;
@@ -44,5 +45,26 @@ describe.skipIf(!url)('threat-intel integration', () => {
     const risk = await computeProjectRisk(db, p!.id);
     expect(risk.score).toBeGreaterThan(0);
     expect(['yellow', 'red', 'green']).toContain(risk.color);
+  }, 30000);
+
+  it('pruneOldNews drops stale brand news but keeps recent + analyst-flagged', async () => {
+    const db = handle.db;
+    const [p] = await db
+      .insert(projects)
+      .values({ slug: `prune${Date.now()}`, name: 'Prune' })
+      .returning();
+    const old = new Date(Date.now() - 120 * 24 * 3600 * 1000); // 120 days ago
+    const recent = new Date(Date.now() - 5 * 24 * 3600 * 1000); // 5 days ago
+    await db.insert(brandNews).values([
+      { projectId: p!.id, title: 'old', link: 'l-old', source: 's', publishedAt: old, status: 'new' },
+      { projectId: p!.id, title: 'old-flagged', link: 'l-flagged', source: 's', publishedAt: old, status: 'relevant' },
+      { projectId: p!.id, title: 'recent', link: 'l-recent', source: 's', publishedAt: recent, status: 'new' },
+    ]);
+
+    await pruneOldNews(db, 90, { projectId: p!.id });
+
+    const rows = await db.select().from(brandNews).where(eq(brandNews.projectId, p!.id));
+    const links = rows.map((r) => r.link).sort();
+    expect(links).toEqual(['l-flagged', 'l-recent']); // old 'new' pruned; flagged + recent kept
   }, 30000);
 });

@@ -1,4 +1,4 @@
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, notInArray, sql } from 'drizzle-orm';
 import {
   targets,
   manualIndicators,
@@ -21,12 +21,51 @@ export interface RefreshDeps {
   leakKey?: string;
   /** Injected fetch for the sector news feeds (mocked in tests). */
   newsFetch?: FetchLike;
+  /** Prune news older than this many days (default 90). Analyst-flagged items are always kept. */
+  retentionDays?: number;
   onProgress?: (progress: number, message: string) => void;
+}
+
+/** Statuses an analyst has explicitly flagged to keep — never auto-pruned regardless of age. */
+const KEEP_STATUSES = ['relevant', 'actioned'];
+
+/**
+ * Delete news rows older than `days` (by published date, falling back to fetch date), keeping any
+ * the analyst flagged as relevant/actioned. Best-effort: a prune failure must not fail the refresh.
+ */
+export async function pruneOldNews(db: Database, days: number, scope: { sector: string } | { projectId: string }) {
+  const cutoff = sql`now() - ${`${Math.max(1, Math.round(days))} days`}::interval`;
+  try {
+    if ('sector' in scope) {
+      await db
+        .delete(threatNews)
+        .where(
+          and(
+            eq(threatNews.sector, scope.sector),
+            sql`coalesce(${threatNews.publishedAt}, ${threatNews.fetchedAt}) < ${cutoff}`,
+            notInArray(threatNews.status, KEEP_STATUSES),
+          ),
+        );
+    } else {
+      await db
+        .delete(brandNews)
+        .where(
+          and(
+            eq(brandNews.projectId, scope.projectId),
+            sql`coalesce(${brandNews.publishedAt}, ${brandNews.fetchedAt}) < ${cutoff}`,
+            notInArray(brandNews.status, KEEP_STATUSES),
+          ),
+        );
+    }
+  } catch {
+    // Retention is housekeeping — never let it break a refresh.
+  }
 }
 
 /** Refresh Threat-Intel for a project: OTX + LeakCheck per domain/indicator. Degrades gracefully. */
 export async function refreshThreatIntel(deps: RefreshDeps): Promise<void> {
   const { db, projectId } = deps;
+  const retentionDays = deps.retentionDays ?? 90;
 
   const setStatus = async (state: string, progress: number, message?: string): Promise<void> => {
     const existing = await db.select().from(threatIntelStatus).where(eq(threatIntelStatus.projectId, projectId));
@@ -134,6 +173,8 @@ export async function refreshThreatIntel(deps: RefreshDeps): Promise<void> {
     } catch {
       // News is best-effort — a feed outage must not fail the TI refresh.
     }
+    // Retention: drop stale sector headlines (keeps analyst-flagged ones) so the table stays light.
+    await pruneOldNews(db, retentionDays, { sector });
 
     // Brand monitoring — public news mentioning the project's brand/domain (per project, triageable).
     await setStatus('running', 96, 'fetching brand news');
@@ -179,6 +220,8 @@ export async function refreshThreatIntel(deps: RefreshDeps): Promise<void> {
       } catch {
         // Best-effort — a feed outage must not fail the TI refresh.
       }
+      // Retention: drop stale brand headlines (keeps analyst-flagged ones).
+      await pruneOldNews(db, retentionDays, { projectId });
     }
 
     await setStatus('completed', 100, `${lookups.length} indicator(s)`);

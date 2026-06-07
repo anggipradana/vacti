@@ -27,6 +27,9 @@ export const aiSettings = pgTable('ai_settings', {
     .unique(),
   provider: text('provider').notNull().default('anthropic'), // anthropic | openai | ollama
   model: text('model').notNull().default('claude-sonnet-4-6'),
+  // Optional override endpoint for Anthropic/OpenAI-compatible gateways (e.g. a local proxy,
+  // LiteLLM, claude-code-router). Blank = the provider's default cloud endpoint.
+  baseUrl: text('base_url'),
   createdAt: createdAt(),
 });
 

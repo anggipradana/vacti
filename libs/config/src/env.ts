@@ -25,6 +25,9 @@ export const envSchema = z.object({
   ANTHROPIC_API_KEY: z.string().optional(),
   OPENAI_API_KEY: z.string().optional(),
   OLLAMA_BASE_URL: z.string().url().optional(),
+  // Threat/brand news retention: rows older than this many days are pruned on each TI refresh
+  // (analyst-flagged "relevant"/"actioned" headlines are always kept). Keeps the DB light.
+  NEWS_RETENTION_DAYS: z.coerce.number().int().positive().default(90),
 });
 
 export type Env = z.infer<typeof envSchema>;

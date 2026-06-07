@@ -82,7 +82,8 @@ export const NEWS_STATUS_LABEL: Record<NewsStatusValue, string> = {
   reviewed: 'Reviewed',
   relevant: 'Relevant',
   actioned: 'Actioned',
-  dismissed: 'Dismissed',
+  // DB value stays 'dismissed' (no migration); label reads "Irrelevant" — clearer for not-relevant news.
+  dismissed: 'Irrelevant',
 };
 
 export function isNewsStatus(s: string): s is NewsStatusValue {
