@@ -141,6 +141,7 @@ async function main(): Promise<void> {
               targetId: scan.targetId,
               domain: target.domain,
               vtApiKey: vtKey,
+              deepScan: scan.deepScan,
               signal: controller.signal,
             },
             { db, onProgress: (stage, msg) => console.log(`[passive ${scanId}] ${stage}: ${msg}`) },

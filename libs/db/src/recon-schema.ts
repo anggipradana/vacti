@@ -42,6 +42,8 @@ export const scans = pgTable('scans', {
   status: text('status').notNull().default('queued'), // queued|running|completed|failed|cancelled
   // active = binary recon pipeline; passive = OSINT-only (VT/Wayback); full = passive → feed → active.
   mode: text('mode').notNull().default('active'),
+  // Passive deep-fetch: fetch discovered URL bodies (SSRF-guarded) and scan them for exposures.
+  deepScan: boolean('deep_scan').notNull().default(false),
   stage: text('stage'),
   // Cross-process cancellation flag: the API/web sets it, the worker polls it and aborts the run.
   cancelRequested: boolean('cancel_requested').notNull().default(false),

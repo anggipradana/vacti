@@ -38,6 +38,11 @@ export const discoveredUrls = pgTable(
     pathnameExtension: text('pathname_extension'),
     categorySlug: text('category_slug'),
     externalSeenAt: timestamp('external_seen_at', { withTimezone: true }),
+    // Deep-fetch state (SSRF-guarded body fetch): skipped | pending | done | failed | blocked.
+    deepScanState: text('deep_scan_state').notNull().default('skipped'),
+    fetchedAt: timestamp('fetched_at', { withTimezone: true }),
+    httpStatus: integer('http_status'),
+    contentLength: integer('content_length'),
     createdAt: createdAt(),
   },
   (t) => ({

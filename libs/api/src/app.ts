@@ -77,6 +77,7 @@ const createScanSchema = z.object({
   targetId: z.string().uuid(),
   profileId: z.string().uuid().optional(),
   mode: z.enum(['active', 'passive', 'full']).optional(),
+  deepScan: z.boolean().optional(),
 });
 
 /**
@@ -168,6 +169,7 @@ export function buildApi(deps: ApiDeps): Hono<{ Variables: Vars }> {
         targetId: target.id,
         profileId: parsed.data.profileId ?? null,
         mode: parsed.data.mode ?? 'active',
+        deepScan: parsed.data.deepScan ?? false,
       })
       .returning();
     await deps.enqueueScan(scan!.id);
