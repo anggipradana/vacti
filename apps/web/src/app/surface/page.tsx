@@ -14,6 +14,7 @@ import { Pagination } from '../../components/ui/pagination';
 import { Reveal } from '../../components/ui/reveal';
 import { LeakStatusBadge } from '../../components/ui/finding-status';
 import { LEAK_STATUS_LABEL, userCan, Permission } from '@vacti/core';
+import { analyzeEndpoints } from '@vacti/recon';
 import { projects, discoveredUrls, exposureFindings, ipResolutions, ipResolutionSightings } from '@vacti/db';
 import { getDb } from '../../lib/db';
 import { getCurrentUser } from '../../lib/session';
@@ -110,6 +111,14 @@ export default async function SurfacePage({
       .limit(50),
     db.select({ n: count() }).from(ipResolutions).where(eq(ipResolutions.projectId, projectId)),
   ]);
+
+  // Endpoint / parameter discovery — derived from all discovered URLs (capped) for the project.
+  const allUrlRows = await db
+    .select({ u: discoveredUrls.urlText })
+    .from(discoveredUrls)
+    .where(eq(discoveredUrls.projectId, projectId))
+    .limit(5000);
+  const endpoints = analyzeEndpoints(allUrlRows.map((r) => r.u));
 
   const urlPages = Math.max(1, Math.ceil(Number(urlTotal[0]!.n) / PAGE));
   const findPages = Math.max(1, Math.ceil(Number(findTotal[0]!.n) / PAGE));
@@ -353,6 +362,60 @@ export default async function SurfacePage({
                 label="URLs"
                 makeHref={(p) => `/surface?${keep}&upage=${p}&cat=${cat}&q=${encodeURIComponent(q)}`}
               />
+            </>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Endpoints & parameters (derived from discovered URLs) */}
+      <Card className="mt-4">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <FileSearch className="size-4 text-accent" /> Endpoints &amp; parameters · {endpoints.paramCount} params ·{' '}
+            {endpoints.authCount} auth
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3 pt-0">
+          {endpoints.params.length === 0 && endpoints.authEndpoints.length === 0 ? (
+            <p className="py-1 text-sm text-fg-muted">No parameters or auth endpoints derived yet.</p>
+          ) : (
+            <>
+              {endpoints.params.length ? (
+                <div>
+                  <div className="mb-1 text-xs font-semibold uppercase tracking-wider text-fg-subtle">
+                    Top parameters
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {endpoints.params.slice(0, 30).map((p) => (
+                      <Badge key={p.name} variant="neutral">
+                        {p.name} · {p.count}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+              {endpoints.authEndpoints.length ? (
+                <div>
+                  <div className="mb-1 text-xs font-semibold uppercase tracking-wider text-fg-subtle">
+                    Auth / admin endpoints
+                  </div>
+                  <ul className="space-y-0.5">
+                    {endpoints.authEndpoints.slice(0, 20).map((e) => (
+                      <li key={e} className="truncate font-mono text-xs">
+                        <a
+                          href={e}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-accent hover:underline"
+                          title={e}
+                        >
+                          {e}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
             </>
           )}
         </CardContent>
