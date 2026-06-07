@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm';
-import { boolean, jsonb, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import { boolean, integer, jsonb, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 
 const id = () => uuid('id').primaryKey().defaultRandom();
 const createdAt = () => timestamp('created_at', { withTimezone: true }).notNull().defaultNow();
@@ -114,6 +114,11 @@ export const apiKeys = pgTable('api_keys', {
   name: text('name').notNull(),
   // AES-256-GCM ciphertext (see @vacti/auth vault). Never stored in plaintext.
   ciphertext: text('ciphertext').notNull(),
+  // Rotation/quota/backoff (for rate-limited OSINT providers like VirusTotal). All in Postgres.
+  usageCount: integer('usage_count').notNull().default(0),
+  usageDate: timestamp('usage_date', { withTimezone: true }),
+  disabledUntil: timestamp('disabled_until', { withTimezone: true }),
+  lastUsedAt: timestamp('last_used_at', { withTimezone: true }),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 });

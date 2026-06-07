@@ -169,6 +169,13 @@
       "when": 1780818644683,
       "tag": "0023_aspiring_slapstick",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1780821681476,
+      "tag": "0024_magical_moonstone",
+      "breakpoints": true
     }
   ]
 }

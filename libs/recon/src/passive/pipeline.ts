@@ -22,8 +22,15 @@ export interface PassiveScanInput {
   projectId: string;
   targetId: string;
   domain: string;
-  /** VirusTotal API key (optional — Wayback works without it). */
+  /** VirusTotal API key (optional single key — Wayback works without it). */
   vtApiKey?: string | null;
+  /** Rotating VT key provider (multi-key quota/backoff via Postgres). Takes precedence over vtApiKey. */
+  vtKeyProvider?: {
+    next: () => Promise<{ id: string; secret: string } | null>;
+    report: (id: string, status: number) => Promise<void>;
+  };
+  /** Max discovered subdomains to additionally query in VirusTotal (per-sub enrichment). */
+  maxVtSubdomains?: number;
   /** URLScan.io API key (optional — search works key-less but rate-limited). */
   urlscanApiKey?: string | null;
   /** Cap archived URLs pulled from Wayback (0 = unlimited). */
@@ -81,27 +88,64 @@ export async function runPassiveScan(
   const urlMap = new Map<string, { url: string; date: Date | null; sources: Set<string> }>();
   const resolutions: { ip: string; host: string; at: Date }[] = [];
 
-  // ── VirusTotal (optional) ──
+  // ── VirusTotal (optional, rotating keys + per-subdomain enrichment) ──
   checkAbort();
-  if (input.vtApiKey) {
-    await activity('virustotal', 'running');
-    const r = await fetchVtDomainReport({ apiKey: input.vtApiKey, domain: target });
-    if (r.status === 200) {
-      for (const h of discoverSubdomains(r.data, target)) hostSet.add(h);
-      for (const { url, date } of harvestUndetectedUrls(r.data)) {
-        const h = hostOf(url);
-        if (!h || (h !== target && !h.endsWith(`.${target}`))) continue;
-        const ex = urlMap.get(url) ?? { url, date, sources: new Set<string>() };
-        if (!ex.date && date) ex.date = date;
-        ex.sources.add('virustotal');
-        urlMap.set(url, ex);
+  // Key provider: rotating (multi-key, Postgres quota/backoff) or a single-key fallback.
+  const vtProvider =
+    input.vtKeyProvider ??
+    (input.vtApiKey ? { next: async () => ({ id: 'single', secret: input.vtApiKey! }), report: async () => {} } : null);
+
+  // Fetch a domain's VT report, rotating keys + backing off on rate-limit. Null when no key/report.
+  const vtFetch = async (domain: string): Promise<Awaited<ReturnType<typeof fetchVtDomainReport>>['data'] | null> => {
+    if (!vtProvider) return null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const k = await vtProvider.next();
+      if (!k) return null;
+      const r = await fetchVtDomainReport({ apiKey: k.secret, domain });
+      if (r.status === 200) return r.data;
+      if (r.status === 403 || r.status === 429 || r.status >= 500) {
+        await vtProvider.report(k.id, r.status);
+        continue; // try another key
       }
-      for (const res of harvestResolutions(r.data))
-        resolutions.push({ ip: res.ipAddress, host: target, at: res.lastResolved });
-      await activity('virustotal', 'completed', `${hostSet.size - 1} subdomains, ${resolutions.length} IP resolutions`);
-    } else {
-      await activity('virustotal', 'failed', `VT status ${r.status}`);
+      return r.data; // other status (e.g. 204) — nothing to retry
     }
+    return null;
+  };
+
+  const harvestVt = (data: NonNullable<Awaited<ReturnType<typeof vtFetch>>>, viaHost: string) => {
+    for (const h of discoverSubdomains(data, target)) hostSet.add(h);
+    for (const { url, date } of harvestUndetectedUrls(data)) {
+      const h = hostOf(url);
+      if (!h || (h !== target && !h.endsWith(`.${target}`))) continue;
+      const ex = urlMap.get(url) ?? { url, date, sources: new Set<string>() };
+      if (!ex.date && date) ex.date = date;
+      ex.sources.add('virustotal');
+      urlMap.set(url, ex);
+    }
+    for (const res of harvestResolutions(data))
+      resolutions.push({ ip: res.ipAddress, host: viaHost, at: res.lastResolved });
+  };
+
+  let vtCalls = 0;
+  if (vtProvider) {
+    await activity('virustotal', 'running');
+    const apex = await vtFetch(target);
+    if (apex) {
+      vtCalls += 1;
+      harvestVt(apex, target);
+    }
+    // Per-subdomain enrichment (capped) — each sub's VT report adds URLs/IPs (origin-behind-WAF).
+    const maxVtSubs = input.maxVtSubdomains ?? 25;
+    const vtSubs = [...hostSet].filter((h) => h !== target).slice(0, maxVtSubs);
+    for (const sub of vtSubs) {
+      checkAbort();
+      const rep = await vtFetch(sub);
+      if (rep) {
+        vtCalls += 1;
+        harvestVt(rep, sub);
+      }
+    }
+    await activity('virustotal', 'completed', `${vtCalls} VT lookup(s), ${resolutions.length} IP resolution(s)`);
   } else {
     await activity('virustotal', 'skipped', 'no VirusTotal API key');
   }

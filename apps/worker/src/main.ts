@@ -18,7 +18,13 @@ import {
 import { createQueue } from '@vacti/queue';
 import { runScanPipeline, runPassiveScan, DEFAULT_CATEGORIES, type ScanProfile } from '@vacti/recon';
 import { refreshThreatIntel } from '@vacti/threat-intel';
-import { sendProjectNotifications, getProjectSecret } from '@vacti/integrations';
+import {
+  sendProjectNotifications,
+  getProjectSecret,
+  acquireRotatingKey,
+  backoffKey,
+  countProviderKeys,
+} from '@vacti/integrations';
 
 const scanJobSchema = z.object({ scanId: z.string().uuid() });
 const tiJobSchema = z.object({ projectId: z.string().uuid() });
@@ -132,8 +138,16 @@ async function main(): Promise<void> {
           .set({ status: 'running', stage: 'passive', startedAt: new Date() })
           .where(eq(scans.id, scanId));
         try {
-          const vtKey =
-            (await getProjectSecret(db, scan.projectId, 'virustotal', env.ENCRYPTION_KEY)) ?? env.VT_API_KEY ?? null;
+          // VT keys: rotate over vault keys (virustotal, virustotal-2, …) with Postgres quota/backoff;
+          // fall back to the env key when none are in the vault.
+          const hasVaultVt = (await countProviderKeys(db, scan.projectId, 'virustotal')) > 0;
+          const vtKeyProvider = hasVaultVt
+            ? {
+                next: () => acquireRotatingKey(db, scan.projectId, 'virustotal', env.ENCRYPTION_KEY),
+                report: (id: string, status: number) => backoffKey(db, id, status === 429 ? 900 : 300),
+              }
+            : undefined;
+          const vtKey = hasVaultVt ? null : (env.VT_API_KEY ?? null);
           const urlscanKey =
             (await getProjectSecret(db, scan.projectId, 'urlscan', env.ENCRYPTION_KEY)) ?? env.URLSCAN_API_KEY ?? null;
           const res = await runPassiveScan(
@@ -143,6 +157,7 @@ async function main(): Promise<void> {
               targetId: scan.targetId,
               domain: target.domain,
               vtApiKey: vtKey,
+              vtKeyProvider,
               urlscanApiKey: urlscanKey,
               deepScan: scan.deepScan,
               signal: controller.signal,
