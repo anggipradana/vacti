@@ -224,11 +224,17 @@ describe('deep-fetch', () => {
 });
 
 describe('wayback client', () => {
-  it('parses CDX text lines into URLs via injected fetch', async () => {
-    const fakeFetch = (async () =>
-      new Response('https://example.com/a\nhttps://example.com/b\n', { status: 200 })) as typeof fetch;
+  it('parses CDX lines + queries the whole domain (subdomains via matchType=domain)', async () => {
+    let calledUrl = '';
+    const fakeFetch = (async (u: string) => {
+      calledUrl = u;
+      return new Response('https://example.com/a\nhttps://api.example.com/b\n', { status: 200 });
+    }) as typeof fetch;
     const urls = await fetchWaybackUrls('example.com', { fetchImpl: fakeFetch });
-    expect(urls).toEqual(['https://example.com/a', 'https://example.com/b']);
+    expect(urls).toEqual(['https://example.com/a', 'https://api.example.com/b']);
+    // Must request the domain + all subdomains, not just the apex host's paths.
+    expect(calledUrl).toContain('matchType=domain');
+    expect(calledUrl).not.toContain('example.com/*');
   });
 
   it('returns [] on non-ok and respects limit', async () => {

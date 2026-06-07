@@ -23,6 +23,20 @@ export default async function TokensPage() {
   return (
     <>
       <div className="space-y-6">
+        <div className="rounded-lg border border-border bg-surface-2 px-4 py-3 text-sm">
+          <span className="font-medium">API reference:</span> every action is scriptable via the typed REST API (Bearer
+          token).{' '}
+          <a href="/api/docs" target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">
+            Open API docs (Redoc) →
+          </a>{' '}
+          ·{' '}
+          <a href="/api/openapi.json" target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">
+            OpenAPI JSON
+          </a>
+          <div className="mt-1 text-xs text-fg-subtle">
+            Usage guide: see <span className="font-mono">docs/tutorials/getting-started.md</span> in the repository.
+          </div>
+        </div>
         <CreateToken />
         <div data-testid="token-list">
           {rows.length === 0 ? (
