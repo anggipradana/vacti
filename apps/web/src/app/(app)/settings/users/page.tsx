@@ -11,7 +11,12 @@ import { Role, ROLE_LABEL, roleFromUser, userCan, Permission } from '@vacti/core
 import { users } from '@vacti/db';
 import { getDb } from '../../../../lib/db';
 import { getCurrentUser } from '../../../../lib/session';
-import { changeUserRoleAction, addUserAction, deleteUserAction } from '../../../../lib/actions';
+import {
+  changeUserRoleAction,
+  addUserAction,
+  deleteUserAction,
+  resetUserPasswordAction,
+} from '../../../../lib/actions';
 
 export const dynamic = 'force-dynamic';
 
@@ -84,6 +89,20 @@ export default async function UsersSettingsPage() {
                   </Select>
                   <Button type="submit" size="sm" variant="outline">
                     Save
+                  </Button>
+                </form>
+                <form action={resetUserPasswordAction} className="flex items-center gap-2">
+                  <input type="hidden" name="id" value={u.id} />
+                  <Input
+                    name="password"
+                    type="password"
+                    placeholder="New password"
+                    required
+                    minLength={8}
+                    className="w-44"
+                  />
+                  <Button type="submit" size="sm" variant="outline">
+                    Reset password
                   </Button>
                 </form>
                 {u.id !== me.id ? (

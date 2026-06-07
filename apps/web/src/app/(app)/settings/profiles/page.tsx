@@ -12,7 +12,7 @@ import { userCan, Permission } from '@vacti/core';
 import { scanProfiles } from '@vacti/db';
 import { getDb } from '../../../../lib/db';
 import { getCurrentUser } from '../../../../lib/session';
-import { saveProfileAction, deleteProfileAction } from '../../../../lib/recon-actions';
+import { saveProfileAction, editProfileAction, deleteProfileAction } from '../../../../lib/recon-actions';
 
 export const dynamic = 'force-dynamic';
 
@@ -185,6 +185,9 @@ export default async function ProfilesPage() {
               const on = Object.entries(tools)
                 .filter(([, v]) => v)
                 .map(([k]) => k);
+              const sevSet = new Set(p.severities);
+              const str = (v: unknown) => (v === undefined || v === null ? '' : String(v));
+              const arr = (v: unknown) => (Array.isArray(v) ? (v as string[]).join(', ') : '');
               return (
                 <Card key={p.id}>
                   <CardContent className="py-3">
@@ -212,6 +215,185 @@ export default async function ProfilesPage() {
                         <span>· excl {(cfg.excludeSubdomains as string[]).length}</span>
                       ) : null}
                     </div>
+                    {canEdit ? (
+                      <details className="mt-3">
+                        <summary className="cursor-pointer text-xs text-fg-muted hover:text-fg">Edit</summary>
+                        <form action={editProfileAction} className="mt-3 space-y-4">
+                          <input type="hidden" name="id" value={p.id} />
+                          <div className="space-y-1.5">
+                            <Label htmlFor={`name-${p.id}`}>Name</Label>
+                            <Input id={`name-${p.id}`} name="name" defaultValue={p.name} required />
+                          </div>
+
+                          <fieldset className="space-y-2 rounded-md border border-border p-3">
+                            <legend className="px-1 text-sm font-medium">Tools</legend>
+                            <div className="flex flex-wrap gap-3 text-sm">
+                              {(['subfinder', 'httpx', 'naabu', 'nuclei', 'wordfence'] as const).map((tk) => (
+                                <label key={tk} className="flex items-center gap-1.5">
+                                  <input type="checkbox" name="tools" value={tk} defaultChecked={!!tools[tk]} /> {tk}
+                                </label>
+                              ))}
+                            </div>
+                          </fieldset>
+
+                          <div className="space-y-1.5">
+                            <Label htmlFor={`ports-${p.id}`}>Ports</Label>
+                            <Input
+                              id={`ports-${p.id}`}
+                              name="ports"
+                              defaultValue={p.ports}
+                              placeholder="top-100 / 80,443 / 1-1000"
+                            />
+                          </div>
+
+                          <div className="space-y-1.5">
+                            <Label>Severities</Label>
+                            <div className="flex flex-wrap gap-2 text-xs">
+                              {SEVS.map((s) => (
+                                <label
+                                  key={s}
+                                  className="flex items-center gap-1 rounded-md border border-border px-2 py-1"
+                                >
+                                  <input type="checkbox" name="severities" value={s} defaultChecked={sevSet.has(s)} />{' '}
+                                  {s}
+                                </label>
+                              ))}
+                            </div>
+                          </div>
+
+                          <fieldset className="space-y-2 rounded-md border border-border p-3">
+                            <legend className="px-1 text-sm font-medium">httpx</legend>
+                            <div className="space-y-1.5">
+                              <Label htmlFor={`httpxUserAgent-${p.id}`}>User-Agent</Label>
+                              <Input
+                                id={`httpxUserAgent-${p.id}`}
+                                name="httpxUserAgent"
+                                defaultValue={str(httpxCfg.userAgent)}
+                              />
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                              <div className="space-y-1.5">
+                                <Label htmlFor={`httpxRateLimit-${p.id}`}>Rate limit</Label>
+                                <Input
+                                  id={`httpxRateLimit-${p.id}`}
+                                  name="httpxRateLimit"
+                                  type="number"
+                                  defaultValue={str(httpxCfg.rateLimit)}
+                                />
+                              </div>
+                              <div className="space-y-1.5">
+                                <Label htmlFor={`httpxConcurrency-${p.id}`}>Threads</Label>
+                                <Input
+                                  id={`httpxConcurrency-${p.id}`}
+                                  name="httpxConcurrency"
+                                  type="number"
+                                  defaultValue={str(httpxCfg.concurrency)}
+                                />
+                              </div>
+                            </div>
+                          </fieldset>
+
+                          <fieldset className="space-y-2 rounded-md border border-border p-3">
+                            <legend className="px-1 text-sm font-medium">nuclei</legend>
+                            <div className="space-y-1.5">
+                              <Label htmlFor={`nucleiTags-${p.id}`}>tags</Label>
+                              <Input
+                                id={`nucleiTags-${p.id}`}
+                                name="nucleiTags"
+                                defaultValue={arr(nucleiCfg.tags)}
+                                placeholder="cve, exposure, misconfig"
+                              />
+                            </div>
+                            <div className="space-y-1.5">
+                              <Label htmlFor={`nucleiExcludeTags-${p.id}`}>exclude-tags</Label>
+                              <Input
+                                id={`nucleiExcludeTags-${p.id}`}
+                                name="nucleiExcludeTags"
+                                defaultValue={arr(nucleiCfg.excludeTags)}
+                                placeholder="dos, intrusive, fuzzing"
+                              />
+                            </div>
+                            <div className="space-y-1.5">
+                              <Label htmlFor={`nucleiTemplates-${p.id}`}>templates (paths)</Label>
+                              <Input
+                                id={`nucleiTemplates-${p.id}`}
+                                name="nucleiTemplates"
+                                defaultValue={arr(nucleiCfg.templates)}
+                                placeholder="custom/my-template.yaml"
+                              />
+                            </div>
+                            <div className="space-y-1.5">
+                              <Label htmlFor={`nucleiUserAgent-${p.id}`}>User-Agent</Label>
+                              <Input
+                                id={`nucleiUserAgent-${p.id}`}
+                                name="nucleiUserAgent"
+                                defaultValue={str(nucleiCfg.userAgent)}
+                              />
+                            </div>
+                            <div className="grid grid-cols-3 gap-3">
+                              <div className="space-y-1.5">
+                                <Label htmlFor={`nucleiRateLimit-${p.id}`}>Rate limit</Label>
+                                <Input
+                                  id={`nucleiRateLimit-${p.id}`}
+                                  name="nucleiRateLimit"
+                                  type="number"
+                                  defaultValue={str(nucleiCfg.rateLimit)}
+                                />
+                              </div>
+                              <div className="space-y-1.5">
+                                <Label htmlFor={`nucleiConcurrency-${p.id}`}>Concurrency</Label>
+                                <Input
+                                  id={`nucleiConcurrency-${p.id}`}
+                                  name="nucleiConcurrency"
+                                  type="number"
+                                  defaultValue={str(nucleiCfg.concurrency)}
+                                />
+                              </div>
+                              <div className="space-y-1.5">
+                                <Label htmlFor={`nucleiRetries-${p.id}`}>Retries</Label>
+                                <Input
+                                  id={`nucleiRetries-${p.id}`}
+                                  name="nucleiRetries"
+                                  type="number"
+                                  defaultValue={str(nucleiCfg.retries)}
+                                />
+                              </div>
+                            </div>
+                            <div className="space-y-1.5">
+                              <Label htmlFor={`nucleiExtraArgs-${p.id}`}>extra args (allow-listed)</Label>
+                              <Input
+                                id={`nucleiExtraArgs-${p.id}`}
+                                name="nucleiExtraArgs"
+                                defaultValue={arr(nucleiCfg.extraArgs)}
+                                placeholder="-follow-redirects -timeout 10"
+                              />
+                            </div>
+                          </fieldset>
+
+                          <fieldset className="space-y-2 rounded-md border border-border p-3">
+                            <legend className="px-1 text-sm font-medium">Scope</legend>
+                            <div className="space-y-1.5">
+                              <Label htmlFor={`excludeSubdomains-${p.id}`}>Exclude subdomains</Label>
+                              <Textarea
+                                id={`excludeSubdomains-${p.id}`}
+                                name="excludeSubdomains"
+                                rows={2}
+                                defaultValue={
+                                  Array.isArray(cfg.excludeSubdomains)
+                                    ? (cfg.excludeSubdomains as string[]).join('\n')
+                                    : ''
+                                }
+                                placeholder={'dev.example.com\nstaging.example.com'}
+                              />
+                            </div>
+                          </fieldset>
+
+                          <SubmitButton size="sm" pendingText="Saving…">
+                            Save changes
+                          </SubmitButton>
+                        </form>
+                      </details>
+                    ) : null}
                   </CardContent>
                 </Card>
               );

@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache';
 import { and, eq } from 'drizzle-orm';
 import { hashPassword, verifyPassword, generateApiToken, needsRehash } from '@vacti/auth';
 import { Role, Permission, isRoleName } from '@vacti/core';
+import { isSector } from '@vacti/threat-intel';
 import { users, projects, projectMembers, apiTokens } from '@vacti/db';
 import { getDb } from './db';
 import { createSession, destroySession, getCurrentUser, userCount } from './session';
@@ -87,6 +88,29 @@ export async function createProjectAction(formData: FormData) {
   revalidatePath('/projects');
 }
 
+/** Edit a project's name, sector, and (optionally) slug. Requires ModifyTargets + audit. */
+export async function editProjectAction(formData: FormData) {
+  const actor = await requirePermission(Permission.ModifyTargets);
+  const id = String(formData.get('id') ?? '');
+  const name = String(formData.get('name') ?? '').trim();
+  const sector = String(formData.get('sector') ?? '');
+  const slug = String(formData.get('slug') ?? '').trim();
+  if (!id || !name || !isSector(sector)) redirect('/projects?error=invalid');
+  const set: { name: string; sector: string; updatedAt: Date; slug?: string } = {
+    name,
+    sector,
+    updatedAt: new Date(),
+  };
+  // Only touch the slug when a (valid) one is supplied; blank keeps the current slug.
+  if (slug) {
+    if (!/^[a-z][a-z0-9-]*$/.test(slug)) redirect('/projects?error=invalid');
+    set.slug = slug;
+  }
+  await getDb().update(projects).set(set).where(eq(projects.id, id));
+  await recordAudit({ actorId: actor.id, action: 'project.update', resource: `project:${id}`, projectId: id });
+  revalidatePath('/projects');
+}
+
 /** Delete a project and all its scoped data (cascades via FK). Requires ModifyTargets + audit. */
 export async function deleteProjectAction(formData: FormData) {
   const actor = await requirePermission(Permission.ModifyTargets);
@@ -147,6 +171,20 @@ export async function deleteUserAction(formData: FormData) {
   }
   await db.delete(users).where(eq(users.id, id));
   await recordAudit({ actorId: actor.id, action: 'user.delete', resource: `user:${id}` });
+  revalidatePath('/settings/users');
+}
+
+/** SysAdmin-only: reset another user's password (no current-password check). Audited. */
+export async function resetUserPasswordAction(formData: FormData) {
+  const actor = await requirePermission(Permission.ModifySystemConfig);
+  const id = String(formData.get('id') ?? '');
+  const password = String(formData.get('password') ?? '');
+  if (!id || password.length < 8) redirect('/settings/users?error=weak');
+  await getDb()
+    .update(users)
+    .set({ passwordHash: await hashPassword(password), updatedAt: new Date() })
+    .where(eq(users.id, id));
+  await recordAudit({ actorId: actor.id, action: 'user.password_reset', resource: `user:${id}` });
   revalidatePath('/settings/users');
 }
 
