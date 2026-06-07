@@ -44,6 +44,7 @@ async function providerFor(projectId: string): Promise<AiProvider | null> {
     anthropicKey: prov === 'anthropic' ? (vaultKey ?? e.ANTHROPIC_API_KEY) : e.ANTHROPIC_API_KEY,
     openaiKey: prov === 'openai' ? (vaultKey ?? e.OPENAI_API_KEY) : e.OPENAI_API_KEY,
     ollamaBaseUrl: e.OLLAMA_BASE_URL,
+    baseUrl: settings?.baseUrl ?? undefined,
   });
 }
 
@@ -66,6 +67,7 @@ export async function enrichVulnAction(formData: FormData) {
     anthropicKey: prov === 'anthropic' ? (vaultKey ?? e.ANTHROPIC_API_KEY) : e.ANTHROPIC_API_KEY,
     openaiKey: prov === 'openai' ? (vaultKey ?? e.OPENAI_API_KEY) : e.OPENAI_API_KEY,
     ollamaBaseUrl: e.OLLAMA_BASE_URL,
+    baseUrl: settings?.baseUrl ?? undefined,
   });
   if (!provider) {
     // No AI key configured — degrade gracefully (no-op).
@@ -102,11 +104,14 @@ export async function saveAiSettingsAction(formData: FormData) {
   const projectId = String(formData.get('projectId') ?? '');
   const provider = String(formData.get('provider') ?? 'anthropic');
   const model = String(formData.get('model') ?? '').trim() || 'claude-sonnet-4-6';
+  const rawBaseUrl = String(formData.get('baseUrl') ?? '').trim();
+  // Optional override endpoint; must be a valid http(s) URL when present, else store null (vendor default).
+  const baseUrl = rawBaseUrl && /^https?:\/\//i.test(rawBaseUrl) ? rawBaseUrl : null;
   if (!projectId || !['anthropic', 'openai', 'ollama'].includes(provider)) return;
   await getDb()
     .insert(aiSettings)
-    .values({ projectId, provider, model })
-    .onConflictDoUpdate({ target: aiSettings.projectId, set: { provider, model } });
+    .values({ projectId, provider, model, baseUrl })
+    .onConflictDoUpdate({ target: aiSettings.projectId, set: { provider, model, baseUrl } });
   revalidatePath('/settings/integrations');
 }
 

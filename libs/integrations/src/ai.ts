@@ -10,6 +10,11 @@ export interface AiConfig {
   anthropicKey?: string;
   openaiKey?: string;
   ollamaBaseUrl?: string;
+  /**
+   * Optional override endpoint for Anthropic/OpenAI-compatible APIs (a local proxy or gateway).
+   * Blank → the SDK's default vendor cloud endpoint. Does not apply to Ollama (use ollamaBaseUrl).
+   */
+  baseUrl?: string;
 }
 
 export interface VulnEnrichmentInput {
@@ -70,10 +75,12 @@ export async function enrichVulnerability(v: VulnEnrichmentInput, provider: AiPr
 /** Build a concrete provider via the Vercel AI SDK. Returns null when no key/config (graceful degrade). */
 export async function makeProvider(cfg: AiConfig): Promise<AiProvider | null> {
   try {
+    // A blank/whitespace baseUrl must behave exactly like "unset" (vendor default endpoint).
+    const baseURL = cfg.baseUrl?.trim() || undefined;
     if (cfg.provider === 'anthropic') {
       if (!cfg.anthropicKey) return null;
       const [{ generateText }, { createAnthropic }] = await Promise.all([import('ai'), import('@ai-sdk/anthropic')]);
-      const anthropic = createAnthropic({ apiKey: cfg.anthropicKey });
+      const anthropic = createAnthropic({ apiKey: cfg.anthropicKey, ...(baseURL ? { baseURL } : {}) });
       return {
         generate: async (system, prompt) => (await generateText({ model: anthropic(cfg.model), system, prompt })).text,
       };
@@ -81,7 +88,7 @@ export async function makeProvider(cfg: AiConfig): Promise<AiProvider | null> {
     if (cfg.provider === 'openai') {
       if (!cfg.openaiKey) return null;
       const [{ generateText }, { createOpenAI }] = await Promise.all([import('ai'), import('@ai-sdk/openai')]);
-      const openai = createOpenAI({ apiKey: cfg.openaiKey });
+      const openai = createOpenAI({ apiKey: cfg.openaiKey, ...(baseURL ? { baseURL } : {}) });
       return {
         generate: async (system, prompt) => (await generateText({ model: openai(cfg.model), system, prompt })).text,
       };

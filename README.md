@@ -295,9 +295,35 @@ and the layout follows the BPRS-Hijra reference design.
 | `OTX_API_KEY`, `LEAKCHECK_API_KEY`                         | no       | threat-intel sources (degrade gracefully if unset)                  |
 | `VT_API_KEY`                                               | no       | VirusTotal passive DNS for passive recon (Wayback works without it) |
 | `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` / `OLLAMA_BASE_URL` | no       | AI provider (per-project keys can override via vault)               |
+| `NEWS_RETENTION_DAYS`                                      | no       | Auto-prune threat/brand news older than N days (default `90`)       |
 
 Per-project keys set in the encrypted vault (Settings -> Integrations) take precedence over these
 environment defaults.
+
+### AI enrichment with a custom / compatible endpoint
+
+By default Anthropic and OpenAI talk to their official cloud APIs. You can point them at any
+**OpenAI- or Anthropic-compatible** endpoint instead - a local proxy, an internal gateway,
+[LiteLLM](https://github.com/BerriAI/litellm), or [claude-code-router](https://github.com/musistudio/claude-code-router) -
+without touching the rest of your setup.
+
+1. Open **Settings -> Integrations -> AI enrichment**.
+2. Pick the **Provider** (Anthropic or OpenAI) and the **Model** name your endpoint expects.
+3. Set **Base URL** to your endpoint, e.g. `http://localhost:4000/v1` (LiteLLM) or your gateway's
+   base path. Leave it **blank** to use the official cloud API.
+4. Put the API key your endpoint expects in the **encrypted vault** (same page) for that provider -
+   or in `ANTHROPIC_API_KEY` / `OPENAI_API_KEY`. The Base URL only changes _where_ requests go; the
+   key field is unchanged.
+5. Save, then click **AI** on any finding to verify enrichment works against your endpoint.
+
+Notes:
+
+- The Base URL is **per project** and optional; it never affects other projects or your API keys.
+- It must be a full `http(s)://` URL (invalid values are ignored and fall back to the cloud default).
+- For a **fully local** model use the **Ollama** provider instead, configured via `OLLAMA_BASE_URL`
+  (default `http://localhost:11434`).
+- This lets you route enrichment through a gateway backed by your own Claude credentials, so you are
+  not limited to a separate pay-as-you-go API key.
 
 ---
 

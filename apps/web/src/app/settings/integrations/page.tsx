@@ -156,21 +156,37 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
             <CardContent className="pt-5">
               <p className="mb-3 text-sm text-fg-muted">
                 Provider for vulnerability enrichment (description/impact/remediation). Set the matching API key in the
-                environment; features degrade gracefully without a key.
+                vault below (or environment); features degrade gracefully without a key.
               </p>
-              <form action={saveAiSettingsAction} className="flex items-end gap-3">
+              <form action={saveAiSettingsAction} className="space-y-3">
                 <input type="hidden" name="projectId" value={projectId} />
-                <div className="flex-1 space-y-1">
-                  <Label htmlFor="provider">Provider</Label>
-                  <Select id="provider" name="provider" defaultValue={ai?.provider ?? 'anthropic'}>
-                    <option value="anthropic">Anthropic (Claude)</option>
-                    <option value="openai">OpenAI</option>
-                    <option value="ollama">Ollama</option>
-                  </Select>
+                <div className="flex items-end gap-3">
+                  <div className="flex-1 space-y-1">
+                    <Label htmlFor="provider">Provider</Label>
+                    <Select id="provider" name="provider" defaultValue={ai?.provider ?? 'anthropic'}>
+                      <option value="anthropic">Anthropic (Claude)</option>
+                      <option value="openai">OpenAI</option>
+                      <option value="ollama">Ollama</option>
+                    </Select>
+                  </div>
+                  <div className="flex-1 space-y-1">
+                    <Label htmlFor="model">Model</Label>
+                    <Input id="model" name="model" defaultValue={ai?.model ?? 'claude-sonnet-4-6'} />
+                  </div>
                 </div>
-                <div className="flex-1 space-y-1">
-                  <Label htmlFor="model">Model</Label>
-                  <Input id="model" name="model" defaultValue={ai?.model ?? 'claude-sonnet-4-6'} />
+                <div className="space-y-1">
+                  <Label htmlFor="baseUrl">Base URL (optional)</Label>
+                  <Input
+                    id="baseUrl"
+                    name="baseUrl"
+                    type="url"
+                    placeholder="https://my-gateway.local/v1  (blank = vendor default)"
+                    defaultValue={ai?.baseUrl ?? ''}
+                  />
+                  <p className="text-xs text-fg-subtle">
+                    Point Anthropic/OpenAI at a compatible endpoint (local proxy, LiteLLM, gateway). Leave blank to use
+                    the official cloud API. Does not change your API key. (Ollama uses OLLAMA_BASE_URL.)
+                  </p>
                 </div>
                 <Button type="submit" data-testid="ai-save">
                   Save

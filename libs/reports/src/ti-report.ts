@@ -20,7 +20,7 @@ const NEWS_STATUS_LABEL: Record<string, string> = {
   reviewed: 'Reviewed',
   relevant: 'Relevant',
   actioned: 'Actioned',
-  dismissed: 'Dismissed',
+  dismissed: 'Irrelevant', // DB value 'dismissed'; mirrors NEWS_STATUS_LABEL in @vacti/core
 };
 
 const COMPONENT_LABEL: Record<string, string> = {

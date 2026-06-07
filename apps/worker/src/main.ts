@@ -286,6 +286,7 @@ async function main(): Promise<void> {
       projectId,
       otxKey,
       leakKey,
+      retentionDays: env.NEWS_RETENTION_DAYS,
       onProgress: (p, msg) => console.log(`[ti ${projectId}] ${p}% ${msg}`),
     });
     const leaksAfter = await db
