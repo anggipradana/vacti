@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { Suspense } from 'react';
 import { and, desc, eq, count, sql } from 'drizzle-orm';
@@ -365,9 +366,9 @@ export default async function ThreatPage({
           <CardTitle className="flex items-center gap-2">
             <Bug className="size-4 text-accent" /> Exposure (passive) · {exposureTotal}
           </CardTitle>
-          <a href={`/surface?project=${projectId}`} className="text-xs text-accent hover:underline">
+          <Link href={`/surface?project=${projectId}`} className="text-xs text-accent hover:underline">
             View in Attack Surface →
-          </a>
+          </Link>
         </CardHeader>
         <CardContent className="pt-0">
           {exposureTotal === 0 ? (
@@ -378,11 +379,15 @@ export default async function ThreatPage({
             <div className="space-y-2">
               <div className="flex flex-wrap gap-1.5">
                 {exposureTop.map((t) => (
-                  <a key={t.type} href={`/surface?project=${projectId}&etype=${t.type}`} title="Open in Attack Surface">
+                  <Link
+                    key={t.type}
+                    href={`/surface?project=${projectId}&etype=${t.type}`}
+                    title="Open in Attack Surface"
+                  >
                     <Badge variant="danger">
                       {t.type} · {Number(t.n)}
                     </Badge>
-                  </a>
+                  </Link>
                 ))}
               </div>
               {exposureCredTotal > 0 ? (

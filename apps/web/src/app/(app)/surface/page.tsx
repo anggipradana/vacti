@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { and, eq, ilike, desc, count, sql, inArray } from 'drizzle-orm';
 import { ShieldAlert, FileSearch, Network } from 'lucide-react';
@@ -184,9 +185,9 @@ export default async function SurfacePage({
         {diffScanId ? (
           <span className="flex items-center gap-2 text-xs text-fg-muted">
             <Badge variant="accent">Showing NEW discoveries from scan {diffScanId.slice(0, 8)}</Badge>
-            <a href={`/surface?project=${projectId}`} className="text-accent hover:underline">
+            <Link href={`/surface?project=${projectId}`} className="text-accent hover:underline">
               clear
-            </a>
+            </Link>
           </span>
         ) : null}
       </div>
