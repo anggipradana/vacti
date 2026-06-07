@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { sql, eq } from 'drizzle-orm';
+import { sql, eq, desc } from 'drizzle-orm';
 import {
   scans,
   scanActivity,
@@ -14,6 +14,7 @@ import { fetchVtDomainReport, discoverSubdomains, harvestUndetectedUrls, harvest
 import { fetchWaybackUrls } from './wayback';
 import { categorizeUrl, buildSuffixIndex } from './categorize';
 import { scanExposure } from './exposure';
+import { deepFetch } from './deepfetch';
 
 export interface PassiveScanInput {
   scanId: string;
@@ -26,6 +27,10 @@ export interface PassiveScanInput {
   waybackLimit?: number;
   /** Cap URLs scanned for exposure (bounds work on huge archives). */
   exposureLimit?: number;
+  /** Opt-in deep-fetch: fetch discovered URL bodies (SSRF-guarded) and scan them for exposures. */
+  deepScan?: boolean;
+  /** Cap deep-fetched URLs (politeness + bound work). */
+  deepFetchLimit?: number;
   signal?: AbortSignal;
 }
 
@@ -213,11 +218,64 @@ export async function runPassiveScan(
   }
   await activity('exposure', 'completed', `${findingCount} exposure finding(s)`);
 
+  // ── Deep-fetch (opt-in): fetch URL bodies (SSRF-guarded) and scan them for exposures ──
+  let deepFetched = 0;
+  let bodyFindingCount = 0;
+  if (input.deepScan) {
+    checkAbort();
+    await activity('deep-fetch', 'running');
+    const deepLimit = input.deepFetchLimit ?? 150;
+    // Prioritise categorised (sensitive) URLs first, then the rest.
+    const candidates = await db
+      .select({ id: discoveredUrls.id, urlText: discoveredUrls.urlText })
+      .from(discoveredUrls)
+      .where(eq(discoveredUrls.projectId, input.projectId))
+      .orderBy(sql`${discoveredUrls.categorySlug} nulls last`, desc(discoveredUrls.createdAt))
+      .limit(deepLimit);
+    for (const cand of candidates) {
+      checkAbort();
+      const r = await deepFetch(cand.urlText);
+      const state = r.blocked ? 'blocked' : r.status >= 200 && r.status < 400 ? 'done' : 'failed';
+      await db
+        .update(discoveredUrls)
+        .set({
+          deepScanState: state,
+          fetchedAt: new Date(),
+          httpStatus: r.status || null,
+          contentLength: r.length || null,
+        })
+        .where(eq(discoveredUrls.id, cand.id));
+      if (r.body) {
+        const bodyRows = scanExposure(r.body).map((hit) => ({
+          projectId: input.projectId,
+          discoveredUrlId: cand.id,
+          scanId: input.scanId,
+          source: 'body',
+          findingType: hit.type,
+          snippet: hit.snippet,
+          urlText: cand.urlText,
+        }));
+        if (bodyRows.length) {
+          const res = await db
+            .insert(exposureFindings)
+            .values(bodyRows)
+            .onConflictDoNothing()
+            .returning({ id: exposureFindings.id });
+          bodyFindingCount += res.length;
+        }
+      }
+      if (state === 'done') deepFetched += 1;
+    }
+    findingCount += bodyFindingCount;
+    await activity('deep-fetch', 'completed', `${deepFetched} fetched · ${bodyFindingCount} body finding(s)`);
+  }
+
   const counts = {
     passiveSubdomains: passiveSubs.length,
     discoveredUrls: urls.length,
     exposureFindings: findingCount,
     ipResolutions: resolutions.length,
+    deepFetched,
   };
   // Merge into scans.counts (preserve any active-pipeline counts).
   await db

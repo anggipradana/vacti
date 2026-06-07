@@ -49,6 +49,10 @@ export function NewScanDialog({
               <option value="full">Full (passive discovery → active)</option>
             </Select>
           </div>
+          <label className="flex items-center gap-2 text-sm">
+            <input type="checkbox" name="deepScan" value="1" data-testid="scan-deep" />
+            Deep-fetch discovered URLs (passive/full) — fetches bodies (SSRF-guarded) to scan for secrets
+          </label>
           {profiles.length ? (
             <div className="space-y-1.5">
               <Label htmlFor="profileId">Scan profile</Label>

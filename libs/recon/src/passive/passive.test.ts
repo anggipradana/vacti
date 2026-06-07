@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { scanExposure, EXPOSURE_RULES } from './exposure';
 import { pathnameExtension, categorizeUrl, buildSuffixIndex, DEFAULT_CATEGORIES } from './categorize';
 import { assertUrlSafeForServerFetch, isUrlSafeForServerFetch } from './ssrf';
+import { deepFetch } from './deepfetch';
 import { fetchWaybackUrls } from './wayback';
 import {
   discoverSubdomains,
@@ -143,6 +144,27 @@ describe('virustotal harvesters', () => {
     }) as typeof fetch;
     const r = await fetchVtDomainReport({ apiKey: 'k', domain: 'x.com', fetchImpl: boom });
     expect(r.status).toBe(599);
+  });
+});
+
+describe('deep-fetch', () => {
+  it('blocks SSRF targets before any fetch', async () => {
+    let called = false;
+    const spy = (async () => {
+      called = true;
+      return new Response('x', { status: 200 });
+    }) as typeof fetch;
+    const r = await deepFetch('http://169.254.169.254/latest/meta-data', { fetchImpl: spy });
+    expect(r.blocked).toBe(true);
+    expect(called).toBe(false);
+  });
+
+  it('fetches a public URL body (size-capped) via injected fetch', async () => {
+    const fakeFetch = (async () => new Response('AKIAIOSFODNN7EXAMPLE secret body', { status: 200 })) as typeof fetch;
+    const r = await deepFetch('https://example.com/app.js', { fetchImpl: fakeFetch, maxBytes: 10 });
+    expect(r.blocked).toBe(false);
+    expect(r.status).toBe(200);
+    expect(r.body.length).toBeLessThanOrEqual(10);
   });
 });
 
