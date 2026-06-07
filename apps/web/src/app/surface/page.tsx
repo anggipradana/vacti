@@ -121,6 +121,25 @@ export default async function SurfacePage({
       <PageHeader
         title="Attack Surface"
         description="Passive OSINT discovery (VirusTotal + Wayback): URLs, exposure findings, and IP resolutions. Run a passive/full scan from Scans to populate."
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            <a href={`/surface/export?project=${projectId}&format=zip`}>
+              <Button variant="secondary" size="sm">
+                Export ZIP
+              </Button>
+            </a>
+            <a href={`/surface/export?project=${projectId}&format=csv&resource=urls`}>
+              <Button variant="ghost" size="sm">
+                URLs CSV
+              </Button>
+            </a>
+            <a href={`/surface/export?project=${projectId}&format=csv&resource=findings`}>
+              <Button variant="ghost" size="sm">
+                Findings CSV
+              </Button>
+            </a>
+          </div>
+        }
       />
 
       <div className="mb-4 grid grid-cols-2 gap-4 lg:grid-cols-4">
