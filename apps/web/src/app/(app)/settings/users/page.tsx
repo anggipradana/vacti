@@ -1,7 +1,5 @@
 import { redirect } from 'next/navigation';
 import { desc } from 'drizzle-orm';
-import { PageHeader } from '../../../../components/ui/page-header';
-import { SettingsTabs } from '../../../../components/settings-tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../components/ui/card';
 import { Select } from '../../../../components/ui/select';
 import { Button } from '../../../../components/ui/button';
@@ -26,12 +24,6 @@ export default async function UsersSettingsPage() {
 
   return (
     <>
-      <PageHeader
-        title="Settings"
-        description="Users & roles. Roles are enforced server-side on every mutating action."
-      />
-      <SettingsTabs active="/settings/users" isSysAdmin />
-
       <Card className="mb-4">
         <CardHeader>
           <CardTitle>Add user</CardTitle>

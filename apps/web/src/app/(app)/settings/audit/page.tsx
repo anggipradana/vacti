@@ -1,7 +1,5 @@
 import { redirect } from 'next/navigation';
 import { desc } from 'drizzle-orm';
-import { PageHeader } from '../../../../components/ui/page-header';
-import { SettingsTabs } from '../../../../components/settings-tabs';
 import { Card, CardContent } from '../../../../components/ui/card';
 import { Table, THead, TBody, TR, TH, TD } from '../../../../components/ui/table';
 import { Badge } from '../../../../components/ui/badge';
@@ -24,8 +22,6 @@ export default async function AuditPage() {
 
   return (
     <>
-      <PageHeader title="Settings" description="Audit log — mutating actions, newest first (last 200)." />
-      <SettingsTabs active="/settings/audit" isSysAdmin />
       {rows.length === 0 ? (
         <EmptyState
           title="No audit entries yet"

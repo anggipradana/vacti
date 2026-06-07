@@ -1,4 +1,7 @@
+'use client';
+
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { cn } from '../lib/cn';
 
 const tabs = [
@@ -10,7 +13,8 @@ const tabs = [
   { label: 'Audit log', href: '/settings/audit', sysAdminOnly: true },
 ];
 
-export function SettingsTabs({ active, isSysAdmin = true }: { active: string; isSysAdmin?: boolean }) {
+export function SettingsTabs({ isSysAdmin = true }: { isSysAdmin?: boolean }) {
+  const pathname = usePathname();
   return (
     <div className="mb-6 flex gap-1 border-b border-border">
       {tabs
@@ -21,7 +25,7 @@ export function SettingsTabs({ active, isSysAdmin = true }: { active: string; is
             href={t.href}
             className={cn(
               'border-b-2 px-3 py-2 text-sm font-medium',
-              active === t.href ? 'border-accent text-fg' : 'border-transparent text-fg-muted hover:text-fg',
+              pathname === t.href ? 'border-accent text-fg' : 'border-transparent text-fg-muted hover:text-fg',
             )}
           >
             {t.label}

@@ -1,7 +1,5 @@
 import { redirect } from 'next/navigation';
 import { desc, eq } from 'drizzle-orm';
-import { PageHeader } from '../../../../components/ui/page-header';
-import { SettingsTabs } from '../../../../components/settings-tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../components/ui/card';
 import { Input } from '../../../../components/ui/input';
 import { Textarea } from '../../../../components/ui/textarea';
@@ -34,13 +32,7 @@ export default async function ReportSettingsPage({ searchParams }: { searchParam
   const projectId = sp.project ?? projectRows[0]?.id;
 
   if (!projectId) {
-    return (
-      <>
-        <PageHeader title="Settings" />
-        <SettingsTabs active="/settings/reports" isSysAdmin={user.isSysAdmin} />
-        <p className="text-sm text-fg-muted">Create a project first.</p>
-      </>
-    );
+    return <p className="text-sm text-fg-muted">Create a project first.</p>;
   }
 
   const [allSettings, signatories] = await Promise.all([
@@ -176,8 +168,6 @@ export default async function ReportSettingsPage({ searchParams }: { searchParam
 
   return (
     <>
-      <PageHeader title="Settings" description="Report branding, signatories, and document control." />
-      <SettingsTabs active="/settings/reports" isSysAdmin={user.isSysAdmin} />
       <div className="grid gap-4 lg:grid-cols-2">
         {brandingForm('va')}
         {brandingForm('ti')}
