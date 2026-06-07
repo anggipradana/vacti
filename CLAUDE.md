@@ -43,4 +43,10 @@ Nx monorepo, Next.js + worker + Postgres. See [README.md](README.md) and
   Destructive actions must enforce RBAC server-side, confirm in the UI (`ConfirmButton`), `recordAudit`,
   cascade via FK `onDelete`, and protect invariants (e.g. last SysAdmin). See principle 10 +
   §10 of [02-FEATURE-PARITY-CHECKLIST.md](docs/planning/02-FEATURE-PARITY-CHECKLIST.md).
+- Don't sacrifice **reliability or speed** — they are must-haves (principle 11). Live app runs a
+  production build (`next start`) under a supervisor, never `next dev`; app + worker self-heal.
+  Keep navigation instant (shared `app/(app)/` shell layout + `loading.tsx`, `next/link` not `<a>`);
+  do minimum work per request (SQL-side filter/paginate, `Promise.all`, per-request `cache()`); never
+  block on the network without a timeout + visible pending state. Treat perf/reliability regressions
+  as bugs.
 - Don't bypass Husky hooks or the CI quality gate.
