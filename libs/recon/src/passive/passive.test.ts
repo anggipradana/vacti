@@ -4,6 +4,7 @@ import { pathnameExtension, categorizeUrl, buildSuffixIndex, DEFAULT_CATEGORIES 
 import { assertUrlSafeForServerFetch, isUrlSafeForServerFetch } from './ssrf';
 import { deepFetch } from './deepfetch';
 import { analyzeEndpoints } from './endpoints';
+import { fetchUrlscan } from './urlscan';
 import { fetchWaybackUrls } from './wayback';
 import {
   discoverSubdomains,
@@ -166,6 +167,27 @@ describe('endpoint/param discovery', () => {
     const r = analyzeEndpoints(['not a url', '']);
     expect(r.paramCount).toBe(0);
     expect(r.authCount).toBe(0);
+  });
+});
+
+describe('urlscan client', () => {
+  it('harvests page/task URLs + IP resolutions via injected fetch', async () => {
+    const payload = {
+      results: [
+        {
+          page: { url: 'https://a.example.com/x', domain: 'a.example.com', ip: '203.0.113.9' },
+          task: { url: 'https://a.example.com/y' },
+        },
+      ],
+    };
+    const fakeFetch = (async () => new Response(JSON.stringify(payload), { status: 200 })) as typeof fetch;
+    const r = await fetchUrlscan('example.com', { fetchImpl: fakeFetch });
+    expect(r.urls).toEqual(expect.arrayContaining(['https://a.example.com/x', 'https://a.example.com/y']));
+    expect(r.resolutions[0]).toMatchObject({ ip: '203.0.113.9', host: 'a.example.com' });
+  });
+  it('degrades to empty on non-ok', async () => {
+    const bad = (async () => new Response('rate limited', { status: 429 })) as typeof fetch;
+    expect(await fetchUrlscan('x.com', { fetchImpl: bad })).toEqual({ urls: [], resolutions: [] });
   });
 });
 

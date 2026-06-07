@@ -5,4 +5,5 @@ export * from './deepfetch';
 export * from './endpoints';
 export * from './wayback';
 export * from './virustotal';
+export * from './urlscan';
 export * from './pipeline';

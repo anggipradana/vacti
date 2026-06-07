@@ -19,6 +19,7 @@ export const envSchema = z.object({
   OTX_API_KEY: z.string().optional(),
   LEAKCHECK_API_KEY: z.string().optional(),
   VT_API_KEY: z.string().optional(),
+  URLSCAN_API_KEY: z.string().optional(),
   ANTHROPIC_API_KEY: z.string().optional(),
   OPENAI_API_KEY: z.string().optional(),
   OLLAMA_BASE_URL: z.string().url().optional(),
