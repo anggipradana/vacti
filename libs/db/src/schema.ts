@@ -47,6 +47,10 @@ export const projects = pgTable('projects', {
   name: text('name').notNull(),
   // Chosen sector for the threat-news feed (SectorName from @vacti/threat-intel).
   sector: text('sector').notNull().default('banking'),
+  // The default workspace shown on login / when no project is explicitly selected. At most one true.
+  isDefault: boolean('is_default').notNull().default(false),
+  // Optional override search term for brand monitoring (defaults to the project name when null).
+  brandQuery: text('brand_query'),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 });

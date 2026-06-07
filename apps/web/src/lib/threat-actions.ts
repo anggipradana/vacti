@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { and, eq, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { Permission, isNewsStatus, isLeakStatus, REVIEW_TOGGLE } from '@vacti/core';
-import { isSector, fetchSectorNews } from '@vacti/threat-intel';
+import { isSector, fetchSectorNews, fetchBrandNews } from '@vacti/threat-intel';
 import { manualIndicators, leakcheckData, projects, threatNews, brandNews } from '@vacti/db';
 import { getDb } from './db';
 import { getQueue } from './queue';
@@ -57,6 +57,66 @@ export async function setSectorAction(formData: FormData) {
   }
   const q = await getQueue();
   await q.enqueue('ti-refresh', tiJob, { projectId });
+  revalidatePath('/threat');
+}
+
+/**
+ * On-demand brand-monitoring search: optionally save a custom query term, then fetch Google News
+ * (security + general) synchronously and upsert, preserving any triage status. Best-effort.
+ */
+export async function refreshBrandNewsAction(formData: FormData) {
+  await requirePermission(Permission.ModifyScanResults);
+  const projectId = String(formData.get('projectId') ?? '');
+  if (!projectId) return;
+  const db = getDb();
+  const [proj] = await db.select().from(projects).where(eq(projects.id, projectId));
+  if (!proj) return;
+  const rawQuery = String(formData.get('query') ?? '').trim();
+  // A typed query becomes the persisted brand search term; otherwise reuse the stored one / name.
+  if (rawQuery && rawQuery !== (proj.brandQuery ?? '')) {
+    await db.update(projects).set({ brandQuery: rawQuery, updatedAt: new Date() }).where(eq(projects.id, projectId));
+  }
+  const term = rawQuery || proj.brandQuery || proj.name;
+  if (!term) return;
+  try {
+    const [sec, gen] = await Promise.all([
+      fetchBrandNews(term, { security: true, limit: 10 }),
+      fetchBrandNews(term, { security: false, limit: 10 }),
+    ]);
+    const seen = new Set<string>();
+    const items = [
+      ...sec.map((n) => ({ ...n, security: true })),
+      ...gen.map((n) => ({ ...n, security: false })),
+    ].filter((n) => (seen.has(n.link) ? false : (seen.add(n.link), true)));
+    if (items.length) {
+      await db
+        .insert(brandNews)
+        .values(
+          items.map((n) => ({
+            projectId,
+            title: n.title.slice(0, 500),
+            link: n.link,
+            source: n.source,
+            summary: n.summary,
+            publishedAt: n.publishedAt,
+            security: n.security,
+          })),
+        )
+        .onConflictDoUpdate({
+          target: [brandNews.projectId, brandNews.link],
+          set: {
+            title: sql`excluded.title`,
+            source: sql`excluded.source`,
+            summary: sql`excluded.summary`,
+            publishedAt: sql`excluded.published_at`,
+            security: sql`excluded.security`,
+            fetchedAt: sql`now()`,
+          },
+        });
+    }
+  } catch {
+    // Feed outage must not fail the action.
+  }
   revalidatePath('/threat');
 }
 

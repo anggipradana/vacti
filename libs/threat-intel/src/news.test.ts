@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseFeed, matchesSector, fetchSectorNews } from './news';
+import { parseFeed, matchesSector, fetchSectorNews, sectorSearchUrl, sectorFeeds } from './news';
 
 const RSS = `<?xml version="1.0"?><rss><channel>
   <item><title>Major bank hit by phishing fraud</title><link>https://x/1</link>
@@ -64,5 +64,23 @@ describe('fetchSectorNews', () => {
     // Both 'ok' and 'dup' return the same banking item (link https://x/1) → deduped to 1.
     expect(news).toHaveLength(1);
     expect(news[0]!.link).toBe('https://x/1');
+  });
+});
+
+describe('sector search augmentation', () => {
+  it('builds a sector-targeted Google News query with keywords + security qualifier', () => {
+    const url = sectorSearchUrl('energy');
+    expect(url).toContain('news.google.com/rss/search');
+    expect(decodeURIComponent(url)).toContain('keamanan siber');
+    // An energy keyword should appear in the query (SECTORS.energy includes energy terms).
+    expect(decodeURIComponent(url).toLowerCase()).toMatch(/energ|listrik|pln|grid|scada/);
+  });
+  it('general (no keywords) falls back to a generic security query', () => {
+    expect(decodeURIComponent(sectorSearchUrl('general'))).toContain('ransomware');
+  });
+  it('sectorFeeds appends the sector search to the curated feeds', () => {
+    const feeds = sectorFeeds('banking');
+    expect(feeds.length).toBeGreaterThan(1);
+    expect(feeds.some((f) => f.source === 'Google News (sector)')).toBe(true);
   });
 });
