@@ -6,22 +6,19 @@ import { PageHeader } from '../../../components/ui/page-header';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card';
 import { Table, THead, TBody, TR, TH, TD } from '../../../components/ui/table';
 import { Select } from '../../../components/ui/select';
-import { AutoSubmitSelect } from '../../../components/ui/auto-submit-select';
 import { Button } from '../../../components/ui/button';
 import { Badge } from '../../../components/ui/badge';
 import { Input } from '../../../components/ui/input';
 import { EmptyState } from '../../../components/ui/empty-state';
 import { Pagination } from '../../../components/ui/pagination';
-import { Reveal } from '../../../components/ui/reveal';
-import { LeakStatusBadge } from '../../../components/ui/finding-status';
 import { LEAK_STATUS_LABEL, userCan, Permission } from '@vacti/core';
 import { analyzeEndpoints } from '@vacti/recon';
 import { projects, scans, discoveredUrls, exposureFindings, ipResolutions, ipResolutionSightings } from '@vacti/db';
 import { getDb } from '../../../lib/db';
 import { getCurrentUser } from '../../../lib/session';
 import { getActiveProjectId } from '../../../lib/active-project';
-import { setExposureStatusAction, bulkReviewExposureAction, deleteExposureAction } from '../../../lib/surface-actions';
-import { ConfirmButton } from '../../../components/ui/confirm-button';
+import { bulkReviewExposureAction } from '../../../lib/surface-actions';
+import { ExposureTable } from './exposure-table';
 
 export const dynamic = 'force-dynamic';
 const PAGE = 25;
@@ -33,10 +30,7 @@ export default async function SurfacePage({
     project?: string;
     cat?: string;
     q?: string;
-    etype?: string;
-    estatus?: string;
     upage?: string;
-    fpage?: string;
     scan?: string;
   }>;
 }) {
@@ -57,10 +51,7 @@ export default async function SurfacePage({
   const canTriage = userCan(user, Permission.ModifyScanResults);
   const cat = sp.cat ?? 'all';
   const q = (sp.q ?? '').trim();
-  const etype = sp.etype ?? 'all';
-  const estatus = sp.estatus ?? 'all';
   const upage = Math.max(1, Number(sp.upage ?? 1) || 1);
-  const fpage = Math.max(1, Number(sp.fpage ?? 1) || 1);
   const diffScanId = (sp.scan ?? '').trim(); // when set: show only NEW discoveries from this scan
 
   const urlWhere = and(
@@ -69,10 +60,10 @@ export default async function SurfacePage({
     q ? ilike(discoveredUrls.urlText, `%${q}%`) : undefined,
     diffScanId ? eq(discoveredUrls.firstScanId, diffScanId) : undefined,
   );
+  // Exposure findings are filtered/paginated client-side (ExposureTable) — scope only by project +
+  // optional scan-diff here, then hand the full set (capped) to the client for search/filter.
   const findWhere = and(
     eq(exposureFindings.projectId, projectId),
-    etype !== 'all' ? eq(exposureFindings.findingType, etype) : undefined,
-    estatus !== 'all' ? eq(exposureFindings.status, estatus) : undefined,
     diffScanId ? eq(exposureFindings.scanId, diffScanId) : undefined,
   );
 
@@ -96,12 +87,17 @@ export default async function SurfacePage({
       .where(eq(exposureFindings.projectId, projectId))
       .groupBy(exposureFindings.findingType),
     db
-      .select()
+      .select({
+        id: exposureFindings.id,
+        findingType: exposureFindings.findingType,
+        snippet: exposureFindings.snippet,
+        urlText: exposureFindings.urlText,
+        status: exposureFindings.status,
+      })
       .from(exposureFindings)
       .where(findWhere)
       .orderBy(desc(exposureFindings.createdAt))
-      .limit(PAGE)
-      .offset((fpage - 1) * PAGE),
+      .limit(2000),
     db.select({ n: count() }).from(exposureFindings).where(findWhere),
     db
       .select({
@@ -118,12 +114,14 @@ export default async function SurfacePage({
     db.select({ n: count() }).from(ipResolutions).where(eq(ipResolutions.projectId, projectId)),
   ]);
 
-  // Endpoint / parameter discovery — derived from all discovered URLs (capped) for the project.
+  // Endpoint / parameter discovery — derived from discovered URLs for the project. The result is a
+  // top-N summary (params/auth), so a 2000-URL sample is plenty; the previous 5000 cap re-ran a large
+  // scan + analysis on every render with no visible benefit. Bound the work to keep the page fast.
   const allUrlRows = await db
     .select({ u: discoveredUrls.urlText })
     .from(discoveredUrls)
     .where(eq(discoveredUrls.projectId, projectId))
-    .limit(5000);
+    .limit(2000);
   const endpoints = analyzeEndpoints(allUrlRows.map((r) => r.u));
 
   // Scan-diff: recent passive/full scans for the picker ("show only new discoveries from a scan").
@@ -135,7 +133,6 @@ export default async function SurfacePage({
     .limit(20);
 
   const urlPages = Math.max(1, Math.ceil(Number(urlTotal[0]!.n) / PAGE));
-  const findPages = Math.max(1, Math.ceil(Number(findTotal[0]!.n) / PAGE));
   const totalUrls = catCounts.reduce((a, c) => a + Number(c.n), 0);
   const keep = `project=${projectId}${diffScanId ? `&scan=${diffScanId}` : ''}`;
 
@@ -225,126 +222,31 @@ export default async function SurfacePage({
           <CardTitle className="flex items-center gap-2">
             <ShieldAlert className="size-4 text-accent" /> Exposure findings
           </CardTitle>
-          <div className="flex flex-wrap items-center gap-2">
-            <form method="get" className="flex items-center gap-1.5">
-              <input type="hidden" name="project" value={projectId} />
-              <Select name="etype" defaultValue={etype} className="h-8 w-40 text-xs" aria-label="Filter by type">
-                <option value="all">All types</option>
-                {types.map((t) => (
-                  <option key={t.t} value={t.t}>
-                    {t.t} ({Number(t.n)})
-                  </option>
-                ))}
-              </Select>
-              <Select name="estatus" defaultValue={estatus} className="h-8 w-36 text-xs" aria-label="Filter by status">
-                <option value="all">All statuses</option>
+          {/* Bulk-by-filter: mark ALL of the project's findings (honours the active scan-diff). The
+              per-selection checkbox bulk + search/type/status filters live inside ExposureTable. */}
+          {canTriage && finds.length > 0 ? (
+            <form action={bulkReviewExposureAction} className="flex items-center gap-1.5">
+              <input type="hidden" name="projectId" value={projectId} />
+              <input type="hidden" name="type" value="all" />
+              <input type="hidden" name="filter" value="all" />
+              <Select name="status" defaultValue="investigating" className="h-8 w-36 text-xs" aria-label="Bulk status">
                 {Object.entries(LEAK_STATUS_LABEL).map(([v, l]) => (
                   <option key={v} value={v}>
-                    {l}
+                    Mark all: {l}
                   </option>
                 ))}
               </Select>
-              <Button type="submit" variant="ghost" size="sm">
-                Filter
+              <Button type="submit" variant="outline" size="sm">
+                Apply
               </Button>
             </form>
-            {canTriage ? (
-              <form action={bulkReviewExposureAction} className="flex items-center gap-1.5">
-                <input type="hidden" name="projectId" value={projectId} />
-                <input type="hidden" name="type" value={etype} />
-                <input type="hidden" name="filter" value={estatus} />
-                <Select
-                  name="status"
-                  defaultValue="investigating"
-                  className="h-8 w-36 text-xs"
-                  aria-label="Bulk status"
-                >
-                  {Object.entries(LEAK_STATUS_LABEL).map(([v, l]) => (
-                    <option key={v} value={v}>
-                      Mark all: {l}
-                    </option>
-                  ))}
-                </Select>
-                <Button type="submit" variant="outline" size="sm">
-                  Apply
-                </Button>
-              </form>
-            ) : null}
-          </div>
+          ) : null}
         </CardHeader>
         <CardContent className="pt-0">
           {finds.length === 0 ? (
             <p className="py-3 text-sm text-fg-muted">No exposure findings match — run a passive or full scan.</p>
           ) : (
-            <>
-              <Table>
-                <THead>
-                  <TR>
-                    <TH>Type</TH>
-                    <TH>Snippet</TH>
-                    <TH>URL</TH>
-                    <TH>Status</TH>
-                  </TR>
-                </THead>
-                <TBody>
-                  {finds.map((f) => (
-                    <TR key={f.id}>
-                      <TD>
-                        <Badge variant="danger">{f.findingType}</Badge>
-                      </TD>
-                      <TD>
-                        <Reveal value={f.snippet} />
-                      </TD>
-                      <TD className="max-w-md truncate font-mono text-xs text-fg-subtle" title={f.urlText ?? ''}>
-                        {f.urlText}
-                      </TD>
-                      <TD>
-                        {canTriage ? (
-                          <div className="flex items-center gap-1.5">
-                            <form action={setExposureStatusAction} className="flex items-center gap-1.5">
-                              <input type="hidden" name="id" value={f.id} />
-                              <AutoSubmitSelect
-                                key={f.status}
-                                name="status"
-                                defaultValue={f.status}
-                                className="h-8 w-36 text-xs"
-                                aria-label="Change status"
-                              >
-                                {Object.entries(LEAK_STATUS_LABEL).map(([v, l]) => (
-                                  <option key={v} value={v}>
-                                    {l}
-                                  </option>
-                                ))}
-                              </AutoSubmitSelect>
-                            </form>
-                            <form action={deleteExposureAction}>
-                              <input type="hidden" name="id" value={f.id} />
-                              <ConfirmButton
-                                size="sm"
-                                variant="ghost"
-                                className="text-danger hover:bg-danger/10"
-                                confirm="Delete this exposure finding?"
-                              >
-                                Delete
-                              </ConfirmButton>
-                            </form>
-                          </div>
-                        ) : (
-                          <LeakStatusBadge status={f.status} />
-                        )}
-                      </TD>
-                    </TR>
-                  ))}
-                </TBody>
-              </Table>
-              <Pagination
-                page={fpage}
-                totalPages={findPages}
-                total={Number(findTotal[0]!.n)}
-                label="findings"
-                makeHref={(p) => `/surface?${keep}&fpage=${p}&etype=${etype}&estatus=${estatus}`}
-              />
-            </>
+            <ExposureTable findings={finds} canTriage={canTriage} />
           )}
         </CardContent>
       </Card>

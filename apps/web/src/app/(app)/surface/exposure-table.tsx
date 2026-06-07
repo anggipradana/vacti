@@ -1,0 +1,268 @@
+'use client';
+
+import * as React from 'react';
+import { LEAK_STATUS_LABEL } from '@vacti/core';
+import { Table, THead, TBody, TR, TH, TD } from '../../../components/ui/table';
+import { Button } from '../../../components/ui/button';
+import { Input } from '../../../components/ui/input';
+import { Select } from '../../../components/ui/select';
+import { Badge } from '../../../components/ui/badge';
+import { Reveal } from '../../../components/ui/reveal';
+import { LeakStatusBadge } from '../../../components/ui/finding-status';
+import { AutoSubmitSelect } from '../../../components/ui/auto-submit-select';
+import { ConfirmButton } from '../../../components/ui/confirm-button';
+import {
+  setExposureStatusAction,
+  bulkSetExposureStatusByIdsAction,
+  deleteExposureAction,
+} from '../../../lib/surface-actions';
+
+/**
+ * Serializable exposure-finding row. `snippet` stays CONFIDENTIAL — it is rendered ONLY through
+ * <Reveal> (click-to-reveal mask), exactly as the server-rendered table did, and is never used as
+ * search-filter input (we filter only over the plain-text fields already shown: type + url).
+ */
+export interface ExposureRow {
+  id: string;
+  findingType: string;
+  snippet: string | null;
+  urlText: string | null;
+  status: string;
+}
+
+const PAGE_SIZE = 25;
+const STATUS_OPTIONS = Object.entries(LEAK_STATUS_LABEL);
+
+/**
+ * Exposure findings table with text search, type/status filters, and checkbox multi-select for
+ * bulk status changes — plus per-row instant status change (AutoSubmitSelect) and delete.
+ * Snippet masking and per-row RBAC (canTriage) controls are preserved exactly as before.
+ */
+export function ExposureTable({ findings, canTriage }: { findings: ExposureRow[]; canTriage: boolean }) {
+  const [query, setQuery] = React.useState('');
+  const [statusFilter, setStatusFilter] = React.useState('all');
+  const [typeFilter, setTypeFilter] = React.useState('all');
+  const [selected, setSelected] = React.useState<Set<string>>(new Set());
+  const [page, setPage] = React.useState(1);
+
+  // Type options with per-type counts, e.g. "aws-key (3)" — the count keeps the option label distinct
+  // from the in-row finding-type badge text.
+  const types = React.useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const f of findings) counts.set(f.findingType, (counts.get(f.findingType) ?? 0) + 1);
+    return [...counts.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+  }, [findings]);
+
+  const filtered = React.useMemo(() => {
+    const qy = query.trim().toLowerCase();
+    return findings.filter((f) => {
+      if (statusFilter !== 'all' && f.status !== statusFilter) return false;
+      if (typeFilter !== 'all' && f.findingType !== typeFilter) return false;
+      if (!qy) return true;
+      // Search only over plain-text fields already shown — NOT the masked snippet (confidential PII).
+      return `${f.findingType} ${f.urlText ?? ''}`.toLowerCase().includes(qy);
+    });
+  }, [findings, query, statusFilter, typeFilter]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const shown = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
+  const shownIds = shown.map((f) => f.id);
+  const allShownSelected = shownIds.length > 0 && shownIds.every((id) => selected.has(id));
+  const selectedIds = [...selected];
+
+  const toggle = (id: string) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  const toggleAllShown = () =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (allShownSelected) shownIds.forEach((id) => next.delete(id));
+      else shownIds.forEach((id) => next.add(id));
+      return next;
+    });
+
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <Input
+          value={query}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setPage(1);
+          }}
+          placeholder="Search findings (type, URL)…"
+          className="h-8 w-72 text-xs"
+          aria-label="Search exposure findings"
+        />
+        <Select
+          value={typeFilter}
+          onChange={(e) => {
+            setTypeFilter(e.target.value);
+            setPage(1);
+          }}
+          className="h-8 w-40 text-xs"
+          aria-label="Filter exposure findings by type"
+        >
+          <option value="all">All types</option>
+          {types.map(([t, n]) => (
+            <option key={t} value={t}>
+              {t} ({n})
+            </option>
+          ))}
+        </Select>
+        <Select
+          value={statusFilter}
+          onChange={(e) => {
+            setStatusFilter(e.target.value);
+            setPage(1);
+          }}
+          className="h-8 w-36 text-xs"
+          aria-label="Filter exposure findings by status"
+        >
+          <option value="all">All statuses</option>
+          {STATUS_OPTIONS.map(([val, label]) => (
+            <option key={val} value={val}>
+              {label}
+            </option>
+          ))}
+        </Select>
+        <span className="text-xs text-fg-subtle">
+          {filtered.length} of {findings.length}
+        </span>
+      </div>
+
+      {/* Bulk action bar — appears when rows are selected. */}
+      {canTriage && selected.size > 0 ? (
+        <form
+          action={bulkSetExposureStatusByIdsAction}
+          className="flex flex-wrap items-center gap-2 rounded-md border border-accent/30 bg-accent/5 px-3 py-2"
+        >
+          {selectedIds.map((id) => (
+            <input key={id} type="hidden" name="ids" value={id} />
+          ))}
+          <span className="text-xs font-medium">{selected.size} selected</span>
+          <Select name="status" defaultValue="investigating" className="h-8 w-36 text-xs" aria-label="Bulk set status">
+            {STATUS_OPTIONS.map(([val, label]) => (
+              <option key={val} value={val}>
+                Set: {label}
+              </option>
+            ))}
+          </Select>
+          <Button type="submit" size="sm" variant="primary">
+            Apply to selected
+          </Button>
+          <Button type="button" size="sm" variant="ghost" onClick={() => setSelected(new Set())}>
+            Clear
+          </Button>
+        </form>
+      ) : null}
+
+      {filtered.length === 0 ? (
+        <p className="py-3 text-sm text-fg-muted">No exposure findings match your search/filter.</p>
+      ) : (
+        <Table>
+          <THead>
+            <TR>
+              {canTriage ? (
+                <TH className="w-8">
+                  <input
+                    type="checkbox"
+                    checked={allShownSelected}
+                    onChange={toggleAllShown}
+                    aria-label="Select all shown"
+                  />
+                </TH>
+              ) : null}
+              <TH>Type</TH>
+              <TH>Snippet</TH>
+              <TH>URL</TH>
+              <TH>Status</TH>
+            </TR>
+          </THead>
+          <TBody>
+            {shown.map((f) => (
+              <TR key={f.id}>
+                {canTriage ? (
+                  <TD>
+                    <input
+                      type="checkbox"
+                      checked={selected.has(f.id)}
+                      onChange={() => toggle(f.id)}
+                      aria-label={`Select ${f.findingType} finding`}
+                    />
+                  </TD>
+                ) : null}
+                <TD>
+                  <Badge variant="danger">{f.findingType}</Badge>
+                </TD>
+                <TD>
+                  <Reveal value={f.snippet} />
+                </TD>
+                <TD className="max-w-md truncate font-mono text-xs text-fg-subtle" title={f.urlText ?? ''}>
+                  {f.urlText}
+                </TD>
+                <TD>
+                  {canTriage ? (
+                    <div className="flex items-center gap-1.5">
+                      <form action={setExposureStatusAction} className="flex items-center gap-1.5">
+                        <input type="hidden" name="id" value={f.id} />
+                        <AutoSubmitSelect
+                          key={f.status}
+                          name="status"
+                          defaultValue={f.status}
+                          className="h-8 w-36 text-xs"
+                          aria-label="Change status"
+                        >
+                          {STATUS_OPTIONS.map(([val, label]) => (
+                            <option key={val} value={val}>
+                              {label}
+                            </option>
+                          ))}
+                        </AutoSubmitSelect>
+                      </form>
+                      <form action={deleteExposureAction}>
+                        <input type="hidden" name="id" value={f.id} />
+                        <ConfirmButton
+                          size="sm"
+                          variant="ghost"
+                          className="text-danger hover:bg-danger/10"
+                          confirm="Delete this exposure finding?"
+                        >
+                          Delete
+                        </ConfirmButton>
+                      </form>
+                    </div>
+                  ) : (
+                    <LeakStatusBadge status={f.status} />
+                  )}
+                </TD>
+              </TR>
+            ))}
+          </TBody>
+        </Table>
+      )}
+
+      {totalPages > 1 ? (
+        <div className="flex items-center justify-between text-xs text-fg-subtle">
+          <span>
+            Page {safePage} of {totalPages} · {filtered.length} findings
+          </span>
+          <div className="flex gap-1.5">
+            <Button size="sm" variant="outline" disabled={safePage <= 1} onClick={() => setPage(safePage - 1)}>
+              Prev
+            </Button>
+            <Button size="sm" variant="outline" disabled={safePage >= totalPages} onClick={() => setPage(safePage + 1)}>
+              Next
+            </Button>
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}

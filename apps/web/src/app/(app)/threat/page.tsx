@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { Suspense } from 'react';
-import { and, desc, eq, count, sql } from 'drizzle-orm';
+import { desc, eq, count, sql } from 'drizzle-orm';
 import { RefreshCw, ShieldCheck, Bug, Activity, Plus } from 'lucide-react';
 import { PageHeader } from '../../../components/ui/page-header';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card';
@@ -12,13 +12,8 @@ import { SubmitButton } from '../../../components/ui/submit-button';
 import { Textarea } from '../../../components/ui/textarea';
 import { Label } from '../../../components/ui/label';
 import { Select } from '../../../components/ui/select';
-import { AutoSubmitSelect } from '../../../components/ui/auto-submit-select';
 import { Badge } from '../../../components/ui/badge';
-import { Table, THead, TBody, TR, TH, TD } from '../../../components/ui/table';
 import { EmptyState } from '../../../components/ui/empty-state';
-import { NewsStatusBadge, LeakStatusBadge } from '../../../components/ui/finding-status';
-import { Pagination } from '../../../components/ui/pagination';
-import { Reveal } from '../../../components/ui/reveal';
 import { computeProjectRisk } from '@vacti/threat-intel';
 import { LEAK_STATUS_LABEL, NEWS_STATUS_LABEL, userCan, Permission } from '@vacti/core';
 import { SECTORS } from '@vacti/threat-intel';
@@ -38,15 +33,15 @@ import {
   addIndicatorAction,
   deleteIndicatorAction,
   setSectorAction,
-  setNewsStatusAction,
   bulkReviewNewsAction,
   bulkReviewLeaksAction,
 } from '../../../lib/threat-actions';
-import { setLeakStatusAction, deleteLeakAction } from '../../../lib/status-actions';
 import { ConfirmButton } from '../../../components/ui/confirm-button';
 import { generateThreatNarrativeAction, aiTriageNewsAction } from '../../../lib/ai-actions';
 import { CtiCards } from './cti-cards';
 import { BrandNews } from './brand-news';
+import { LeakTable } from './leak-table';
+import { SectorNewsList } from './sector-news-list';
 import { getActiveProjectId } from '../../../lib/active-project';
 
 export const dynamic = 'force-dynamic';
@@ -54,7 +49,7 @@ export const dynamic = 'force-dynamic';
 export default async function ThreatPage({
   searchParams,
 }: {
-  searchParams: Promise<{ project?: string; leak?: string; news?: string; bnews?: string; lpage?: string }>;
+  searchParams: Promise<{ project?: string; bnews?: string }>;
 }) {
   const user = await getCurrentUser();
   if (!user) redirect('/login');
@@ -62,11 +57,7 @@ export default async function ThreatPage({
   const projectRows = await db.select().from(projects).orderBy(desc(projects.createdAt));
   const sp = await searchParams;
   const projectId = await getActiveProjectId(sp.project, projectRows);
-  const leakFilter = sp.leak ?? 'all';
-  const newsFilter = sp.news ?? 'all';
   const brandFilter = sp.bnews ?? 'all';
-  const LEAK_PAGE_SIZE = 25;
-  const leakPage = Math.max(1, Number(sp.lpage ?? 1) || 1);
 
   if (!projectId) {
     return (
@@ -83,36 +74,23 @@ export default async function ThreatPage({
 
   const project = projectRows.find((p) => p.id === projectId);
   const sector = project?.sector ?? 'banking';
-  // Leaks are paginated server-side (the list can run to hundreds of rows); the filter is pushed into SQL.
-  const leakWhere = and(
-    eq(leakcheckData.projectId, projectId),
-    leakFilter !== 'all' ? eq(leakcheckData.status, leakFilter) : undefined,
-  );
-  const [risk, otx, leakStatRows, leaks, leakFilteredRows, indicators, statusRows, news, exposureTypes] =
-    await Promise.all([
-      computeProjectRisk(db, projectId),
-      db.select().from(otxThreatData).where(eq(otxThreatData.projectId, projectId)),
-      db
-        .select({ total: count(), unchecked: sql<number>`count(*) filter (where ${leakcheckData.checked} = false)` })
-        .from(leakcheckData)
-        .where(eq(leakcheckData.projectId, projectId)),
-      db
-        .select()
-        .from(leakcheckData)
-        .where(leakWhere)
-        .orderBy(desc(leakcheckData.id))
-        .limit(LEAK_PAGE_SIZE)
-        .offset((leakPage - 1) * LEAK_PAGE_SIZE),
-      db.select({ n: count() }).from(leakcheckData).where(leakWhere),
-      db.select().from(manualIndicators).where(eq(manualIndicators.projectId, projectId)),
-      db.select().from(threatIntelStatus).where(eq(threatIntelStatus.projectId, projectId)),
-      db.select().from(threatNews).where(eq(threatNews.sector, sector)).orderBy(desc(threatNews.publishedAt)).limit(15),
-      db
-        .select({ type: exposureFindings.findingType, n: count() })
-        .from(exposureFindings)
-        .where(eq(exposureFindings.projectId, projectId))
-        .groupBy(exposureFindings.findingType),
-    ]);
+  const [risk, otx, leakStatRows, leaks, indicators, statusRows, news, exposureTypes] = await Promise.all([
+    computeProjectRisk(db, projectId),
+    db.select().from(otxThreatData).where(eq(otxThreatData.projectId, projectId)).limit(100),
+    db
+      .select({ total: count(), unchecked: sql<number>`count(*) filter (where ${leakcheckData.checked} = false)` })
+      .from(leakcheckData)
+      .where(eq(leakcheckData.projectId, projectId)),
+    db.select().from(leakcheckData).where(eq(leakcheckData.projectId, projectId)).orderBy(desc(leakcheckData.id)),
+    db.select().from(manualIndicators).where(eq(manualIndicators.projectId, projectId)),
+    db.select().from(threatIntelStatus).where(eq(threatIntelStatus.projectId, projectId)),
+    db.select().from(threatNews).where(eq(threatNews.sector, sector)).orderBy(desc(threatNews.publishedAt)).limit(15),
+    db
+      .select({ type: exposureFindings.findingType, n: count() })
+      .from(exposureFindings)
+      .where(eq(exposureFindings.projectId, projectId))
+      .groupBy(exposureFindings.findingType),
+  ]);
   // Passive exposure findings summary (CTI surfacing). Credential-class types overlap LeakCheck.
   const exposureTotal = exposureTypes.reduce((a, t) => a + Number(t.n), 0);
   const CRED_TYPES = new Set(['combo-list-cred', 'basic-auth-url', 'credential-like', 'email', 'db-connection']);
@@ -124,9 +102,6 @@ export default async function ThreatPage({
   const malware = otx.reduce((a, o) => a + o.malwareCount, 0);
   const leakTotal = Number(leakStatRows[0]?.total ?? 0);
   const unchecked = Number(leakStatRows[0]?.unchecked ?? 0);
-  const leakFilteredTotal = Number(leakFilteredRows[0]?.n ?? 0);
-  const leakTotalPages = Math.max(1, Math.ceil(leakFilteredTotal / LEAK_PAGE_SIZE));
-  const shownNews = newsFilter === 'all' ? news : news.filter((n) => n.status === newsFilter);
 
   return (
     <>
@@ -206,8 +181,6 @@ export default async function ThreatPage({
           brand={project?.brandQuery || project?.name || 'brand'}
           canTriage={canTriage}
           filter={brandFilter}
-          newsFilter={newsFilter}
-          leakFilter={leakFilter}
         />
       </Suspense>
 
@@ -236,31 +209,11 @@ export default async function ThreatPage({
         <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3">
           <CardTitle>Security news · {sector}</CardTitle>
           <div className="flex flex-wrap items-center gap-2">
-            <form method="get" className="flex items-center gap-1.5">
-              <input type="hidden" name="project" value={projectId} />
-              <input type="hidden" name="leak" value={leakFilter} />
-              <Select
-                name="news"
-                defaultValue={newsFilter}
-                className="h-8 w-36 text-xs"
-                aria-label="Filter news by status"
-              >
-                <option value="all">All statuses</option>
-                {Object.entries(NEWS_STATUS_LABEL).map(([val, label]) => (
-                  <option key={val} value={val}>
-                    {label}
-                  </option>
-                ))}
-              </Select>
-              <Button type="submit" variant="ghost" size="sm">
-                Filter
-              </Button>
-            </form>
             {canTriage ? (
               <>
                 <form action={bulkReviewNewsAction} className="flex items-center gap-1.5">
                   <input type="hidden" name="sector" value={sector} />
-                  <input type="hidden" name="filter" value={newsFilter} />
+                  <input type="hidden" name="filter" value="all" />
                   <Select name="status" defaultValue="reviewed" className="h-8 w-36 text-xs" aria-label="Bulk status">
                     {Object.entries(NEWS_STATUS_LABEL).map(([val, label]) => (
                       <option key={val} value={val}>
@@ -308,54 +261,18 @@ export default async function ThreatPage({
             <p className="py-2 text-sm text-fg-muted">
               No news yet — pick a sector and refresh to pull the latest security headlines.
             </p>
-          ) : shownNews.length === 0 ? (
-            <p className="py-2 text-sm text-fg-muted">No headlines match this status filter.</p>
           ) : (
-            <ul className="divide-y divide-border">
-              {shownNews.map((n) => (
-                <li key={n.id} className="flex items-start justify-between gap-3 py-2.5">
-                  <div className="min-w-0">
-                    <a
-                      href={n.link}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-sm font-medium text-accent hover:underline"
-                    >
-                      {n.title}
-                    </a>
-                    <div className="mt-0.5 text-xs text-fg-subtle">
-                      {n.source}
-                      {n.publishedAt ? ` · ${new Date(n.publishedAt).toISOString().slice(0, 10)}` : ''}
-                    </div>
-                  </div>
-                  {canTriage ? (
-                    <div className="flex shrink-0 items-center gap-1.5">
-                      <NewsStatusBadge status={n.status} />
-                      <form action={setNewsStatusAction} className="flex items-center gap-1.5">
-                        <input type="hidden" name="id" value={n.id} />
-                        <AutoSubmitSelect
-                          key={n.status}
-                          name="status"
-                          defaultValue={n.status}
-                          className="h-8 w-36 text-xs"
-                          aria-label="Change status"
-                        >
-                          {Object.entries(NEWS_STATUS_LABEL).map(([val, label]) => (
-                            <option key={val} value={val}>
-                              {label}
-                            </option>
-                          ))}
-                        </AutoSubmitSelect>
-                      </form>
-                    </div>
-                  ) : (
-                    <Badge variant="neutral" className="shrink-0">
-                      {NEWS_STATUS_LABEL[n.status as keyof typeof NEWS_STATUS_LABEL] ?? n.status}
-                    </Badge>
-                  )}
-                </li>
-              ))}
-            </ul>
+            <SectorNewsList
+              items={news.map((n) => ({
+                id: n.id,
+                title: n.title,
+                link: n.link,
+                source: n.source,
+                publishedAt: n.publishedAt ? new Date(n.publishedAt).toISOString() : null,
+                status: n.status,
+              }))}
+              canTriage={canTriage}
+            />
           )}
         </CardContent>
       </Card>
@@ -405,132 +322,41 @@ export default async function ThreatPage({
         <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-fg-subtle">
           Leaked credentials
         </h2>
-        {leakTotal > 0 ? (
-          <div className="flex flex-wrap items-center gap-2">
-            <form method="get" className="flex items-center gap-1.5">
-              <input type="hidden" name="project" value={projectId} />
-              <input type="hidden" name="news" value={newsFilter} />
-              <Select
-                name="leak"
-                defaultValue={leakFilter}
-                className="h-8 w-40 text-xs"
-                aria-label="Filter leaks by status"
-              >
-                <option value="all">All statuses</option>
-                {Object.entries(LEAK_STATUS_LABEL).map(([val, label]) => (
-                  <option key={val} value={val}>
-                    {label}
-                  </option>
-                ))}
-              </Select>
-              <Button type="submit" variant="ghost" size="sm">
-                Filter
-              </Button>
-            </form>
-            {canTriage ? (
-              <form action={bulkReviewLeaksAction} className="flex items-center gap-1.5">
-                <input type="hidden" name="projectId" value={projectId} />
-                <input type="hidden" name="filter" value={leakFilter} />
-                <Select
-                  name="status"
-                  defaultValue="investigating"
-                  className="h-8 w-40 text-xs"
-                  aria-label="Bulk status"
-                >
-                  {Object.entries(LEAK_STATUS_LABEL).map(([val, label]) => (
-                    <option key={val} value={val}>
-                      Mark all: {label}
-                    </option>
-                  ))}
-                </Select>
-                <Button type="submit" variant="outline" size="sm">
-                  Apply
-                </Button>
-              </form>
-            ) : null}
-          </div>
+        {leakTotal > 0 && canTriage ? (
+          <form action={bulkReviewLeaksAction} className="flex items-center gap-1.5">
+            <input type="hidden" name="projectId" value={projectId} />
+            <input type="hidden" name="filter" value="all" />
+            <Select name="status" defaultValue="investigating" className="h-8 w-40 text-xs" aria-label="Bulk status">
+              {Object.entries(LEAK_STATUS_LABEL).map(([val, label]) => (
+                <option key={val} value={val}>
+                  Mark all: {label}
+                </option>
+              ))}
+            </Select>
+            <Button type="submit" variant="outline" size="sm">
+              Apply
+            </Button>
+          </form>
         ) : null}
       </div>
       {leakTotal === 0 ? (
         <Card>
           <CardContent className="py-5 text-sm text-fg-muted">No leaked credentials found.</CardContent>
         </Card>
-      ) : leakFilteredTotal === 0 ? (
-        <Card>
-          <CardContent className="py-5 text-sm text-fg-muted">No leaks match this status filter.</CardContent>
-        </Card>
       ) : (
-        <Table>
-          <THead>
-            <TR>
-              <TH>Identifier</TH>
-              <TH>Password</TH>
-              <TH>Origin</TH>
-              <TH>Source</TH>
-              <TH>Type</TH>
-              <TH className="text-right">Triage status</TH>
-            </TR>
-          </THead>
-          <TBody>
-            {leaks.map((l) => (
-              <TR key={l.id}>
-                <TD className="font-mono text-xs">{l.identifier}</TD>
-                <TD>
-                  <Reveal value={l.password} />
-                </TD>
-                <TD className="max-w-[200px] truncate font-mono text-xs text-fg-subtle" title={l.origin ?? ''}>
-                  {l.origin ?? '-'}
-                </TD>
-                <TD>{l.source}</TD>
-                <TD>
-                  <Badge variant="neutral">{l.type}</Badge>
-                </TD>
-                <TD>
-                  <div className="flex items-center justify-end gap-1.5">
-                    <LeakStatusBadge status={l.status} />
-                    <form action={setLeakStatusAction} className="flex items-center gap-1.5">
-                      <input type="hidden" name="id" value={l.id} />
-                      <AutoSubmitSelect
-                        key={l.status}
-                        name="status"
-                        defaultValue={l.status}
-                        className="h-8 w-40 text-xs"
-                        aria-label="Change status"
-                      >
-                        {Object.entries(LEAK_STATUS_LABEL).map(([val, label]) => (
-                          <option key={val} value={val}>
-                            {label}
-                          </option>
-                        ))}
-                      </AutoSubmitSelect>
-                    </form>
-                    <form action={deleteLeakAction}>
-                      <input type="hidden" name="id" value={l.id} />
-                      <ConfirmButton
-                        size="sm"
-                        variant="ghost"
-                        className="text-danger hover:bg-danger/10"
-                        confirm="Delete this leaked-credential row?"
-                      >
-                        Delete
-                      </ConfirmButton>
-                    </form>
-                  </div>
-                </TD>
-              </TR>
-            ))}
-          </TBody>
-        </Table>
-      )}
-      {leakFilteredTotal > 0 ? (
-        <Pagination
-          page={leakPage}
-          totalPages={leakTotalPages}
-          total={leakFilteredTotal}
-          label="leaks"
-          makeHref={(p) => `/threat?project=${projectId}&leak=${leakFilter}&news=${newsFilter}&lpage=${p}`}
+        <LeakTable
+          leaks={leaks.map((l) => ({
+            id: l.id,
+            identifier: l.identifier,
+            password: l.password,
+            origin: l.origin,
+            source: l.source,
+            type: l.type,
+            status: l.status,
+          }))}
+          canTriage={canTriage}
         />
-      ) : null}
+      )}
 
       <h2 className="mb-3 mt-8 font-display text-sm font-semibold uppercase tracking-wider text-fg-subtle">
         Manual indicators

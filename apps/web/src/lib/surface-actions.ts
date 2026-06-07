@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { Permission, isLeakStatus } from '@vacti/core';
 import { exposureFindings } from '@vacti/db';
 import { getDb } from './db';
@@ -25,6 +25,16 @@ export async function deleteExposureAction(formData: FormData) {
   if (!id) return;
   await getDb().delete(exposureFindings).where(eq(exposureFindings.id, id));
   await recordAudit({ actorId: actor.id, action: 'exposure.delete', resource: `exposure:${id}` });
+  revalidatePath('/surface');
+}
+
+/** Set the status of a SELECTED set of exposure findings (checkbox multi-select). */
+export async function bulkSetExposureStatusByIdsAction(formData: FormData) {
+  await requirePermission(Permission.ModifyScanResults);
+  const status = String(formData.get('status') ?? '');
+  const ids = formData.getAll('ids').map(String).filter(Boolean);
+  if (!ids.length || !isLeakStatus(status)) return;
+  await getDb().update(exposureFindings).set({ status }).where(inArray(exposureFindings.id, ids));
   revalidatePath('/surface');
 }
 
