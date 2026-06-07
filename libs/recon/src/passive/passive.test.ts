@@ -3,6 +3,7 @@ import { scanExposure, EXPOSURE_RULES } from './exposure';
 import { pathnameExtension, categorizeUrl, buildSuffixIndex, DEFAULT_CATEGORIES } from './categorize';
 import { assertUrlSafeForServerFetch, isUrlSafeForServerFetch } from './ssrf';
 import { deepFetch } from './deepfetch';
+import { analyzeEndpoints } from './endpoints';
 import { fetchWaybackUrls } from './wayback';
 import {
   discoverSubdomains,
@@ -144,6 +145,27 @@ describe('virustotal harvesters', () => {
     }) as typeof fetch;
     const r = await fetchVtDomainReport({ apiKey: 'k', domain: 'x.com', fetchImpl: boom });
     expect(r.status).toBe(599);
+  });
+});
+
+describe('endpoint/param discovery', () => {
+  it('extracts param frequencies and auth endpoints', () => {
+    const r = analyzeEndpoints([
+      'https://x.com/search?q=a&page=1',
+      'https://x.com/list?page=2',
+      'https://x.com/admin/login',
+      'https://x.com/blog/post',
+    ]);
+    expect(r.params[0]).toEqual({ name: 'page', count: 2 }); // most frequent first
+    expect(r.params.map((p) => p.name)).toContain('q');
+    expect(r.authEndpoints).toContain('https://x.com/admin/login');
+    expect(r.authEndpoints).not.toContain('https://x.com/blog/post');
+  });
+
+  it('handles junk input safely', () => {
+    const r = analyzeEndpoints(['not a url', '']);
+    expect(r.paramCount).toBe(0);
+    expect(r.authCount).toBe(0);
   });
 });
 
