@@ -167,6 +167,30 @@ undici), 9.11 (scan-diff `first_scan_id`) kini terkirim juga. Seluruh section 9 
 
 ---
 
+## 10. Management CRUD completeness (2026-06-07)
+
+Setiap resource harus punya **CRUD lengkap** lewat UI + API (API-first), dengan RBAC server-side,
+audit, konfirmasi untuk destructive action, dan cascade delete yang benar. Audit menemukan banyak
+"create-only" — dilengkapi di sesi ini.
+
+| #     | Resource                         | Create      | Read | Update             | Delete | Catatan                                                         |
+| ----- | -------------------------------- | ----------- | ---- | ------------------ | ------ | --------------------------------------------------------------- |
+| 10.1  | User                             | ✅➕ (baru) | ✅   | ✅ (role)          | ✅➕   | Add user (email/pass/role) + delete; guard last-SysAdmin & self |
+| 10.2  | Project                          | ✅          | ✅   | —                  | ✅➕   | Delete cascade (targets/scans/TI/passive)                       |
+| 10.3  | Target                           | ✅          | ✅   | —                  | ✅➕   | Delete cascade (scans + hasil)                                  |
+| 10.4  | Scan                             | ✅          | ✅   | ✅ (cancel/status) | ✅➕   | Delete cascade (subdomain/endpoint/port/vuln/activity)          |
+| 10.5  | Finding (vuln)                   | (scan)      | ✅   | ✅ (status/AI)     | ✅➕   | Delete satuan                                                   |
+| 10.6  | Leaked credential                | (TI)        | ✅   | ✅ (status)        | ✅➕   | Delete satuan                                                   |
+| 10.7  | Exposure finding                 | (passive)   | ✅   | ✅ (status)        | ✅➕   | Delete satuan                                                   |
+| 10.8  | Manual indicator                 | ✅          | ✅   | —                  | ✅➕   | Delete via web (API sudah ada)                                  |
+| 10.9  | Scan profile                     | ✅          | ✅   | —                  | ✅     | Sudah ada                                                       |
+| 10.10 | Webhook/Token/Signatory/Schedule | ✅          | ✅   | —                  | ✅     | Sudah ada                                                       |
+
+Aturan destructive action (lihat governance principle 10): RBAC server-side, konfirmasi di UI
+(`ConfirmButton`), `recordAudit`, cascade FK `onDelete`, dan jangan biarkan UI/API "create-only".
+
+---
+
 ## Ringkasan keputusan
 
 - **IKUT/SEDERHANAKAN/BARU (wajib ada task):** seluruh baris ✅ 🟡 ➕ di atas.

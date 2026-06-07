@@ -39,4 +39,8 @@ Nx monorepo, Next.js + worker + Postgres. See [README.md](README.md) and
 - Don't deep-fetch discovered content without the SSRF guard (block localhost/`.local`/cloud-metadata/
   private+reserved IPs) + size cap; deep-fetch is opt-in. Treat exposure-finding snippets as
   confidential PII (mask in UI, CONFIDENTIAL in reports, never log) — same as LeakCheck plaintext.
+- Don't ship a resource without **full CRUD** (create/read/update/delete) in UI + typed API.
+  Destructive actions must enforce RBAC server-side, confirm in the UI (`ConfirmButton`), `recordAudit`,
+  cascade via FK `onDelete`, and protect invariants (e.g. last SysAdmin). See principle 10 +
+  §10 of [02-FEATURE-PARITY-CHECKLIST.md](docs/planning/02-FEATURE-PARITY-CHECKLIST.md).
 - Don't bypass Husky hooks or the CI quality gate.
