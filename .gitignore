@@ -26,3 +26,5 @@ tmp/
 apps/web/e2e/.auth/
 .deploy/
 .next-e2e/
+.next-prod/
+.next-build/
