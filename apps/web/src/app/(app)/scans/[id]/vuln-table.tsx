@@ -1,0 +1,342 @@
+'use client';
+
+import * as React from 'react';
+import { VULN_STATUS_LABEL, type SeverityValue } from '@vacti/core';
+import { Table, THead, TBody, TR, TH, TD } from '../../../../components/ui/table';
+import { Button } from '../../../../components/ui/button';
+import { Input } from '../../../../components/ui/input';
+import { Select } from '../../../../components/ui/select';
+import { SeverityBadge } from '../../../../components/ui/severity-badge';
+import { VulnStatusBadge } from '../../../../components/ui/finding-status';
+import { AutoSubmitSelect } from '../../../../components/ui/auto-submit-select';
+import { ConfirmButton } from '../../../../components/ui/confirm-button';
+// (Badge intentionally not imported — read-only status uses VulnStatusBadge.)
+import { setVulnStatusAction, bulkSetVulnStatusByIdsAction, deleteVulnAction } from '../../../../lib/status-actions';
+import { enrichVulnAction } from '../../../../lib/ai-actions';
+
+export interface VulnRow {
+  id: string;
+  name: string;
+  matchedAt: string | null;
+  severity: number;
+  status: string;
+  description: string | null;
+  remediation: string | null;
+  cvss: number | null;
+  cveIds: string[];
+  references: string[];
+  isAiEnriched: boolean;
+  aiDescription: string | null;
+  aiImpact: string | null;
+  aiRemediation: string | null;
+  request: string | null;
+  response: string | null;
+}
+
+const PAGE_SIZE = 50;
+const STATUS_OPTIONS = Object.entries(VULN_STATUS_LABEL);
+
+/**
+ * Findings table with a text search, status filter, and checkbox multi-select for bulk status
+ * changes — plus per-row instant status change (AutoSubmitSelect), AI enrich and delete.
+ */
+export function VulnTable({ vulns, scanId, canTriage }: { vulns: VulnRow[]; scanId: string; canTriage: boolean }) {
+  const [query, setQuery] = React.useState('');
+  const [statusFilter, setStatusFilter] = React.useState('all');
+  const [selected, setSelected] = React.useState<Set<string>>(new Set());
+  const [page, setPage] = React.useState(1);
+
+  const filtered = React.useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return vulns.filter((v) => {
+      if (statusFilter !== 'all' && v.status !== statusFilter) return false;
+      if (!q) return true;
+      return `${v.name} ${v.matchedAt ?? ''} ${v.cveIds.join(' ')}`.toLowerCase().includes(q);
+    });
+  }, [vulns, query, statusFilter]);
+
+  // Keep the page in range as the filter narrows.
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const shown = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
+  const shownIds = shown.map((v) => v.id);
+  const allShownSelected = shownIds.length > 0 && shownIds.every((id) => selected.has(id));
+  const selectedIds = [...selected];
+
+  const toggle = (id: string) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  const toggleAllShown = () =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (allShownSelected) shownIds.forEach((id) => next.delete(id));
+      else shownIds.forEach((id) => next.add(id));
+      return next;
+    });
+
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <Input
+          value={query}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setPage(1);
+          }}
+          placeholder="Search findings (name, location, CVE)…"
+          className="h-8 w-72 text-xs"
+          aria-label="Search findings"
+        />
+        <Select
+          value={statusFilter}
+          onChange={(e) => {
+            setStatusFilter(e.target.value);
+            setPage(1);
+          }}
+          className="h-8 w-40 text-xs"
+          aria-label="Filter findings by status"
+        >
+          <option value="all">All statuses</option>
+          {STATUS_OPTIONS.map(([val, label]) => (
+            <option key={val} value={val}>
+              {label}
+            </option>
+          ))}
+        </Select>
+        <span className="text-xs text-fg-subtle">
+          {filtered.length} of {vulns.length}
+        </span>
+      </div>
+
+      {/* Bulk action bar — appears when rows are selected. */}
+      {canTriage && selected.size > 0 ? (
+        <form
+          action={bulkSetVulnStatusByIdsAction}
+          className="flex flex-wrap items-center gap-2 rounded-md border border-accent/30 bg-accent/5 px-3 py-2"
+        >
+          <input type="hidden" name="scanId" value={scanId} />
+          {selectedIds.map((id) => (
+            <input key={id} type="hidden" name="ids" value={id} />
+          ))}
+          <span className="text-xs font-medium">{selected.size} selected</span>
+          <Select name="status" defaultValue="in_progress" className="h-8 w-40 text-xs" aria-label="Bulk set status">
+            {STATUS_OPTIONS.map(([val, label]) => (
+              <option key={val} value={val}>
+                Set: {label}
+              </option>
+            ))}
+          </Select>
+          <Button type="submit" size="sm" variant="primary">
+            Apply to selected
+          </Button>
+          <Button type="button" size="sm" variant="ghost" onClick={() => setSelected(new Set())}>
+            Clear
+          </Button>
+        </form>
+      ) : null}
+
+      {filtered.length === 0 ? (
+        <p className="text-sm text-fg-subtle">No findings match your search/filter.</p>
+      ) : (
+        <Table>
+          <THead>
+            <TR>
+              {canTriage ? (
+                <TH className="w-8">
+                  <input
+                    type="checkbox"
+                    checked={allShownSelected}
+                    onChange={toggleAllShown}
+                    aria-label="Select all shown"
+                  />
+                </TH>
+              ) : null}
+              <TH>Severity</TH>
+              <TH>Finding</TH>
+              <TH>Status</TH>
+              {canTriage ? <TH>Actions</TH> : null}
+            </TR>
+          </THead>
+          <TBody>
+            {shown.map((v) => (
+              <TR key={v.id}>
+                {canTriage ? (
+                  <TD>
+                    <input
+                      type="checkbox"
+                      checked={selected.has(v.id)}
+                      onChange={() => toggle(v.id)}
+                      aria-label={`Select ${v.name}`}
+                    />
+                  </TD>
+                ) : null}
+                <TD>
+                  <SeverityBadge severity={v.severity as SeverityValue} />
+                </TD>
+                <TD>
+                  <div className="font-medium">{v.name}</div>
+                  <div className="font-mono text-xs text-fg-subtle">{v.matchedAt}</div>
+                  {v.description ||
+                  v.remediation ||
+                  v.cvss != null ||
+                  (v.cveIds?.length ?? 0) > 0 ||
+                  (v.references?.length ?? 0) > 0 ? (
+                    <details className="mt-1 max-w-md text-xs text-fg-muted">
+                      <summary className="cursor-pointer text-accent">Details (template)</summary>
+                      {v.description ? (
+                        <p className="mt-1">
+                          <strong>Description:</strong> {v.description}
+                        </p>
+                      ) : null}
+                      {v.remediation ? (
+                        <p className="mt-1">
+                          <strong>Remediation:</strong> {v.remediation}
+                        </p>
+                      ) : null}
+                      {v.cvss != null || (v.cveIds?.length ?? 0) > 0 ? (
+                        <p className="mt-1">
+                          {v.cvss != null ? <strong>CVSS {v.cvss}</strong> : null}
+                          {v.cvss != null && (v.cveIds?.length ?? 0) > 0 ? ' · ' : null}
+                          {v.cveIds?.join(', ')}
+                        </p>
+                      ) : null}
+                      {v.references?.length ? (
+                        <div className="mt-1">
+                          <strong>References:</strong>
+                          <ul className="ml-4 list-disc">
+                            {v.references.slice(0, 8).map((r) => (
+                              <li key={r} className="break-all">
+                                <a
+                                  href={r}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-accent hover:underline"
+                                >
+                                  {r}
+                                </a>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      ) : null}
+                    </details>
+                  ) : null}
+                  {v.isAiEnriched ? (
+                    <details className="mt-1 max-w-md text-xs text-fg-muted">
+                      <summary className="cursor-pointer text-accent">AI analysis</summary>
+                      {v.aiDescription ? (
+                        <p className="mt-1">
+                          <strong>Description:</strong> {v.aiDescription}
+                        </p>
+                      ) : null}
+                      {v.aiImpact ? (
+                        <p className="mt-1">
+                          <strong>Impact:</strong> {v.aiImpact}
+                        </p>
+                      ) : null}
+                      {v.aiRemediation ? (
+                        <p className="mt-1">
+                          <strong>Remediation:</strong> {v.aiRemediation}
+                        </p>
+                      ) : null}
+                    </details>
+                  ) : null}
+                  {v.request || v.response ? (
+                    <details className="mt-1 max-w-md text-xs text-fg-muted">
+                      <summary className="cursor-pointer text-accent">Request / Response</summary>
+                      {v.request ? (
+                        <div className="mt-1">
+                          <div className="font-semibold text-fg-subtle">Request</div>
+                          <pre className="mt-0.5 max-h-64 overflow-auto whitespace-pre-wrap rounded-md bg-bg-subtle p-2 font-mono text-[11px] leading-snug">
+                            {v.request}
+                          </pre>
+                        </div>
+                      ) : null}
+                      {v.response ? (
+                        <div className="mt-1">
+                          <div className="font-semibold text-fg-subtle">Response</div>
+                          <pre className="mt-0.5 max-h-64 overflow-auto whitespace-pre-wrap rounded-md bg-bg-subtle p-2 font-mono text-[11px] leading-snug">
+                            {v.response}
+                          </pre>
+                        </div>
+                      ) : null}
+                    </details>
+                  ) : null}
+                </TD>
+                <TD>
+                  {canTriage ? (
+                    <form action={setVulnStatusAction} className="flex items-center gap-1.5">
+                      <input type="hidden" name="id" value={v.id} />
+                      <input type="hidden" name="scanId" value={scanId} />
+                      <AutoSubmitSelect
+                        key={v.status}
+                        name="status"
+                        defaultValue={v.status}
+                        className="h-8 w-36 text-xs"
+                        aria-label="Change status"
+                      >
+                        {STATUS_OPTIONS.map(([val, label]) => (
+                          <option key={val} value={val}>
+                            {label}
+                          </option>
+                        ))}
+                      </AutoSubmitSelect>
+                    </form>
+                  ) : (
+                    <VulnStatusBadge status={v.status} />
+                  )}
+                </TD>
+                {canTriage ? (
+                  <TD>
+                    <div className="flex items-center gap-1.5">
+                      <form action={enrichVulnAction}>
+                        <input type="hidden" name="id" value={v.id} />
+                        <input type="hidden" name="scanId" value={scanId} />
+                        <Button type="submit" size="sm" variant="outline">
+                          AI
+                        </Button>
+                      </form>
+                      <form action={deleteVulnAction}>
+                        <input type="hidden" name="id" value={v.id} />
+                        <input type="hidden" name="scanId" value={scanId} />
+                        <ConfirmButton
+                          size="sm"
+                          variant="ghost"
+                          className="text-danger hover:bg-danger/10"
+                          confirm="Delete this finding?"
+                        >
+                          Delete
+                        </ConfirmButton>
+                      </form>
+                    </div>
+                  </TD>
+                ) : null}
+              </TR>
+            ))}
+          </TBody>
+        </Table>
+      )}
+
+      {totalPages > 1 ? (
+        <div className="flex items-center justify-between text-xs text-fg-subtle">
+          <span>
+            Page {safePage} of {totalPages} · {filtered.length} findings
+          </span>
+          <div className="flex gap-1.5">
+            <Button size="sm" variant="outline" disabled={safePage <= 1} onClick={() => setPage(safePage - 1)}>
+              Prev
+            </Button>
+            <Button size="sm" variant="outline" disabled={safePage >= totalPages} onClick={() => setPage(safePage + 1)}>
+              Next
+            </Button>
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
