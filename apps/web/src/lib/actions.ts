@@ -65,6 +65,55 @@ export async function createProjectAction(formData: FormData) {
   revalidatePath('/projects');
 }
 
+/** Delete a project and all its scoped data (cascades via FK). Requires ModifyTargets + audit. */
+export async function deleteProjectAction(formData: FormData) {
+  const actor = await requirePermission(Permission.ModifyTargets);
+  const id = String(formData.get('id') ?? '');
+  if (!id) return;
+  await getDb().delete(projects).where(eq(projects.id, id));
+  await recordAudit({ actorId: actor.id, action: 'project.delete', resource: `project:${id}`, projectId: id });
+  revalidatePath('/projects');
+}
+
+/** Create a user (email + password + role). SysAdmin-only; deduped by email; audited. */
+export async function addUserAction(formData: FormData) {
+  const actor = await requirePermission(Permission.ModifySystemConfig);
+  const email = String(formData.get('email') ?? '')
+    .trim()
+    .toLowerCase();
+  const password = String(formData.get('password') ?? '');
+  const role = String(formData.get('role') ?? Role.PenetrationTester);
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) || password.length < 8 || !isRoleName(role)) {
+    redirect('/settings/users?error=invalid');
+  }
+  const db = getDb();
+  const [existing] = await db.select().from(users).where(eq(users.email, email));
+  if (existing) redirect('/settings/users?error=exists');
+  const [u] = await db
+    .insert(users)
+    .values({ email, passwordHash: await hashPassword(password), role, isSysAdmin: role === Role.SysAdmin })
+    .returning();
+  await recordAudit({ actorId: actor.id, action: 'user.create', resource: `user:${u!.id}`, metadata: { role } });
+  revalidatePath('/settings/users');
+}
+
+/** Delete a user. SysAdmin-only; never self or the last SysAdmin; audited. */
+export async function deleteUserAction(formData: FormData) {
+  const actor = await requirePermission(Permission.ModifySystemConfig);
+  const id = String(formData.get('id') ?? '');
+  if (!id || id === actor.id) return; // never delete yourself
+  const db = getDb();
+  const [target] = await db.select().from(users).where(eq(users.id, id));
+  if (!target) return;
+  if (target.role === Role.SysAdmin) {
+    const admins = (await db.select().from(users).where(eq(users.role, Role.SysAdmin))).length;
+    if (admins <= 1) return; // keep at least one SysAdmin
+  }
+  await db.delete(users).where(eq(users.id, id));
+  await recordAudit({ actorId: actor.id, action: 'user.delete', resource: `user:${id}` });
+  revalidatePath('/settings/users');
+}
+
 export async function createTokenAction(_prev: unknown, formData: FormData) {
   const user = await getCurrentUser();
   if (!user) redirect('/login');
