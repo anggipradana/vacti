@@ -51,6 +51,24 @@ export async function logoutAction() {
   redirect('/login');
 }
 
+/** Self-service: the logged-in user changes their OWN password (verifies the current one first). */
+export async function changeOwnPasswordAction(formData: FormData) {
+  const user = await getCurrentUser();
+  if (!user) redirect('/login');
+  const current = String(formData.get('current') ?? '');
+  const next = String(formData.get('next') ?? '');
+  const confirm = String(formData.get('confirm') ?? '');
+  if (!(await verifyPassword(current, user.passwordHash))) redirect('/settings/account?error=current');
+  if (next.length < 8) redirect('/settings/account?error=weak');
+  if (next !== confirm) redirect('/settings/account?error=mismatch');
+  await getDb()
+    .update(users)
+    .set({ passwordHash: await hashPassword(next), updatedAt: new Date() })
+    .where(eq(users.id, user.id));
+  await recordAudit({ actorId: user.id, action: 'user.password_change', resource: `user:${user.id}` });
+  redirect('/settings/account?ok=1');
+}
+
 export async function createProjectAction(formData: FormData) {
   const user = await requirePermission(Permission.ModifyTargets);
   const name = String(formData.get('name') ?? '').trim();

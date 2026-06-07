@@ -76,4 +76,15 @@ test.describe.serial('settings', () => {
     // Earlier specs created projects/scans → at least one audit entry exists.
     await expect(page.getByText(/project\.create|scan\.start|vault\.key_set/).first()).toBeVisible();
   });
+
+  test('account page shows profile and rejects a wrong current password', async ({ page }) => {
+    await page.goto('/settings/account');
+    await expect(page.getByText('admin@vacti.local').first()).toBeVisible();
+    // Wrong current password → error, and (crucially) the real password is left unchanged.
+    await page.getByLabel('Current password').fill('definitely-wrong');
+    await page.getByLabel('New password', { exact: true }).fill('newpassword123');
+    await page.getByLabel('Confirm new password').fill('newpassword123');
+    await page.getByRole('button', { name: 'Update password' }).click();
+    await expect(page.getByText('Current password is incorrect.')).toBeVisible();
+  });
 });

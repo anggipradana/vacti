@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { cn } from '../lib/cn';
 
 const tabs = [
+  { label: 'Account', href: '/settings/account' },
   { label: 'API Tokens', href: '/settings/tokens' },
   { label: 'Scan Profiles', href: '/settings/profiles' },
   { label: 'Reports', href: '/settings/reports' },
