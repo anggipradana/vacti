@@ -20,6 +20,8 @@ export const envSchema = z.object({
   LEAKCHECK_API_KEY: z.string().optional(),
   VT_API_KEY: z.string().optional(),
   URLSCAN_API_KEY: z.string().optional(),
+  // Optional outbound proxy for OSINT/deep-fetch in the worker (http(s):// or socks5://).
+  PROXY_URL: z.string().optional(),
   ANTHROPIC_API_KEY: z.string().optional(),
   OPENAI_API_KEY: z.string().optional(),
   OLLAMA_BASE_URL: z.string().url().optional(),
