@@ -11,11 +11,13 @@ import { Label } from '../../components/ui/label';
 import { SubmitButton } from '../../components/ui/submit-button';
 import { Select } from '../../components/ui/select';
 import { Badge } from '../../components/ui/badge';
+import { ConfirmButton } from '../../components/ui/confirm-button';
 import { EmptyState } from '../../components/ui/empty-state';
+import { userCan, Permission } from '@vacti/core';
 import { projects, targets } from '@vacti/db';
 import { getDb } from '../../lib/db';
 import { getCurrentUser } from '../../lib/session';
-import { createTargetAction } from '../../lib/recon-actions';
+import { createTargetAction, deleteTargetAction } from '../../lib/recon-actions';
 import { ProjectSwitcher } from '../../components/project-switcher';
 import { getActiveProjectId } from '../../lib/active-project';
 
@@ -101,6 +103,19 @@ export default async function TargetsPage({ searchParams }: { searchParams: Prom
                         ? `${t.predefinedSubdomains.length} predefined subs`
                         : 'discovery on'}
                     </Badge>
+                    {userCan(user, Permission.ModifyTargets) ? (
+                      <form action={deleteTargetAction}>
+                        <input type="hidden" name="id" value={t.id} />
+                        <ConfirmButton
+                          size="sm"
+                          variant="ghost"
+                          className="text-danger hover:bg-danger/10"
+                          confirm={`Delete target ${t.domain} and all its scans/results? This cannot be undone.`}
+                        >
+                          Delete
+                        </ConfirmButton>
+                      </form>
+                    ) : null}
                   </div>
                 </CardContent>
               </Card>

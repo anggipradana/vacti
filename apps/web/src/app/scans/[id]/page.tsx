@@ -21,7 +21,8 @@ import { getDb } from '../../../lib/db';
 import { getCurrentUser } from '../../../lib/session';
 import { setVulnStatusAction, bulkReviewVulnsAction } from '../../../lib/status-actions';
 import { Pagination } from '../../../components/ui/pagination';
-import { cancelScanAction, rescanAction } from '../../../lib/recon-actions';
+import { cancelScanAction, rescanAction, deleteScanAction } from '../../../lib/recon-actions';
+import { ConfirmButton } from '../../../components/ui/confirm-button';
 import { enrichVulnAction } from '../../../lib/ai-actions';
 import AutoRefresh from './auto-refresh';
 
@@ -128,6 +129,19 @@ export default async function ScanDetail({
                 Generate report
               </a>
             </Button>
+            {terminal && userCan(user, Permission.InitiateScans) ? (
+              <form action={deleteScanAction}>
+                <input type="hidden" name="id" value={scan.id} />
+                <ConfirmButton
+                  size="sm"
+                  variant="ghost"
+                  className="text-danger hover:bg-danger/10"
+                  confirm="Delete this scan and all its results? This cannot be undone."
+                >
+                  Delete scan
+                </ConfirmButton>
+              </form>
+            ) : null}
           </div>
         </div>
         {scan.error ? <p className="mt-2 text-sm text-danger">Error: {scan.error}</p> : null}
