@@ -34,12 +34,14 @@ import { getCurrentUser } from '../../lib/session';
 import {
   refreshTiAction,
   addIndicatorAction,
+  deleteIndicatorAction,
   setSectorAction,
   setNewsStatusAction,
   bulkReviewNewsAction,
   bulkReviewLeaksAction,
 } from '../../lib/threat-actions';
-import { setLeakStatusAction } from '../../lib/status-actions';
+import { setLeakStatusAction, deleteLeakAction } from '../../lib/status-actions';
+import { ConfirmButton } from '../../components/ui/confirm-button';
 import { generateThreatNarrativeAction } from '../../lib/ai-actions';
 import { CtiCards } from './cti-cards';
 import { BrandNews } from './brand-news';
@@ -476,6 +478,17 @@ export default async function ThreatPage({
                         Set
                       </Button>
                     </form>
+                    <form action={deleteLeakAction}>
+                      <input type="hidden" name="id" value={l.id} />
+                      <ConfirmButton
+                        size="sm"
+                        variant="ghost"
+                        className="text-danger hover:bg-danger/10"
+                        confirm="Delete this leaked-credential row?"
+                      >
+                        Delete
+                      </ConfirmButton>
+                    </form>
                   </div>
                 </TD>
               </TR>
@@ -536,7 +549,22 @@ export default async function ThreatPage({
               <Card key={ind.id}>
                 <CardContent className="flex items-center justify-between py-3">
                   <span className="font-mono text-sm">{ind.value}</span>
-                  <Badge variant="accent">{ind.type}</Badge>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="accent">{ind.type}</Badge>
+                    {canTriage ? (
+                      <form action={deleteIndicatorAction}>
+                        <input type="hidden" name="id" value={ind.id} />
+                        <ConfirmButton
+                          size="sm"
+                          variant="ghost"
+                          className="text-danger hover:bg-danger/10"
+                          confirm="Delete this indicator?"
+                        >
+                          Delete
+                        </ConfirmButton>
+                      </form>
+                    ) : null}
+                  </div>
                 </CardContent>
               </Card>
             ))

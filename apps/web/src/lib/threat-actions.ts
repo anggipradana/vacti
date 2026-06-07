@@ -9,6 +9,7 @@ import { manualIndicators, leakcheckData, projects, threatNews, brandNews } from
 import { getDb } from './db';
 import { getQueue } from './queue';
 import { requirePermission } from './authz';
+import { recordAudit } from './audit';
 
 const tiJob = z.object({ projectId: z.string().uuid() });
 
@@ -163,5 +164,15 @@ export async function toggleLeakAction(formData: FormData) {
   const id = String(formData.get('id') ?? '');
   const [row] = await getDb().select().from(leakcheckData).where(eq(leakcheckData.id, id));
   if (row) await getDb().update(leakcheckData).set({ checked: !row.checked }).where(eq(leakcheckData.id, id));
+  revalidatePath('/threat');
+}
+
+/** Delete a manual indicator. ModifyScanResults + audit. */
+export async function deleteIndicatorAction(formData: FormData) {
+  const actor = await requirePermission(Permission.ModifyScanResults);
+  const id = String(formData.get('id') ?? '');
+  if (!id) return;
+  await getDb().delete(manualIndicators).where(eq(manualIndicators.id, id));
+  await recordAudit({ actorId: actor.id, action: 'indicator.delete', resource: `indicator:${id}` });
   revalidatePath('/threat');
 }

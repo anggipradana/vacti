@@ -6,6 +6,7 @@ import { Permission, isLeakStatus } from '@vacti/core';
 import { exposureFindings } from '@vacti/db';
 import { getDb } from './db';
 import { requirePermission } from './authz';
+import { recordAudit } from './audit';
 
 /** Triage a single exposure finding (reuses the leak status set: new/investigating/confirmed/…). */
 export async function setExposureStatusAction(formData: FormData) {
@@ -14,6 +15,16 @@ export async function setExposureStatusAction(formData: FormData) {
   const status = String(formData.get('status') ?? '');
   if (!id || !isLeakStatus(status)) return;
   await getDb().update(exposureFindings).set({ status }).where(eq(exposureFindings.id, id));
+  revalidatePath('/surface');
+}
+
+/** Delete a single exposure finding. ModifyScanResults + audit. */
+export async function deleteExposureAction(formData: FormData) {
+  const actor = await requirePermission(Permission.ModifyScanResults);
+  const id = String(formData.get('id') ?? '');
+  if (!id) return;
+  await getDb().delete(exposureFindings).where(eq(exposureFindings.id, id));
+  await recordAudit({ actorId: actor.id, action: 'exposure.delete', resource: `exposure:${id}` });
   revalidatePath('/surface');
 }
 

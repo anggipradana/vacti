@@ -19,7 +19,8 @@ import { projects, scans, discoveredUrls, exposureFindings, ipResolutions, ipRes
 import { getDb } from '../../lib/db';
 import { getCurrentUser } from '../../lib/session';
 import { getActiveProjectId } from '../../lib/active-project';
-import { setExposureStatusAction, bulkReviewExposureAction } from '../../lib/surface-actions';
+import { setExposureStatusAction, bulkReviewExposureAction, deleteExposureAction } from '../../lib/surface-actions';
+import { ConfirmButton } from '../../components/ui/confirm-button';
 
 export const dynamic = 'force-dynamic';
 const PAGE = 25;
@@ -298,19 +299,32 @@ export default async function SurfacePage({
                       </TD>
                       <TD>
                         {canTriage ? (
-                          <form action={setExposureStatusAction} className="flex items-center gap-1.5">
-                            <input type="hidden" name="id" value={f.id} />
-                            <Select key={f.status} name="status" defaultValue={f.status} className="h-8 w-36 text-xs">
-                              {Object.entries(LEAK_STATUS_LABEL).map(([v, l]) => (
-                                <option key={v} value={v}>
-                                  {l}
-                                </option>
-                              ))}
-                            </Select>
-                            <Button type="submit" size="sm" variant="ghost">
-                              Set
-                            </Button>
-                          </form>
+                          <div className="flex items-center gap-1.5">
+                            <form action={setExposureStatusAction} className="flex items-center gap-1.5">
+                              <input type="hidden" name="id" value={f.id} />
+                              <Select key={f.status} name="status" defaultValue={f.status} className="h-8 w-36 text-xs">
+                                {Object.entries(LEAK_STATUS_LABEL).map(([v, l]) => (
+                                  <option key={v} value={v}>
+                                    {l}
+                                  </option>
+                                ))}
+                              </Select>
+                              <Button type="submit" size="sm" variant="ghost">
+                                Set
+                              </Button>
+                            </form>
+                            <form action={deleteExposureAction}>
+                              <input type="hidden" name="id" value={f.id} />
+                              <ConfirmButton
+                                size="sm"
+                                variant="ghost"
+                                className="text-danger hover:bg-danger/10"
+                                confirm="Delete this exposure finding?"
+                              >
+                                Delete
+                              </ConfirmButton>
+                            </form>
+                          </div>
                         ) : (
                           <LeakStatusBadge status={f.status} />
                         )}

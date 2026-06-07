@@ -6,6 +6,7 @@ import { isVulnStatus, isLeakStatus, Permission, REVIEW_TOGGLE } from '@vacti/co
 import { vulnerabilities, leakcheckData } from '@vacti/db';
 import { getDb } from './db';
 import { requirePermission } from './authz';
+import { recordAudit } from './audit';
 
 // Finding-status changes require `modify_scan_results` (Auditor is read-only).
 export async function setVulnStatusAction(formData: FormData) {
@@ -47,5 +48,26 @@ export async function setLeakStatusAction(formData: FormData) {
     .update(leakcheckData)
     .set({ status, checked: status !== 'new' })
     .where(eq(leakcheckData.id, id));
+  revalidatePath('/threat');
+}
+
+/** Delete a single vulnerability finding. ModifyScanResults + audit. */
+export async function deleteVulnAction(formData: FormData) {
+  const actor = await requirePermission(Permission.ModifyScanResults);
+  const id = String(formData.get('id') ?? '');
+  const scanId = String(formData.get('scanId') ?? '');
+  if (!id) return;
+  await getDb().delete(vulnerabilities).where(eq(vulnerabilities.id, id));
+  await recordAudit({ actorId: actor.id, action: 'vuln.delete', resource: `vuln:${id}` });
+  if (scanId) revalidatePath(`/scans/${scanId}`);
+}
+
+/** Delete a single leaked-credential row. ModifyScanResults + audit. */
+export async function deleteLeakAction(formData: FormData) {
+  const actor = await requirePermission(Permission.ModifyScanResults);
+  const id = String(formData.get('id') ?? '');
+  if (!id) return;
+  await getDb().delete(leakcheckData).where(eq(leakcheckData.id, id));
+  await recordAudit({ actorId: actor.id, action: 'leak.delete', resource: `leak:${id}` });
   revalidatePath('/threat');
 }

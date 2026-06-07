@@ -19,6 +19,7 @@ import { openApiSpec, redocHtml } from './openapi';
 import {
   apiTokens,
   users,
+  projects,
   targets,
   scanProfiles,
   scans,
@@ -209,6 +210,44 @@ export function buildApi(deps: ApiDeps): Hono<{ Variables: Vars }> {
       db.select().from(vulnerabilities).where(eq(vulnerabilities.scanId, id)),
     ]);
     return c.json({ subdomains: subs, endpoints: eps, ports: prt, vulnerabilities: vulns });
+  });
+
+  // ── Destructive CRUD (RBAC-guarded, cascade via FK) ──
+  app.delete('/projects/:id', async (c) => {
+    const g = guard(c, Permission.ModifyTargets);
+    if (g) return g;
+    await db.delete(projects).where(eq(projects.id, c.req.param('id')));
+    return c.json({ ok: true });
+  });
+  app.delete('/targets/:id', async (c) => {
+    const g = guard(c, Permission.ModifyTargets);
+    if (g) return g;
+    await db.delete(targets).where(eq(targets.id, c.req.param('id')));
+    return c.json({ ok: true });
+  });
+  app.delete('/scans/:id', async (c) => {
+    const g = guard(c, Permission.InitiateScans);
+    if (g) return g;
+    await db.delete(scans).where(eq(scans.id, c.req.param('id')));
+    return c.json({ ok: true });
+  });
+  app.delete('/vulnerabilities/:id', async (c) => {
+    const g = guard(c, Permission.ModifyScanResults);
+    if (g) return g;
+    await db.delete(vulnerabilities).where(eq(vulnerabilities.id, c.req.param('id')));
+    return c.json({ ok: true });
+  });
+  app.delete('/leaks/:id', async (c) => {
+    const g = guard(c, Permission.ModifyScanResults);
+    if (g) return g;
+    await db.delete(leakcheckData).where(eq(leakcheckData.id, c.req.param('id')));
+    return c.json({ ok: true });
+  });
+  app.delete('/surface/findings/:id', async (c) => {
+    const g = guard(c, Permission.ModifyScanResults);
+    if (g) return g;
+    await db.delete(exposureFindings).where(eq(exposureFindings.id, c.req.param('id')));
+    return c.json({ ok: true });
   });
 
   // Attack-surface (passive recon) read endpoints — scoped to a project.
