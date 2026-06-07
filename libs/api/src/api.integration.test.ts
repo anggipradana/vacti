@@ -181,5 +181,43 @@ describe.skipIf(!url)('@vacti/api', () => {
       });
       expect(wh.status).toBe(201);
     });
+
+    it('user CRUD: SysAdmin creates + deletes; PenTester denied; guards enforced', async () => {
+      const sa = await tokenFor('SysAdmin');
+      const pt = await tokenFor('PenetrationTester');
+      const email = `crud${Date.now()}@x.com`;
+      // PenetrationTester cannot manage users (system config).
+      const denied = await app.request('/api/users', {
+        method: 'POST',
+        headers: pt(),
+        body: JSON.stringify({ email, password: 'password1', role: 'Auditor' }),
+      });
+      expect(denied.status).toBe(403);
+      // SysAdmin creates a user.
+      const created = await app.request('/api/users', {
+        method: 'POST',
+        headers: sa(),
+        body: JSON.stringify({ email, password: 'password1', role: 'Auditor' }),
+      });
+      expect(created.status).toBe(200);
+      const { id } = (await created.json()) as { id: string };
+      // Duplicate email rejected.
+      const dup = await app.request('/api/users', {
+        method: 'POST',
+        headers: sa(),
+        body: JSON.stringify({ email, password: 'password1', role: 'Auditor' }),
+      });
+      expect(dup.status).toBe(409);
+      // Weak password rejected.
+      const weak = await app.request('/api/users', {
+        method: 'POST',
+        headers: sa(),
+        body: JSON.stringify({ email: `w${Date.now()}@x.com`, password: 'short', role: 'Auditor' }),
+      });
+      expect(weak.status).toBe(400);
+      // SysAdmin deletes the user.
+      const del = await app.request(`/api/users/${id}`, { method: 'DELETE', headers: sa() });
+      expect(del.status).toBe(200);
+    });
   });
 });

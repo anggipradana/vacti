@@ -1,12 +1,14 @@
 import { Hono } from 'hono';
 import { and, desc, eq, count as sqlCount } from 'drizzle-orm';
 import { z } from 'zod';
-import { hashToken } from '@vacti/auth';
+import { hashToken, hashPassword } from '@vacti/auth';
 import {
   isVulnStatus,
   isLeakStatus,
   hasPermission,
   roleFromUser,
+  isRoleName,
+  Role,
   Permission,
   isValidCron,
   type RoleName,
@@ -56,6 +58,11 @@ function guard(c: Context<{ Variables: Vars }>, permission: (typeof Permission)[
   return hasPermission(c.get('role'), permission) ? null : c.json({ error: 'forbidden' }, 403);
 }
 
+const createUserSchema = z.object({
+  email: z.string().regex(/^[^@\s]+@[^@\s]+\.[^@\s]+$/),
+  password: z.string().min(8),
+  role: z.string().refine(isRoleName),
+});
 const createTargetSchema = z.object({
   projectId: z.string().uuid(),
   domain: z.string().min(1),
@@ -247,6 +254,41 @@ export function buildApi(deps: ApiDeps): Hono<{ Variables: Vars }> {
     const g = guard(c, Permission.ModifyScanResults);
     if (g) return g;
     await db.delete(exposureFindings).where(eq(exposureFindings.id, c.req.param('id')));
+    return c.json({ ok: true });
+  });
+  // ── User management (SysAdmin-only; same invariants as the web actions) ──
+  app.post('/users', async (c) => {
+    const g = guard(c, Permission.ModifySystemConfig);
+    if (g) return g;
+    const parsed = createUserSchema.safeParse(await c.req.json().catch(() => ({})));
+    if (!parsed.success) return c.json({ error: 'invalid' }, 400);
+    const email = parsed.data.email.trim().toLowerCase();
+    const { role } = parsed.data;
+    const [existing] = await db.select().from(users).where(eq(users.email, email));
+    if (existing) return c.json({ error: 'exists' }, 409);
+    const [u] = await db
+      .insert(users)
+      .values({
+        email,
+        passwordHash: await hashPassword(parsed.data.password),
+        role,
+        isSysAdmin: role === Role.SysAdmin,
+      })
+      .returning();
+    return c.json({ id: u!.id, email: u!.email, role });
+  });
+  app.delete('/users/:id', async (c) => {
+    const g = guard(c, Permission.ModifySystemConfig);
+    if (g) return g;
+    const id = c.req.param('id');
+    if (id === c.get('userId')) return c.json({ error: 'cannot delete self' }, 409);
+    const [target] = await db.select().from(users).where(eq(users.id, id));
+    if (!target) return c.json({ error: 'not found' }, 404);
+    if (roleFromUser(target) === Role.SysAdmin) {
+      const admins = (await db.select().from(users).where(eq(users.role, Role.SysAdmin))).length;
+      if (admins <= 1) return c.json({ error: 'last sysadmin' }, 409);
+    }
+    await db.delete(users).where(eq(users.id, id));
     return c.json({ ok: true });
   });
 
