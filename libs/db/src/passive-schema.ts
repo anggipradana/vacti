@@ -31,6 +31,8 @@ export const discoveredUrls = pgTable(
       .references(() => projects.id, { onDelete: 'cascade' }),
     targetId: uuid('target_id').references(() => targets.id, { onDelete: 'cascade' }),
     scanId: uuid('scan_id').references(() => scans.id, { onDelete: 'set null' }),
+    // The scan that FIRST discovered this URL (set on insert, never updated) — powers scan-diff.
+    firstScanId: uuid('first_scan_id').references(() => scans.id, { onDelete: 'set null' }),
     host: text('host'),
     urlText: text('url_text').notNull(),
     urlSha256: text('url_sha256').notNull(),
