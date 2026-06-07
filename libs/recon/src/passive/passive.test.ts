@@ -5,6 +5,7 @@ import { assertUrlSafeForServerFetch, isUrlSafeForServerFetch } from './ssrf';
 import { deepFetch } from './deepfetch';
 import { analyzeEndpoints } from './endpoints';
 import { fetchUrlscan } from './urlscan';
+import { makeProxyDispatcher } from './proxy';
 import { fetchWaybackUrls } from './wayback';
 import {
   discoverSubdomains,
@@ -167,6 +168,16 @@ describe('endpoint/param discovery', () => {
     const r = analyzeEndpoints(['not a url', '']);
     expect(r.paramCount).toBe(0);
     expect(r.authCount).toBe(0);
+  });
+});
+
+describe('proxy dispatcher factory', () => {
+  it('returns a dispatcher for http and socks URLs, undefined otherwise', () => {
+    expect(makeProxyDispatcher('http://127.0.0.1:8080')).toBeDefined();
+    expect(makeProxyDispatcher('socks5://127.0.0.1:1080')).toBeDefined();
+    expect(makeProxyDispatcher('')).toBeUndefined();
+    expect(makeProxyDispatcher('not a url')).toBeUndefined();
+    expect(makeProxyDispatcher('ftp://x')).toBeUndefined();
   });
 });
 

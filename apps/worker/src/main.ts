@@ -16,7 +16,14 @@ import {
   extensionSuffixRules,
 } from '@vacti/db';
 import { createQueue } from '@vacti/queue';
-import { runScanPipeline, runPassiveScan, DEFAULT_CATEGORIES, type ScanProfile } from '@vacti/recon';
+import { setGlobalDispatcher } from 'undici';
+import {
+  runScanPipeline,
+  runPassiveScan,
+  makeProxyDispatcher,
+  DEFAULT_CATEGORIES,
+  type ScanProfile,
+} from '@vacti/recon';
 import { refreshThreatIntel } from '@vacti/threat-intel';
 import {
   sendProjectNotifications,
@@ -41,6 +48,16 @@ const DEFAULT_PROFILE: ScanProfile = {
 
 async function main(): Promise<void> {
   const env = loadEnv();
+  // Route all worker outbound traffic (OSINT/deep-fetch) through a proxy when configured.
+  if (env.PROXY_URL) {
+    const dispatcher = makeProxyDispatcher(env.PROXY_URL);
+    if (dispatcher) {
+      setGlobalDispatcher(dispatcher);
+      console.log(`[worker] outbound proxy enabled (${new URL(env.PROXY_URL).protocol})`);
+    } else {
+      console.warn('[worker] PROXY_URL set but invalid — ignoring');
+    }
+  }
   console.log('[worker] running migrations…');
   await runMigrations(env.DATABASE_URL);
   const { db } = createDb(env.DATABASE_URL);
