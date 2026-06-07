@@ -65,8 +65,10 @@ test.describe.serial('settings', () => {
     await page.goto('/settings/users');
     // The email also appears in the topbar user-menu, so scope to the users card.
     await expect(page.getByText('admin@vacti.local').first()).toBeVisible();
-    await expect(page.getByText('System Admin').first()).toBeVisible();
-    await expect(page.locator('select[name="role"]').first()).toBeVisible();
+    // The admin's row role select (last select[name=role]; the first is the Add-user form).
+    await expect(page.locator('select[name="role"]').last()).toHaveValue('SysAdmin');
+    // Add-user form is present.
+    await expect(page.locator('#email')).toBeVisible();
   });
 
   test('audit log shows recorded actions', async ({ page }) => {
