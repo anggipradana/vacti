@@ -19,7 +19,7 @@ import { VULN_STATUS_LABEL, userCan, Permission, type SeverityValue } from '@vac
 import { scans, targets, scanActivity, subdomains, endpoints, ports as portsTable, vulnerabilities } from '@vacti/db';
 import { getDb } from '../../../lib/db';
 import { getCurrentUser } from '../../../lib/session';
-import { setVulnStatusAction, bulkReviewVulnsAction } from '../../../lib/status-actions';
+import { setVulnStatusAction, bulkReviewVulnsAction, deleteVulnAction } from '../../../lib/status-actions';
 import { Pagination } from '../../../components/ui/pagination';
 import { cancelScanAction, rescanAction, deleteScanAction } from '../../../lib/recon-actions';
 import { ConfirmButton } from '../../../components/ui/confirm-button';
@@ -492,6 +492,18 @@ export default async function ScanDetail({
                               <Button type="submit" size="sm" variant="outline">
                                 AI
                               </Button>
+                            </form>
+                            <form action={deleteVulnAction}>
+                              <input type="hidden" name="id" value={v.id} />
+                              <input type="hidden" name="scanId" value={scan.id} />
+                              <ConfirmButton
+                                size="sm"
+                                variant="ghost"
+                                className="text-danger hover:bg-danger/10"
+                                confirm="Delete this finding?"
+                              >
+                                Delete
+                              </ConfirmButton>
                             </form>
                           </div>
                         </TD>
