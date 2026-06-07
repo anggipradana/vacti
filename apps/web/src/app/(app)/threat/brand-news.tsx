@@ -2,6 +2,7 @@ import { Newspaper } from 'lucide-react';
 import { desc, eq } from 'drizzle-orm';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card';
 import { Select } from '../../../components/ui/select';
+import { AutoSubmitSelect } from '../../../components/ui/auto-submit-select';
 import { Input } from '../../../components/ui/input';
 import { Button } from '../../../components/ui/button';
 import { SubmitButton } from '../../../components/ui/submit-button';
@@ -146,16 +147,19 @@ export async function BrandNews({
                     <NewsStatusBadge status={n.status} />
                     <form action={setBrandNewsStatusAction} className="flex items-center gap-1.5">
                       <input type="hidden" name="id" value={n.id} />
-                      <Select key={n.status} name="status" defaultValue={n.status} className="h-8 w-36 text-xs">
+                      <AutoSubmitSelect
+                        key={n.status}
+                        name="status"
+                        defaultValue={n.status}
+                        className="h-8 w-36 text-xs"
+                        aria-label="Change status"
+                      >
                         {Object.entries(NEWS_STATUS_LABEL).map(([val, label]) => (
                           <option key={val} value={val}>
                             {label}
                           </option>
                         ))}
-                      </Select>
-                      <Button type="submit" size="sm" variant="ghost">
-                        Set
-                      </Button>
+                      </AutoSubmitSelect>
                     </form>
                   </div>
                 ) : (

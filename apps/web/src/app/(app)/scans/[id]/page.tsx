@@ -13,6 +13,7 @@ import { Table, THead, TBody, TR, TH, TD } from '../../../../components/ui/table
 import { Badge } from '../../../../components/ui/badge';
 import { Button } from '../../../../components/ui/button';
 import { Select } from '../../../../components/ui/select';
+import { AutoSubmitSelect } from '../../../../components/ui/auto-submit-select';
 import { VulnStatusBadge } from '../../../../components/ui/finding-status';
 import { VULN_STATUS_LABEL, userCan, Permission, type SeverityValue } from '@vacti/core';
 import { scans, targets, scanActivity, subdomains, endpoints, ports as portsTable, vulnerabilities } from '@vacti/db';
@@ -474,16 +475,19 @@ export default async function ScanDetail({
                             <form action={setVulnStatusAction} className="flex items-center gap-1.5">
                               <input type="hidden" name="id" value={v.id} />
                               <input type="hidden" name="scanId" value={scan.id} />
-                              <Select key={v.status} name="status" defaultValue={v.status} className="h-8 w-36 text-xs">
+                              <AutoSubmitSelect
+                                key={v.status}
+                                name="status"
+                                defaultValue={v.status}
+                                className="h-8 w-36 text-xs"
+                                aria-label="Change status"
+                              >
                                 {Object.entries(VULN_STATUS_LABEL).map(([val, label]) => (
                                   <option key={val} value={val}>
                                     {label}
                                   </option>
                                 ))}
-                              </Select>
-                              <Button type="submit" size="sm" variant="ghost">
-                                Set
-                              </Button>
+                              </AutoSubmitSelect>
                             </form>
                             <form action={enrichVulnAction}>
                               <input type="hidden" name="id" value={v.id} />

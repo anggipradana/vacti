@@ -58,14 +58,14 @@ test.afterAll(async () => {
   await pool.end();
 });
 
-/** Pick a status different from the row's current one, Set it, and assert the dropdown updates in place. */
+/** Pick a status different from the row's current one and assert the dropdown updates in place.
+ *  The status select now auto-submits on change (no separate "Set" button). */
 async function expectSetUpdatesInPlace(row: import('@playwright/test').Locator) {
   const sel = row.locator('select[name="status"]');
   const before = await sel.inputValue();
   const opts = await sel.locator('option').evaluateAll((os) => (os as HTMLOptionElement[]).map((o) => o.value));
   const target = opts.find((o) => o !== before)!;
-  await sel.selectOption(target);
-  await row.getByRole('button', { name: 'Set', exact: true }).click();
+  await sel.selectOption(target); // auto-submits the form on change
   // No reload — the dropdown must reflect the new status after in-place revalidation.
   await expect(row.locator('select[name="status"]')).toHaveValue(target);
 }
