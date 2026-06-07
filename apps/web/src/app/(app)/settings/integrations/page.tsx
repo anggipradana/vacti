@@ -1,7 +1,5 @@
 import { redirect } from 'next/navigation';
 import { desc, eq } from 'drizzle-orm';
-import { PageHeader } from '../../../../components/ui/page-header';
-import { SettingsTabs } from '../../../../components/settings-tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../components/ui/card';
 import { Input } from '../../../../components/ui/input';
 import { Label } from '../../../../components/ui/label';
@@ -40,9 +38,6 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
 
   return (
     <>
-      <PageHeader title="Settings" description="Webhook notifications, AI, and API docs." />
-      <SettingsTabs active="/settings/integrations" isSysAdmin={user.isSysAdmin} />
-
       <p className="mb-4 text-sm text-fg-muted">
         Public REST API docs:{' '}
         <a href="/api/docs" target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">

@@ -1,7 +1,5 @@
 import { redirect } from 'next/navigation';
 import { desc } from 'drizzle-orm';
-import { PageHeader } from '../../../../components/ui/page-header';
-import { SettingsTabs } from '../../../../components/settings-tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../components/ui/card';
 import { Input } from '../../../../components/ui/input';
 import { Textarea } from '../../../../components/ui/textarea';
@@ -28,9 +26,6 @@ export default async function ProfilesPage() {
 
   return (
     <>
-      <PageHeader title="Settings" description="Scan profiles — tools, scope, and advanced per-tool options." />
-      <SettingsTabs active="/settings/profiles" isSysAdmin={user.isSysAdmin} />
-
       <div className="grid gap-6 lg:grid-cols-[440px_1fr]">
         {canEdit ? (
           <Card>

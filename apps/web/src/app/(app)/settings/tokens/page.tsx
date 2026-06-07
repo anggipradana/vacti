@@ -1,8 +1,6 @@
 import { redirect } from 'next/navigation';
 import { desc, eq } from 'drizzle-orm';
 import { KeyRound } from 'lucide-react';
-import { PageHeader } from '../../../../components/ui/page-header';
-import { SettingsTabs } from '../../../../components/settings-tabs';
 import { Table, THead, TBody, TR, TH, TD } from '../../../../components/ui/table';
 import { Button } from '../../../../components/ui/button';
 import { EmptyState } from '../../../../components/ui/empty-state';
@@ -24,8 +22,6 @@ export default async function TokensPage() {
     .orderBy(desc(apiTokens.createdAt));
   return (
     <>
-      <PageHeader title="Settings" description="Manage API tokens, report branding, and signatories." />
-      <SettingsTabs active="/settings/tokens" isSysAdmin={user.isSysAdmin} />
       <div className="space-y-6">
         <CreateToken />
         <div data-testid="token-list">
