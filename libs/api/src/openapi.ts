@@ -11,6 +11,10 @@ export function openApiSpec(): Record<string, unknown> {
   const forbidden = { description: 'Role lacks the required permission', ...json(ref('Error')) };
   const notFound = { description: 'Not found', ...json(ref('Error')) };
   const badRequest = { description: 'Invalid payload', ...json(ref('Error')) };
+  const conflict = {
+    description: 'Conflicts with an invariant (duplicate / self / last SysAdmin)',
+    ...json(ref('Error')),
+  };
 
   return {
     openapi: '3.1.0',
@@ -300,6 +304,13 @@ export function openApiSpec(): Record<string, unknown> {
           parameters: [idParam],
           responses: { '200': { description: 'OK' }, '404': notFound },
         },
+        delete: {
+          summary: 'Delete a scan (cascades activity/results)',
+          tags: ['Scans'],
+          security: bearer,
+          parameters: [idParam],
+          responses: { '200': { description: 'Deleted' }, '403': forbidden },
+        },
       },
       '/api/scans/{id}/results': {
         get: {
@@ -545,6 +556,85 @@ export function openApiSpec(): Record<string, unknown> {
           security: bearer,
           parameters: [idParam],
           responses: { '200': { description: 'OK' }, '403': forbidden, '404': notFound },
+        },
+      },
+      '/api/projects/{id}': {
+        delete: {
+          summary: 'Delete a project (cascades targets/scans/findings)',
+          tags: ['Projects'],
+          security: bearer,
+          parameters: [idParam],
+          responses: { '200': { description: 'Deleted' }, '403': forbidden },
+        },
+      },
+      '/api/targets/{id}': {
+        delete: {
+          summary: 'Delete a target (cascades subdomains/endpoints/ports)',
+          tags: ['Targets'],
+          security: bearer,
+          parameters: [idParam],
+          responses: { '200': { description: 'Deleted' }, '403': forbidden },
+        },
+      },
+      '/api/vulnerabilities/{id}': {
+        delete: {
+          summary: 'Delete a vulnerability finding',
+          tags: ['Scans'],
+          security: bearer,
+          parameters: [idParam],
+          responses: { '200': { description: 'Deleted' }, '403': forbidden },
+        },
+      },
+      '/api/leaks/{id}': {
+        delete: {
+          summary: 'Delete a leaked-credential record',
+          tags: ['Threat Intel'],
+          security: bearer,
+          parameters: [idParam],
+          responses: { '200': { description: 'Deleted' }, '403': forbidden },
+        },
+      },
+      '/api/surface/findings/{id}': {
+        delete: {
+          summary: 'Delete an exposure finding',
+          tags: ['Attack Surface'],
+          security: bearer,
+          parameters: [idParam],
+          responses: { '200': { description: 'Deleted' }, '403': forbidden },
+        },
+      },
+      '/api/users': {
+        post: {
+          summary: 'Create a user (SysAdmin only)',
+          tags: ['Users'],
+          security: bearer,
+          requestBody: {
+            required: true,
+            ...json({
+              type: 'object',
+              required: ['email', 'password', 'role'],
+              properties: {
+                email: { type: 'string', format: 'email' },
+                password: { type: 'string', minLength: 8 },
+                role: { type: 'string', enum: ['SysAdmin', 'PenetrationTester', 'Auditor'] },
+              },
+            }),
+          },
+          responses: { '200': { description: 'Created' }, '400': badRequest, '403': forbidden, '409': conflict },
+        },
+      },
+      '/api/users/{id}': {
+        delete: {
+          summary: 'Delete a user (SysAdmin only; never self or last SysAdmin)',
+          tags: ['Users'],
+          security: bearer,
+          parameters: [idParam],
+          responses: {
+            '200': { description: 'Deleted' },
+            '403': forbidden,
+            '404': notFound,
+            '409': conflict,
+          },
         },
       },
     },
