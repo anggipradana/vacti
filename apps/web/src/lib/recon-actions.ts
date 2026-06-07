@@ -126,6 +126,26 @@ export async function createTargetAction(formData: FormData) {
   revalidatePath('/targets');
 }
 
+/** Delete a target and its scans/results (cascade via FK). ModifyTargets + audit. */
+export async function deleteTargetAction(formData: FormData) {
+  const actor = await requirePermission(Permission.ModifyTargets);
+  const id = String(formData.get('id') ?? '');
+  if (!id) return;
+  await getDb().delete(targets).where(eq(targets.id, id));
+  await recordAudit({ actorId: actor.id, action: 'target.delete', resource: `target:${id}` });
+  revalidatePath('/targets');
+}
+
+/** Delete a scan and all its results (cascade via FK). InitiateScans + audit. */
+export async function deleteScanAction(formData: FormData) {
+  const actor = await requirePermission(Permission.InitiateScans);
+  const id = String(formData.get('id') ?? '');
+  if (!id) return;
+  await getDb().delete(scans).where(eq(scans.id, id));
+  await recordAudit({ actorId: actor.id, action: 'scan.delete', resource: `scan:${id}` });
+  redirect('/scans');
+}
+
 export async function startScanAction(formData: FormData) {
   const actor = await requirePermission(Permission.InitiateScans);
   const targetId = String(formData.get('targetId') ?? '');
