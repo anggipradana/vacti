@@ -40,6 +40,7 @@ import {
   brandNews,
   subdomains,
   exposureFindings,
+  discoveredUrls,
 } from '@vacti/db';
 import { computeProjectRisk } from '@vacti/threat-intel';
 import { getDb } from '../../lib/db';
@@ -86,6 +87,27 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
     : [[{ n: 0 }], [{ n: 0 }]];
   const exposureFindingsCount = Number(expCount[0]?.n ?? 0);
   const passiveSubdomains = Number(passiveSubCount[0]?.n ?? 0);
+
+  // Discovery-over-time: passively discovered URLs bucketed by day (last 14 days).
+  const discoveryRows = projectId
+    ? await db
+        .select({ at: discoveredUrls.createdAt })
+        .from(discoveredUrls)
+        .where(eq(discoveredUrls.projectId, projectId))
+        .limit(20000)
+    : [];
+  const discoveryDays: { label: string; value: number }[] = [];
+  for (let i = 13; i >= 0; i--) {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    d.setDate(d.getDate() - i);
+    const next = new Date(d);
+    next.setDate(d.getDate() + 1);
+    discoveryDays.push({
+      label: d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+      value: discoveryRows.filter((r) => r.at >= d && r.at < next).length,
+    });
+  }
 
   // CTI overview (scoped to the active project): unified risk score + leaked-credential rows.
   // computeProjectRisk runs purely off the DB; the network-fetch ransomware card streams via Suspense.
@@ -368,6 +390,17 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
           </CardContent>
         </Card>
       </div>
+
+      {discoveryRows.length ? (
+        <Card className="mt-4">
+          <CardHeader>
+            <CardTitle>URL discovery · last 14 days (passive)</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <TrendArea data={discoveryDays} />
+          </CardContent>
+        </Card>
+      ) : null}
 
       {/* VA review status — triage breakdown of this project's findings. */}
       {vulnRows.length > 0 ? (

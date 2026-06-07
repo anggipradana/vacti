@@ -134,6 +134,8 @@ async function main(): Promise<void> {
         try {
           const vtKey =
             (await getProjectSecret(db, scan.projectId, 'virustotal', env.ENCRYPTION_KEY)) ?? env.VT_API_KEY ?? null;
+          const urlscanKey =
+            (await getProjectSecret(db, scan.projectId, 'urlscan', env.ENCRYPTION_KEY)) ?? env.URLSCAN_API_KEY ?? null;
           const res = await runPassiveScan(
             {
               scanId,
@@ -141,6 +143,7 @@ async function main(): Promise<void> {
               targetId: scan.targetId,
               domain: target.domain,
               vtApiKey: vtKey,
+              urlscanApiKey: urlscanKey,
               deepScan: scan.deepScan,
               signal: controller.signal,
             },

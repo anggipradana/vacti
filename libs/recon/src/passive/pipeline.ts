@@ -12,6 +12,7 @@ import {
 } from '@vacti/db';
 import { fetchVtDomainReport, discoverSubdomains, harvestUndetectedUrls, harvestResolutions } from './virustotal';
 import { fetchWaybackUrls } from './wayback';
+import { fetchUrlscan } from './urlscan';
 import { categorizeUrl, buildSuffixIndex } from './categorize';
 import { scanExposure } from './exposure';
 import { deepFetch } from './deepfetch';
@@ -23,6 +24,8 @@ export interface PassiveScanInput {
   domain: string;
   /** VirusTotal API key (optional — Wayback works without it). */
   vtApiKey?: string | null;
+  /** URLScan.io API key (optional — search works key-less but rate-limited). */
+  urlscanApiKey?: string | null;
   /** Cap archived URLs pulled from Wayback (0 = unlimited). */
   waybackLimit?: number;
   /** Cap URLs scanned for exposure (bounds work on huge archives). */
@@ -116,6 +119,26 @@ export async function runPassiveScan(
     urlMap.set(url, ex);
   }
   await activity('wayback', 'completed', `${wb.length} archived URLs`);
+
+  // ── URLScan.io (best-effort, key-less or with key) ──
+  checkAbort();
+  await activity('urlscan', 'running');
+  const us = await fetchUrlscan(target, { apiKey: input.urlscanApiKey });
+  let usUrls = 0;
+  for (const url of us.urls) {
+    const h = hostOf(url);
+    if (!h || (h !== target && !h.endsWith(`.${target}`))) continue;
+    hostSet.add(h);
+    const ex = urlMap.get(url) ?? { url, date: null, sources: new Set<string>() };
+    ex.sources.add('urlscan');
+    urlMap.set(url, ex);
+    usUrls += 1;
+  }
+  for (const r of us.resolutions) {
+    if (r.host === target || r.host.endsWith(`.${target}`))
+      resolutions.push({ ip: r.ip, host: r.host, at: new Date() });
+  }
+  await activity('urlscan', 'completed', `${usUrls} URLs, ${us.resolutions.length} IP(s)`);
 
   // ── Consolidate: subdomains ──
   checkAbort();
