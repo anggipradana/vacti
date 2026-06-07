@@ -16,10 +16,14 @@ export interface WaybackOptions {
   limit?: number;
 }
 
-/** Fetch archived URLs for `domain` (and subdomains) from the Wayback CDX API. */
+/**
+ * Fetch archived URLs for `domain` AND all of its subdomains from the Wayback CDX API.
+ * `matchType=domain` makes the index return `domain` + `*.domain` (e.g. api.domain, www.domain),
+ * not just the apex host's paths — so passive discovery covers the whole subdomain surface.
+ */
 export async function fetchWaybackUrls(domain: string, opts: WaybackOptions = {}): Promise<string[]> {
   const { fetchImpl = fetch, timeoutMs = 120_000, retries = 3, limit = 0 } = opts;
-  const cdx = `https://web.archive.org/cdx/search/cdx?url=${encodeURIComponent(domain)}/*&collapse=urlkey&output=text&fl=original`;
+  const cdx = `https://web.archive.org/cdx/search/cdx?url=${encodeURIComponent(domain)}&matchType=domain&collapse=urlkey&output=text&fl=original`;
 
   for (let attempt = 1; attempt <= retries; attempt++) {
     const ctrl = new AbortController();
