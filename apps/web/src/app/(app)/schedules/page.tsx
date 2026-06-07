@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
-import { desc, eq } from 'drizzle-orm';
+import { desc, eq, getTableColumns } from 'drizzle-orm';
 import { CalendarClock } from 'lucide-react';
 import { PageHeader } from '../../../components/ui/page-header';
 import { Card, CardContent } from '../../../components/ui/card';
@@ -27,16 +27,24 @@ export default async function SchedulesPage({ searchParams }: { searchParams: Pr
   const db = getDb();
   const projectRows = await db.select().from(projects).orderBy(desc(projects.createdAt));
   const projectId = await getActiveProjectId((await searchParams).project, projectRows);
-  // Schedules have no projectId of their own, so scope them via the active project's targets.
-  const [targetRows, profileRows, allSchedules] = await Promise.all([
+  // Schedules have no projectId of their own, so scope them via the active project's targets with an
+  // inner join — only this project's schedules are fetched (no load-all + JS filter), and the join also
+  // gives us each schedule's target domain for display.
+  const [targetRows, profileRows, scheduleJoinRows] = await Promise.all([
     projectId
       ? db.select().from(targets).where(eq(targets.projectId, projectId)).orderBy(desc(targets.createdAt))
       : Promise.resolve([]),
     db.select().from(scanProfiles),
-    db.select().from(scanSchedules).orderBy(desc(scanSchedules.createdAt)),
+    projectId
+      ? db
+          .select({ ...getTableColumns(scanSchedules), domain: targets.domain })
+          .from(scanSchedules)
+          .innerJoin(targets, eq(scanSchedules.targetId, targets.id))
+          .where(eq(targets.projectId, projectId))
+          .orderBy(desc(scanSchedules.createdAt))
+      : Promise.resolve([]),
   ]);
-  const targetById = new Map(targetRows.map((t) => [t.id, t.domain]));
-  const scheduleRows = allSchedules.filter((s) => targetById.has(s.targetId));
+  const scheduleRows = scheduleJoinRows;
 
   return (
     <>
@@ -123,7 +131,7 @@ export default async function SchedulesPage({ searchParams }: { searchParams: Pr
             <Card key={s.id} data-testid="schedule-row">
               <CardContent className="flex flex-wrap items-center justify-between gap-3 py-3">
                 <div>
-                  <span className="font-mono text-sm">{targetById.get(s.targetId) ?? s.targetId.slice(0, 8)}</span>
+                  <span className="font-mono text-sm">{s.domain ?? s.targetId.slice(0, 8)}</span>
                   <span className="ml-3 font-mono text-xs text-fg-muted">{s.cron}</span>
                   {s.lastRunAt ? (
                     <span className="ml-3 text-xs text-fg-subtle">
