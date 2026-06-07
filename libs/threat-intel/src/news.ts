@@ -112,14 +112,21 @@ export function isSector(s: unknown): s is SectorName {
   return typeof s === 'string' && s in SECTORS;
 }
 
-/** Curated, key-less security-news feeds (RSS 2.0 + Atom). */
-export const FEEDS: { url: string; source: string }[] = [
-  { url: 'https://feeds.feedburner.com/TheHackersNews', source: 'The Hacker News' },
-  { url: 'https://www.bleepingcomputer.com/feed/', source: 'BleepingComputer' },
-  { url: 'https://krebsonsecurity.com/feed/', source: 'KrebsOnSecurity' },
-  { url: 'https://www.cisa.gov/cybersecurity-advisories/all.xml', source: 'CISA' },
-  { url: 'https://www.securityweek.com/feed/', source: 'SecurityWeek' },
-  // Indonesian-language coverage (keyword filter still applies per sector).
+export interface Feed {
+  url: string;
+  source: string;
+  /** Curated = a security-only source (no extra security-term filter). General sources are filtered. */
+  curated?: boolean;
+}
+
+/** Key-less news feeds. The first group is security-only; the rest are general and get filtered. */
+export const FEEDS: Feed[] = [
+  { url: 'https://feeds.feedburner.com/TheHackersNews', source: 'The Hacker News', curated: true },
+  { url: 'https://www.bleepingcomputer.com/feed/', source: 'BleepingComputer', curated: true },
+  { url: 'https://krebsonsecurity.com/feed/', source: 'KrebsOnSecurity', curated: true },
+  { url: 'https://www.cisa.gov/cybersecurity-advisories/all.xml', source: 'CISA', curated: true },
+  { url: 'https://www.securityweek.com/feed/', source: 'SecurityWeek', curated: true },
+  // General Indonesian coverage — sector keyword AND a security term must both match (cuts noise).
   {
     url: 'https://news.google.com/rss/search?q=keamanan+siber+OR+peretasan+OR+bocor+data&hl=id&gl=ID&ceid=ID:id',
     source: 'Google News (ID)',
@@ -127,6 +134,57 @@ export const FEEDS: { url: string; source: string }[] = [
   { url: 'https://www.cnnindonesia.com/teknologi/rss', source: 'CNN Indonesia Teknologi' },
   { url: 'https://inet.detik.com/rss', source: 'detikInet' },
 ];
+
+/**
+ * Security/cyber terms (EN + ID). Used to keep only genuinely security-related items from general
+ * (non-curated) feeds — without this, "bank opens new branch" leaks in via the sector keyword alone.
+ */
+const SECURITY_TERMS = [
+  'breach',
+  'hack',
+  'hacked',
+  'ransomware',
+  'phishing',
+  'malware',
+  'spyware',
+  'exploit',
+  'vulnerabilit',
+  'cve-',
+  'zero-day',
+  'zero day',
+  'ddos',
+  'data leak',
+  'leaked',
+  'stolen data',
+  'cyber',
+  'botnet',
+  'backdoor',
+  'trojan',
+  'infostealer',
+  'credential',
+  'unauthorized',
+  'security advisory',
+  'data breach',
+  // Indonesian
+  'keamanan siber',
+  'siber',
+  'bocor data',
+  'kebocoran data',
+  'peretasan',
+  'diretas',
+  'dibobol',
+  'serangan siber',
+  'celah keamanan',
+  'kerentanan',
+  'pencurian data',
+  'penipuan',
+];
+
+/** Is this item actually about cyber security (vs generic sector/lifestyle news)? */
+export function isSecurityRelated(item: NewsItem): boolean {
+  const hay = `${item.title} ${item.summary}`.toLowerCase();
+  return SECURITY_TERMS.some((t) => hay.includes(t));
+}
 
 /**
  * Build a Google News RSS search URL targeted at a sector: the sector's keywords AND a
@@ -148,7 +206,8 @@ export function sectorSearchUrl(sector: string): string {
 }
 
 /** Curated feeds plus a sector-targeted Google News search, used as the default feed set. */
-export function sectorFeeds(sector: string): { url: string; source: string }[] {
+export function sectorFeeds(sector: string): Feed[] {
+  // The sector search is a general source → it still gets the security-term filter (curated omitted).
   return [...FEEDS, { url: sectorSearchUrl(sector), source: 'Google News (sector)' }];
 }
 
@@ -205,31 +264,42 @@ export function matchesSector(item: NewsItem, sector: string): boolean {
 }
 
 export interface FetchNewsOptions {
-  feeds?: { url: string; source: string }[];
+  feeds?: Feed[];
   fetchImpl?: FetchLike;
   limit?: number;
   timeoutMs?: number;
 }
 
-/** Aggregate the feeds, filter by sector, dedupe by link, newest first. Degrades per-feed on error. */
+/**
+ * Aggregate the feeds (in PARALLEL — sequential fetching made the sector switch hang for seconds),
+ * filter by sector + security relevance, dedupe by link, newest first. Degrades per-feed on error.
+ */
 export async function fetchSectorNews(sector: string, opts: FetchNewsOptions = {}): Promise<NewsItem[]> {
   // Default to the curated feeds + a sector-targeted Google News search (callers can override).
   const { feeds = sectorFeeds(sector), fetchImpl = fetch, limit = 30, timeoutMs = 8000 } = opts;
-  const all: NewsItem[] = [];
-  for (const feed of feeds) {
-    try {
-      const ctrl = new AbortController();
-      const t = setTimeout(() => ctrl.abort(), timeoutMs);
-      const res = await fetchImpl(feed.url, { signal: ctrl.signal, headers: { 'user-agent': 'vacti-threatnews/1.0' } });
-      clearTimeout(t);
-      if (!res.ok) continue;
-      all.push(...parseFeed(await res.text(), feed.source).filter((i) => matchesSector(i, sector)));
-    } catch {
-      // Skip an unreachable/slow feed — never throw.
-    }
-  }
+  const perFeed = await Promise.all(
+    feeds.map(async (feed) => {
+      try {
+        const ctrl = new AbortController();
+        const t = setTimeout(() => ctrl.abort(), timeoutMs);
+        const res = await fetchImpl(feed.url, {
+          signal: ctrl.signal,
+          headers: { 'user-agent': 'vacti-threatnews/1.0' },
+        });
+        clearTimeout(t);
+        if (!res.ok) return [];
+        // Curated feeds are security-only; general feeds must ALSO contain a security term (cuts noise).
+        return parseFeed(await res.text(), feed.source).filter(
+          (i) => matchesSector(i, sector) && (feed.curated || isSecurityRelated(i)),
+        );
+      } catch {
+        return []; // Skip an unreachable/slow feed — never throw.
+      }
+    }),
+  );
   const seen = new Set<string>();
-  return all
+  return perFeed
+    .flat()
     .filter((i) => (seen.has(i.link) ? false : (seen.add(i.link), true)))
     .sort((a, b) => (b.publishedAt?.getTime() ?? 0) - (a.publishedAt?.getTime() ?? 0))
     .slice(0, limit);
