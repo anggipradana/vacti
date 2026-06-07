@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { Suspense } from 'react';
-import { desc, eq, inArray, and, count, sql } from 'drizzle-orm';
+import { desc, eq, inArray, and, count, sql, gte } from 'drizzle-orm';
 import {
   Crosshair,
   Radar,
@@ -64,16 +64,39 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
       ])
     : [[], []];
   const scanIds = scanRows.map((s) => s.id);
-  const [endpointRows, vulnRows] = scanIds.length
+  // Endpoints are only ever counted on this page; tally server-side instead of hauling every row.
+  // Vulnerabilities feed several top-N reductions, so we still pull rows — but only the columns those
+  // reductions touch (name/severity/status/scanId/host/url/matchedAt), never the request/response/
+  // description blobs that bloat the payload.
+  const [endpointCountRows, vulnRows] = scanIds.length
     ? await Promise.all([
-        db.select().from(endpoints).where(inArray(endpoints.scanId, scanIds)),
-        db.select().from(vulnerabilities).where(inArray(vulnerabilities.scanId, scanIds)),
+        db.select({ n: count() }).from(endpoints).where(inArray(endpoints.scanId, scanIds)),
+        db
+          .select({
+            name: vulnerabilities.name,
+            severity: vulnerabilities.severity,
+            status: vulnerabilities.status,
+            scanId: vulnerabilities.scanId,
+            host: vulnerabilities.host,
+            url: vulnerabilities.url,
+            matchedAt: vulnerabilities.matchedAt,
+          })
+          .from(vulnerabilities)
+          .where(inArray(vulnerabilities.scanId, scanIds)),
       ])
-    : [[], []];
+    : [[{ n: 0 }], []];
+  const endpointCount = Number(endpointCountRows[0]?.n ?? 0);
   const targetById = new Map(targetRows.map((t) => [t.id, t]));
 
-  // Passive recon surfacing (CTI/VA crossover): exposure findings + passively-discovered subdomains.
-  const [expCount, passiveSubCount] = projectId
+  // These overview queries are all independent of one another, so fan them out together:
+  //  - exposure-finding count + distinct passive-subdomain count (passive recon surfacing)
+  //  - URL discovery bucketed per day for the last 14 days + a cheap "any discovered URL ever?" gate
+  //  - unified risk score + leaked-credential rows (CTI overview)
+  //  - sector/brand news rows for the "needs review" tallies
+  // dashSector comes from already-loaded projectRows, so it's safe to read before the fan-out.
+  const dashProject = projectRows.find((p) => p.id === projectId);
+  const dashSector = dashProject?.sector ?? 'banking';
+  const [expCount, passiveSubCount, discoveryByDay, discoveryEverCount, risk, leakRows, newsRows, brandRows] = projectId
     ? await Promise.all([
         db.select({ n: count() }).from(exposureFindings).where(eq(exposureFindings.projectId, projectId)),
         scanIds.length
@@ -82,51 +105,59 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
               .from(subdomains)
               .where(and(inArray(subdomains.scanId, scanIds), eq(subdomains.source, 'passive')))
           : Promise.resolve([{ n: 0 }]),
+        db
+          .select({ day: sql<string>`date_trunc('day', ${discoveredUrls.createdAt})`, n: count() })
+          .from(discoveredUrls)
+          .where(
+            and(
+              eq(discoveredUrls.projectId, projectId),
+              gte(discoveredUrls.createdAt, sql`now() - interval '14 days'`),
+            ),
+          )
+          .groupBy(sql`date_trunc('day', ${discoveredUrls.createdAt})`)
+          .orderBy(sql`date_trunc('day', ${discoveredUrls.createdAt})`),
+        db.select({ n: count() }).from(discoveredUrls).where(eq(discoveredUrls.projectId, projectId)),
+        computeProjectRisk(db, projectId),
+        db.select().from(leakcheckData).where(eq(leakcheckData.projectId, projectId)),
+        db.select({ status: threatNews.status }).from(threatNews).where(eq(threatNews.sector, dashSector)),
+        db.select({ status: brandNews.status }).from(brandNews).where(eq(brandNews.projectId, projectId)),
       ])
-    : [[{ n: 0 }], [{ n: 0 }]];
+    : ([
+        [{ n: 0 }],
+        [{ n: 0 }],
+        [],
+        [{ n: 0 }],
+        { score: 0 } as Awaited<ReturnType<typeof computeProjectRisk>>,
+        [],
+        [],
+        [],
+      ] as const);
   const exposureFindingsCount = Number(expCount[0]?.n ?? 0);
   const passiveSubdomains = Number(passiveSubCount[0]?.n ?? 0);
 
-  // Discovery-over-time: passively discovered URLs bucketed by day (last 14 days).
-  const discoveryRows = projectId
-    ? await db
-        .select({ at: discoveredUrls.createdAt })
-        .from(discoveredUrls)
-        .where(eq(discoveredUrls.projectId, projectId))
-        .limit(20000)
-    : [];
+  // Index the per-day counts by local calendar day so we can fill the 14-day window (0 for gaps).
+  const discoveryCountByDay = new Map<number, number>();
+  for (const row of discoveryByDay) {
+    const d = new Date(row.day);
+    d.setHours(0, 0, 0, 0);
+    discoveryCountByDay.set(d.getTime(), Number(row.n));
+  }
   const discoveryDays: { label: string; value: number }[] = [];
   for (let i = 13; i >= 0; i--) {
     const d = new Date();
     d.setHours(0, 0, 0, 0);
     d.setDate(d.getDate() - i);
-    const next = new Date(d);
-    next.setDate(d.getDate() + 1);
     discoveryDays.push({
       label: d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
-      value: discoveryRows.filter((r) => r.at >= d && r.at < next).length,
+      value: discoveryCountByDay.get(d.getTime()) ?? 0,
     });
   }
+  // Gate the discovery card on "project has ever discovered a URL" (matches prior behavior), so a
+  // project with only stale (>14d) discoveries still shows its — necessarily flat — chart.
+  const discoveryEver = Number(discoveryEverCount[0]?.n ?? 0);
 
-  // CTI overview (scoped to the active project): unified risk score + leaked-credential rows.
-  // computeProjectRisk runs purely off the DB; the network-fetch ransomware card streams via Suspense.
-  const [risk, leakRows] = projectId
-    ? await Promise.all([
-        computeProjectRisk(db, projectId),
-        db.select().from(leakcheckData).where(eq(leakcheckData.projectId, projectId)),
-      ])
-    : [{ score: 0 } as Awaited<ReturnType<typeof computeProjectRisk>>, []];
   const leakUnchecked = leakRows.filter((l) => !l.checked).length;
 
-  // "Needs review" — items still in their initial untriaged state, aggregated across modules.
-  const dashProject = projectRows.find((p) => p.id === projectId);
-  const dashSector = dashProject?.sector ?? 'banking';
-  const [newsRows, brandRows] = projectId
-    ? await Promise.all([
-        db.select({ status: threatNews.status }).from(threatNews).where(eq(threatNews.sector, dashSector)),
-        db.select({ status: brandNews.status }).from(brandNews).where(eq(brandNews.projectId, projectId)),
-      ])
-    : [[], []];
   const reviewVulns = vulnRows.filter((v) => v.status === 'open').length;
   const reviewLeaks = leakRows.filter((l) => l.status === 'new').length;
   const reviewNews = newsRows.filter((n) => n.status === 'new').length;
@@ -288,7 +319,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
         <StatCard label="Targets" value={targetRows.length} icon={<Crosshair />} testId="stat-targets" />
         <StatCard label="Scans" value={scanRows.length} icon={<Radar />} />
-        <StatCard label="Live endpoints" value={endpointRows.length} icon={<Globe />} />
+        <StatCard label="Live endpoints" value={endpointCount} icon={<Globe />} />
         <StatCard label="Vulnerabilities" value={vulnRows.length} icon={<ShieldAlert />} />
         <Link href="/surface">
           <StatCard label="Passive subdomains" value={passiveSubdomains} icon={<RadarIcon />} />
@@ -390,7 +421,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
         </Card>
       </div>
 
-      {discoveryRows.length ? (
+      {discoveryEver > 0 ? (
         <Card className="mt-4">
           <CardHeader>
             <CardTitle>URL discovery · last 14 days (passive)</CardTitle>

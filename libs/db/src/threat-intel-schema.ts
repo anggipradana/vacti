@@ -1,51 +1,69 @@
-import { boolean, integer, jsonb, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import { boolean, index, integer, jsonb, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 import { projects } from './schema';
 
 const id = () => uuid('id').primaryKey().defaultRandom();
 const createdAt = () => timestamp('created_at', { withTimezone: true }).notNull().defaultNow();
 
-export const manualIndicators = pgTable('manual_indicators', {
-  id: id(),
-  projectId: uuid('project_id')
-    .notNull()
-    .references(() => projects.id, { onDelete: 'cascade' }),
-  type: text('type').notNull(), // domain | subdomain | ip
-  value: text('value').notNull(),
-  note: text('note'),
-  createdAt: createdAt(),
-});
+export const manualIndicators = pgTable(
+  'manual_indicators',
+  {
+    id: id(),
+    projectId: uuid('project_id')
+      .notNull()
+      .references(() => projects.id, { onDelete: 'cascade' }),
+    type: text('type').notNull(), // domain | subdomain | ip
+    value: text('value').notNull(),
+    note: text('note'),
+    createdAt: createdAt(),
+  },
+  (t) => ({
+    projectIdx: index('manual_indicators_project_idx').on(t.projectId),
+  }),
+);
 
-export const otxThreatData = pgTable('otx_threat_data', {
-  id: id(),
-  projectId: uuid('project_id')
-    .notNull()
-    .references(() => projects.id, { onDelete: 'cascade' }),
-  indicator: text('indicator').notNull(),
-  pulses: integer('pulses').notNull().default(0),
-  malwareCount: integer('malware_count').notNull().default(0),
-  reputation: integer('reputation').notNull().default(0), // 0..100, higher = worse
-  passiveDns: jsonb('passive_dns'),
-  urls: jsonb('urls'),
-  fetchedAt: createdAt(),
-});
+export const otxThreatData = pgTable(
+  'otx_threat_data',
+  {
+    id: id(),
+    projectId: uuid('project_id')
+      .notNull()
+      .references(() => projects.id, { onDelete: 'cascade' }),
+    indicator: text('indicator').notNull(),
+    pulses: integer('pulses').notNull().default(0),
+    malwareCount: integer('malware_count').notNull().default(0),
+    reputation: integer('reputation').notNull().default(0), // 0..100, higher = worse
+    passiveDns: jsonb('passive_dns'),
+    urls: jsonb('urls'),
+    fetchedAt: createdAt(),
+  },
+  (t) => ({
+    projectIdx: index('otx_threat_data_project_idx').on(t.projectId),
+  }),
+);
 
-export const leakcheckData = pgTable('leakcheck_data', {
-  id: id(),
-  projectId: uuid('project_id')
-    .notNull()
-    .references(() => projects.id, { onDelete: 'cascade' }),
-  domain: text('domain').notNull(),
-  source: text('source'),
-  identifier: text('identifier'), // email/username (display)
-  password: text('password'), // plaintext leaked password (stealer logs); shown on demand
-  origin: text('origin'), // where the credential was captured (stealer-log origin hosts)
-  hashMd5: text('hash_md5').notNull(),
-  type: text('type').notNull().default('domain'), // domain | origin (stealer log)
-  checked: boolean('checked').notNull().default(false), // legacy; superseded by status
-  // Leak triage status (new|investigating|confirmed|remediated|false_positive|ignored).
-  status: text('status').notNull().default('new'),
-  createdAt: createdAt(),
-});
+export const leakcheckData = pgTable(
+  'leakcheck_data',
+  {
+    id: id(),
+    projectId: uuid('project_id')
+      .notNull()
+      .references(() => projects.id, { onDelete: 'cascade' }),
+    domain: text('domain').notNull(),
+    source: text('source'),
+    identifier: text('identifier'), // email/username (display)
+    password: text('password'), // plaintext leaked password (stealer logs); shown on demand
+    origin: text('origin'), // where the credential was captured (stealer-log origin hosts)
+    hashMd5: text('hash_md5').notNull(),
+    type: text('type').notNull().default('domain'), // domain | origin (stealer log)
+    checked: boolean('checked').notNull().default(false), // legacy; superseded by status
+    // Leak triage status (new|investigating|confirmed|remediated|false_positive|ignored).
+    status: text('status').notNull().default('new'),
+    createdAt: createdAt(),
+  },
+  (t) => ({
+    projectIdx: index('leakcheck_data_project_idx').on(t.projectId),
+  }),
+);
 
 export const threatIntelStatus = pgTable(
   'threat_intel_status',

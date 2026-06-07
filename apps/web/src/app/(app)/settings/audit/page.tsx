@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
-import { desc } from 'drizzle-orm';
+import { desc, eq, getTableColumns } from 'drizzle-orm';
 import { Card, CardContent } from '../../../../components/ui/card';
 import { Table, THead, TBody, TR, TH, TD } from '../../../../components/ui/table';
 import { Badge } from '../../../../components/ui/badge';
@@ -16,9 +16,13 @@ export default async function AuditPage() {
   if (!me) redirect('/login');
   if (!userCan(me, Permission.ModifySystemConfig)) redirect('/dashboard');
   const db = getDb();
-  const rows = await db.select().from(auditLog).orderBy(desc(auditLog.createdAt)).limit(200);
-  const userRows = await db.select().from(users);
-  const emailById = new Map(userRows.map((u) => [u.id, u.email]));
+  // Join the actor's email in SQL rather than fetching all users and mapping in JS.
+  const rows = await db
+    .select({ ...getTableColumns(auditLog), actorEmail: users.email })
+    .from(auditLog)
+    .leftJoin(users, eq(auditLog.actorId, users.id))
+    .orderBy(desc(auditLog.createdAt))
+    .limit(200);
 
   return (
     <>
@@ -47,7 +51,7 @@ export default async function AuditPage() {
                     </TD>
                     <TD className="text-sm">
                       {r.actorId ? (
-                        (emailById.get(r.actorId) ?? r.actorId.slice(0, 8))
+                        (r.actorEmail ?? r.actorId.slice(0, 8))
                       ) : (
                         <span className="text-fg-subtle">system</span>
                       )}

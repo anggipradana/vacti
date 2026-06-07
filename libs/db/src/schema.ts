@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm';
-import { boolean, integer, jsonb, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import { boolean, index, integer, jsonb, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 
 const id = () => uuid('id').primaryKey().defaultRandom();
 const createdAt = () => timestamp('created_at', { withTimezone: true }).notNull().defaultNow();
@@ -70,7 +70,10 @@ export const threatNews = pgTable(
     status: text('status').notNull().default('new'),
     fetchedAt: createdAt(),
   },
-  (t) => ({ uniqSectorLink: uniqueIndex('threat_news_sector_link_uniq').on(t.sector, t.link) }),
+  (t) => ({
+    uniqSectorLink: uniqueIndex('threat_news_sector_link_uniq').on(t.sector, t.link),
+    sectorPublishedIdx: index('threat_news_sector_published_idx').on(t.sector, t.publishedAt),
+  }),
 );
 
 // Brand monitoring: public news mentioning a project's brand/domain (per project, triageable).
@@ -127,15 +130,21 @@ export const apiKeys = pgTable('api_keys', {
   updatedAt: updatedAt(),
 });
 
-export const auditLog = pgTable('audit_log', {
-  id: id(),
-  actorId: uuid('actor_id').references(() => users.id, { onDelete: 'set null' }),
-  action: text('action').notNull(),
-  resource: text('resource').notNull(),
-  projectId: uuid('project_id').references(() => projects.id, { onDelete: 'set null' }),
-  metadata: jsonb('metadata'),
-  createdAt: createdAt(),
-});
+export const auditLog = pgTable(
+  'audit_log',
+  {
+    id: id(),
+    actorId: uuid('actor_id').references(() => users.id, { onDelete: 'set null' }),
+    action: text('action').notNull(),
+    resource: text('resource').notNull(),
+    projectId: uuid('project_id').references(() => projects.id, { onDelete: 'set null' }),
+    metadata: jsonb('metadata'),
+    createdAt: createdAt(),
+  },
+  (t) => ({
+    createdIdx: index('audit_log_created_idx').on(t.createdAt),
+  }),
+);
 
 export const schema = {
   users,

@@ -51,6 +51,21 @@ export async function CtiCards({ projectId }: { projectId: string }) {
     .sort((a, b) => b.epss - a.epss);
   const dedupKev = [...new Map(kevFindings.map((f) => [f.cve, f])).values()];
 
+  // Trim the victims payload sent to the client: RansomwareFeed only shows 8 after filtering, and the
+  // country/sector dropdown counts come from separate `countries`/`sectors` props (not this array), so
+  // capping here doesn't change the visible UI. victims is already sorted by `discovered` desc, so we
+  // keep the newest 100 — but retain *all* default-country (ID) victims so the default ID filter view
+  // is never starved by the cap.
+  const VICTIM_CAP = 100;
+  const defaultCountry = ransomware.countries.some((c) => c.code === 'ID') ? 'ID' : null;
+  const cappedVictims =
+    ransomware.victims.length <= VICTIM_CAP
+      ? ransomware.victims
+      : [
+          ...ransomware.victims.slice(0, VICTIM_CAP),
+          ...(defaultCountry ? ransomware.victims.slice(VICTIM_CAP).filter((v) => v.country === defaultCountry) : []),
+        ];
+
   return (
     <div className="mt-4 grid gap-4 lg:grid-cols-2">
       {/* Ransomware landscape */}
@@ -79,7 +94,7 @@ export async function CtiCards({ projectId }: { projectId: string }) {
             </div>
           ) : null}
           <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-fg-subtle">Recently disclosed</div>
-          <RansomwareFeed victims={ransomware.victims} countries={ransomware.countries} sectors={ransomware.sectors} />
+          <RansomwareFeed victims={cappedVictims} countries={ransomware.countries} sectors={ransomware.sectors} />
         </CardContent>
       </Card>
 
