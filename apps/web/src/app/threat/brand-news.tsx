@@ -2,6 +2,7 @@ import { Newspaper } from 'lucide-react';
 import { desc, eq, sql } from 'drizzle-orm';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Select } from '../../components/ui/select';
+import { Input } from '../../components/ui/input';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
 import { NewsStatusBadge } from '../../components/ui/finding-status';
@@ -9,7 +10,8 @@ import { NEWS_STATUS_LABEL } from '@vacti/core';
 import { fetchBrandNews } from '@vacti/threat-intel';
 import { brandNews } from '@vacti/db';
 import { getDb } from '../../lib/db';
-import { setBrandNewsStatusAction, bulkReviewBrandNewsAction } from '../../lib/threat-actions';
+import { setBrandNewsStatusAction, bulkReviewBrandNewsAction, refreshBrandNewsAction } from '../../lib/threat-actions';
+import { aiTriageNewsAction } from '../../lib/ai-actions';
 
 /**
  * Brand monitoring: public news mentioning the project's brand/domain (Google News RSS, key-less,
@@ -106,20 +108,45 @@ export async function BrandNews({
             </Button>
           </form>
           {canTriage ? (
-            <form action={bulkReviewBrandNewsAction} className="flex items-center gap-1.5">
-              <input type="hidden" name="projectId" value={projectId} />
-              <input type="hidden" name="filter" value={filter} />
-              <Select name="status" defaultValue="reviewed" className="h-8 w-36 text-xs" aria-label="Bulk status">
-                {Object.entries(NEWS_STATUS_LABEL).map(([val, label]) => (
-                  <option key={val} value={val}>
-                    Mark all: {label}
-                  </option>
-                ))}
-              </Select>
-              <Button type="submit" variant="outline" size="sm">
-                Apply
-              </Button>
-            </form>
+            <>
+              <form action={refreshBrandNewsAction} className="flex items-center gap-1.5">
+                <input type="hidden" name="projectId" value={projectId} />
+                <Input
+                  name="query"
+                  defaultValue={brand}
+                  placeholder="brand / keyword"
+                  className="h-8 w-44 text-xs"
+                  aria-label="Brand search term"
+                />
+                <Button type="submit" variant="primary" size="sm">
+                  Search now
+                </Button>
+              </form>
+              <form action={bulkReviewBrandNewsAction} className="flex items-center gap-1.5">
+                <input type="hidden" name="projectId" value={projectId} />
+                <input type="hidden" name="filter" value={filter} />
+                <Select name="status" defaultValue="reviewed" className="h-8 w-36 text-xs" aria-label="Bulk status">
+                  {Object.entries(NEWS_STATUS_LABEL).map(([val, label]) => (
+                    <option key={val} value={val}>
+                      Mark all: {label}
+                    </option>
+                  ))}
+                </Select>
+                <Button type="submit" variant="outline" size="sm">
+                  Apply
+                </Button>
+              </form>
+              <form
+                action={aiTriageNewsAction}
+                title="Auto-mark off-topic headlines as Irrelevant (learns from your past triage)"
+              >
+                <input type="hidden" name="projectId" value={projectId} />
+                <input type="hidden" name="kind" value="brand" />
+                <Button type="submit" variant="ghost" size="sm">
+                  AI: filter irrelevant
+                </Button>
+              </form>
+            </>
           ) : (
             <span className="text-xs text-fg-subtle">public news</span>
           )}

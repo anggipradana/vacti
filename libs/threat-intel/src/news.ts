@@ -128,6 +128,30 @@ export const FEEDS: { url: string; source: string }[] = [
   { url: 'https://inet.detik.com/rss', source: 'detikInet' },
 ];
 
+/**
+ * Build a Google News RSS search URL targeted at a sector: the sector's keywords AND a
+ * security/breach qualifier (Indonesian + English). For `general` (no keywords) it falls back to a
+ * generic security query. This populates sparse sectors (e.g. energy/technology/retail) that the
+ * curated feeds rarely cover, so switching sector returns fresh, sector-specific headlines.
+ */
+export function sectorSearchUrl(sector: string): string {
+  const kws = SECTORS[sector] ?? [];
+  const sec =
+    '("keamanan siber" OR "bocor data" OR peretasan OR ransomware OR phishing OR breach OR hacked OR "data breach")';
+  const q = kws.length
+    ? `(${kws
+        .slice(0, 6)
+        .map((k) => `"${k}"`)
+        .join(' OR ')}) ${sec}`
+    : sec;
+  return `https://news.google.com/rss/search?q=${encodeURIComponent(q)}&hl=id&gl=ID&ceid=ID:id`;
+}
+
+/** Curated feeds plus a sector-targeted Google News search, used as the default feed set. */
+export function sectorFeeds(sector: string): { url: string; source: string }[] {
+  return [...FEEDS, { url: sectorSearchUrl(sector), source: 'Google News (sector)' }];
+}
+
 function decode(s: string): string {
   return s
     .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1')
@@ -189,7 +213,8 @@ export interface FetchNewsOptions {
 
 /** Aggregate the feeds, filter by sector, dedupe by link, newest first. Degrades per-feed on error. */
 export async function fetchSectorNews(sector: string, opts: FetchNewsOptions = {}): Promise<NewsItem[]> {
-  const { feeds = FEEDS, fetchImpl = fetch, limit = 30, timeoutMs = 8000 } = opts;
+  // Default to the curated feeds + a sector-targeted Google News search (callers can override).
+  const { feeds = sectorFeeds(sector), fetchImpl = fetch, limit = 30, timeoutMs = 8000 } = opts;
   const all: NewsItem[] = [];
   for (const feed of feeds) {
     try {

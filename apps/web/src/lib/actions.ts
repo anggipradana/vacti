@@ -10,6 +10,7 @@ import { getDb } from './db';
 import { createSession, destroySession, getCurrentUser, userCount } from './session';
 import { requirePermission } from './authz';
 import { recordAudit } from './audit';
+import { setActiveProjectCookie } from './active-project';
 
 export async function createAdminAction(formData: FormData) {
   if ((await userCount()) > 0) redirect('/login');
@@ -39,6 +40,9 @@ export async function loginAction(formData: FormData) {
       .where(eq(users.id, user.id));
   }
   await createSession(user.id);
+  // Land on the default project (if one is flagged) so login always opens the chosen workspace.
+  const [def] = await getDb().select({ id: projects.id }).from(projects).where(eq(projects.isDefault, true)).limit(1);
+  if (def) await setActiveProjectCookie(def.id);
   redirect('/dashboard');
 }
 
@@ -72,6 +76,20 @@ export async function deleteProjectAction(formData: FormData) {
   if (!id) return;
   await getDb().delete(projects).where(eq(projects.id, id));
   await recordAudit({ actorId: actor.id, action: 'project.delete', resource: `project:${id}`, projectId: id });
+  revalidatePath('/projects');
+}
+
+/** Mark a project as the default workspace (shown on login). At most one project is default. */
+export async function setDefaultProjectAction(formData: FormData) {
+  const actor = await requirePermission(Permission.ModifyTargets);
+  const id = String(formData.get('id') ?? '');
+  if (!id) return;
+  const db = getDb();
+  // Single default: clear the flag everywhere, then set it on the chosen project.
+  await db.update(projects).set({ isDefault: false }).where(eq(projects.isDefault, true));
+  await db.update(projects).set({ isDefault: true }).where(eq(projects.id, id));
+  await setActiveProjectCookie(id);
+  await recordAudit({ actorId: actor.id, action: 'project.set_default', resource: `project:${id}`, projectId: id });
   revalidatePath('/projects');
 }
 

@@ -42,7 +42,7 @@ import {
 } from '../../lib/threat-actions';
 import { setLeakStatusAction, deleteLeakAction } from '../../lib/status-actions';
 import { ConfirmButton } from '../../components/ui/confirm-button';
-import { generateThreatNarrativeAction } from '../../lib/ai-actions';
+import { generateThreatNarrativeAction, aiTriageNewsAction } from '../../lib/ai-actions';
 import { CtiCards } from './cti-cards';
 import { BrandNews } from './brand-news';
 import { getActiveProjectId } from '../../lib/active-project';
@@ -201,7 +201,7 @@ export default async function ThreatPage({
       <Suspense fallback={<div className="mt-4 text-sm text-fg-subtle">Loading brand news…</div>}>
         <BrandNews
           projectId={projectId}
-          brand={project?.name ?? 'brand'}
+          brand={project?.brandQuery || project?.name || 'brand'}
           canTriage={canTriage}
           filter={brandFilter}
           newsFilter={newsFilter}
@@ -281,6 +281,16 @@ export default async function ThreatPage({
                   </Select>
                   <Button type="submit" variant="outline" size="sm">
                     Apply sector
+                  </Button>
+                </form>
+                <form
+                  action={aiTriageNewsAction}
+                  title="Auto-mark off-topic headlines as Irrelevant (learns from your past triage)"
+                >
+                  <input type="hidden" name="projectId" value={projectId} />
+                  <input type="hidden" name="kind" value="sector" />
+                  <Button type="submit" variant="ghost" size="sm">
+                    AI: filter irrelevant
                   </Button>
                 </form>
               </>

@@ -113,6 +113,69 @@ export async function makeProvider(cfg: AiConfig): Promise<AiProvider | null> {
   }
 }
 
+// ---- News relevance triage (learns from analyst "Irrelevant" marks) ----
+
+export interface NewsTriageInput {
+  /** What the news is being monitored for, e.g. "banking sector security news" or "brand: Hijra". */
+  context: string;
+  /** Titles the analyst previously marked Irrelevant — negative examples to learn from. */
+  irrelevantExamples: string[];
+  /** Titles the analyst marked Relevant/Actioned — positive examples to learn from. */
+  relevantExamples: string[];
+  /** Candidate (untriaged) titles to classify, in order. */
+  candidates: string[];
+}
+
+export function buildNewsTriagePrompt(input: NewsTriageInput): { system: string; prompt: string } {
+  const system =
+    'You are a cyber threat-intelligence analyst assistant. You triage news headlines for relevance ' +
+    "to a monitoring context. Learn from the analyst's past decisions. A headline is IRRELEVANT if it " +
+    'is off-topic, marketing/promotional, generic non-security news, or unrelated to the context. ' +
+    'Return ONLY a compact JSON array of the 1-based indices of the IRRELEVANT candidates, e.g. [1,4,5]. ' +
+    'If every candidate is relevant, return []. Output nothing else.';
+  const ex = (label: string, xs: string[]) =>
+    xs.length
+      ? `${label}:\n${xs
+          .slice(0, 15)
+          .map((t) => `- ${t}`)
+          .join('\n')}`
+      : '';
+  const prompt = [
+    `Monitoring context: ${input.context}`,
+    ex('Examples the analyst marked IRRELEVANT', input.irrelevantExamples),
+    ex('Examples the analyst marked RELEVANT', input.relevantExamples),
+    `Candidates to classify:\n${input.candidates.map((t, i) => `${i + 1}. ${t}`).join('\n')}`,
+  ]
+    .filter(Boolean)
+    .join('\n\n');
+  return { system, prompt };
+}
+
+/** Parse the model's JSON array of 1-based indices; keep only valid, in-range, unique values. */
+export function parseIrrelevantIndices(text: string, max: number): number[] {
+  const m = text.match(/\[[\s\S]*?\]/);
+  if (!m) return [];
+  try {
+    const arr = JSON.parse(m[0]) as unknown;
+    if (!Array.isArray(arr)) return [];
+    const out = new Set<number>();
+    for (const v of arr) {
+      const n = typeof v === 'number' ? v : parseInt(String(v), 10);
+      if (Number.isInteger(n) && n >= 1 && n <= max) out.add(n);
+    }
+    return [...out];
+  } catch {
+    return [];
+  }
+}
+
+/** Ask the provider which candidate headlines are irrelevant. Returns 1-based indices. */
+export async function triageNewsRelevance(input: NewsTriageInput, provider: AiProvider): Promise<number[]> {
+  if (!input.candidates.length) return [];
+  const { system, prompt } = buildNewsTriagePrompt(input);
+  return parseIrrelevantIndices(await provider.generate(system, prompt), input.candidates.length);
+}
+
 export function enrichmentHash(v: VulnEnrichmentInput): string {
   return createHash('sha256')
     .update(`${v.name}|${v.type ?? ''}`)

@@ -8,12 +8,13 @@ import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Button } from '../../components/ui/button';
 import { ConfirmButton } from '../../components/ui/confirm-button';
+import { Badge } from '../../components/ui/badge';
 import { EmptyState } from '../../components/ui/empty-state';
 import { userCan, Permission } from '@vacti/core';
 import { projects } from '@vacti/db';
 import { getDb } from '../../lib/db';
 import { getCurrentUser } from '../../lib/session';
-import { createProjectAction, deleteProjectAction } from '../../lib/actions';
+import { createProjectAction, deleteProjectAction, setDefaultProjectAction } from '../../lib/actions';
 
 export const dynamic = 'force-dynamic';
 
@@ -55,21 +56,38 @@ export default async function ProjectsPage() {
               <Card key={p.id}>
                 <CardContent className="flex items-center justify-between py-4">
                   <div>
-                    <div className="font-medium">{p.name}</div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">{p.name}</span>
+                      {p.isDefault ? (
+                        <Badge variant="accent" className="text-[10px]">
+                          Default
+                        </Badge>
+                      ) : null}
+                    </div>
                     <div className="font-mono text-xs text-fg-subtle">/{p.slug}</div>
                   </div>
                   {canManage ? (
-                    <form action={deleteProjectAction}>
-                      <input type="hidden" name="id" value={p.id} />
-                      <ConfirmButton
-                        size="sm"
-                        variant="ghost"
-                        className="text-danger hover:bg-danger/10"
-                        confirm={`Delete project "${p.name}" and ALL its targets, scans, findings and TI data? This cannot be undone.`}
-                      >
-                        Delete
-                      </ConfirmButton>
-                    </form>
+                    <div className="flex items-center gap-1.5">
+                      {!p.isDefault ? (
+                        <form action={setDefaultProjectAction}>
+                          <input type="hidden" name="id" value={p.id} />
+                          <Button type="submit" size="sm" variant="outline">
+                            Set default
+                          </Button>
+                        </form>
+                      ) : null}
+                      <form action={deleteProjectAction}>
+                        <input type="hidden" name="id" value={p.id} />
+                        <ConfirmButton
+                          size="sm"
+                          variant="ghost"
+                          className="text-danger hover:bg-danger/10"
+                          confirm={`Delete project "${p.name}" and ALL its targets, scans, findings and TI data? This cannot be undone.`}
+                        >
+                          Delete
+                        </ConfirmButton>
+                      </form>
+                    </div>
                   ) : null}
                 </CardContent>
               </Card>
