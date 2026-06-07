@@ -88,6 +88,67 @@ export async function saveProfileAction(formData: FormData) {
   revalidatePath('/settings/profiles');
 }
 
+/** Update a scan profile — mirrors saveProfileAction's field set (modify_scan_config). */
+export async function editProfileAction(formData: FormData) {
+  const actor = await requirePermission(Permission.ModifyScanConfig);
+  const id = String(formData.get('id') ?? '');
+  const name = String(formData.get('name') ?? '').trim();
+  if (!id || !name) redirect('/settings/profiles?error=invalid');
+  const picked = new Set(formData.getAll('tools').map(String));
+  const tools = Object.fromEntries(ALL_TOOL_KEYS.map((t) => [t, picked.has(t)]));
+  const sev = formData.getAll('severities').map(String).filter(Boolean);
+  const config: Record<string, unknown> = {};
+
+  // httpx — its own probe options.
+  const httpx: Record<string, unknown> = {};
+  const hua = String(formData.get('httpxUserAgent') ?? '').trim();
+  if (hua) httpx.userAgent = hua;
+  const hrate = num(formData.get('httpxRateLimit'));
+  if (hrate) httpx.rateLimit = hrate;
+  const hconc = num(formData.get('httpxConcurrency'));
+  if (hconc) httpx.concurrency = hconc;
+  if (Object.keys(httpx).length) config.httpx = httpx;
+
+  // nuclei — its own scan options.
+  const nuclei: Record<string, unknown> = {};
+  const nua = String(formData.get('nucleiUserAgent') ?? '').trim();
+  if (nua) nuclei.userAgent = nua;
+  const nrate = num(formData.get('nucleiRateLimit'));
+  if (nrate) nuclei.rateLimit = nrate;
+  const nconc = num(formData.get('nucleiConcurrency'));
+  if (nconc) nuclei.concurrency = nconc;
+  const nret = num(formData.get('nucleiRetries'));
+  if (nret !== undefined) nuclei.retries = nret;
+  const nt = list(formData.get('nucleiTags'));
+  if (nt.length) nuclei.tags = nt;
+  const ntpl = list(formData.get('nucleiTemplates'));
+  if (ntpl.length) nuclei.templates = ntpl;
+  const net = list(formData.get('nucleiExcludeTags'));
+  if (net.length) nuclei.excludeTags = net;
+  const extra = list(formData.get('nucleiExtraArgs'));
+  if (extra.length) nuclei.extraArgs = extra;
+  if (Object.keys(nuclei).length) config.nuclei = nuclei;
+
+  // Scope (applies across tools).
+  const ex = list(formData.get('excludeSubdomains'));
+  if (ex.length) config.excludeSubdomains = ex;
+
+  const rate = hrate ?? nrate;
+  await getDb()
+    .update(scanProfiles)
+    .set({
+      name,
+      tools,
+      ports: String(formData.get('ports') ?? 'top-100').trim() || 'top-100',
+      severities: sev.length ? sev : [...ALL_SEVERITIES.slice(0, 4)],
+      rate: rate ?? null,
+      config: Object.keys(config).length ? config : null,
+    })
+    .where(eq(scanProfiles.id, id));
+  await recordAudit({ actorId: actor.id, action: 'profile.update', resource: `profile:${id}` });
+  revalidatePath('/settings/profiles');
+}
+
 export async function deleteProfileAction(formData: FormData) {
   await requirePermission(Permission.ModifyScanConfig);
   const id = String(formData.get('id') ?? '');
@@ -123,6 +184,26 @@ export async function createTargetAction(formData: FormData) {
     : [];
   const customHeaders = headersRaw ? parseHeaders(headersRaw) : null;
   await getDb().insert(targets).values({ projectId, domain, predefinedSubdomains, customHeaders });
+  revalidatePath('/targets');
+}
+
+/** Update a target's domain, predefined subdomains and custom headers. ModifyTargets + audit. */
+export async function editTargetAction(formData: FormData) {
+  const actor = await requirePermission(Permission.ModifyTargets);
+  const id = String(formData.get('id') ?? '');
+  const domain = String(formData.get('domain') ?? '').trim();
+  const subsRaw = String(formData.get('predefinedSubdomains') ?? '').trim();
+  const headersRaw = String(formData.get('customHeaders') ?? '').trim();
+  if (!id || !domain) redirect('/targets?error=invalid');
+  const predefinedSubdomains = subsRaw
+    ? subsRaw
+        .split(/[\s,]+/)
+        .map((s) => s.trim())
+        .filter(Boolean)
+    : [];
+  const customHeaders = headersRaw ? parseHeaders(headersRaw) : null;
+  await getDb().update(targets).set({ domain, predefinedSubdomains, customHeaders }).where(eq(targets.id, id));
+  await recordAudit({ actorId: actor.id, action: 'target.update', resource: `target:${id}` });
   revalidatePath('/targets');
 }
 
@@ -229,6 +310,19 @@ export async function createScheduleAction(formData: FormData) {
   });
   if (!targetId || !isValidCron(cron)) redirect('/schedules?error=invalid');
   await getDb().insert(scanSchedules).values({ targetId, cron, profileId });
+  revalidatePath('/schedules');
+}
+
+/** Update a schedule's cron, profile and enabled flag. InitiateScans + audit. */
+export async function editScheduleAction(formData: FormData) {
+  const actor = await requirePermission(Permission.InitiateScans);
+  const id = String(formData.get('id') ?? '');
+  const cron = String(formData.get('cron') ?? '').trim();
+  const profileId = String(formData.get('profileId') ?? '').trim() || null;
+  const enabled = String(formData.get('enabled') ?? '') === '1';
+  if (!id || !isValidCron(cron)) redirect('/schedules?error=invalid');
+  await getDb().update(scanSchedules).set({ cron, profileId, enabled }).where(eq(scanSchedules.id, id));
+  await recordAudit({ actorId: actor.id, action: 'schedule.update', resource: `schedule:${id}` });
   revalidatePath('/schedules');
 }
 

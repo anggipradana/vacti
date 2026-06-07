@@ -11,7 +11,12 @@ import { ALL_EVENT_TYPES, listProjectSecretNames } from '@vacti/integrations';
 import { projects, webhooks, aiSettings } from '@vacti/db';
 import { getDb } from '../../../../lib/db';
 import { getCurrentUser } from '../../../../lib/session';
-import { addWebhookAction, deleteWebhookAction, testWebhookAction } from '../../../../lib/integration-actions';
+import {
+  addWebhookAction,
+  deleteWebhookAction,
+  editWebhookAction,
+  testWebhookAction,
+} from '../../../../lib/integration-actions';
 import { saveAiSettingsAction } from '../../../../lib/ai-actions';
 import { saveProjectKeyAction, clearProjectKeyAction } from '../../../../lib/vault-actions';
 
@@ -111,28 +116,99 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
             ) : (
               hooks.map((w) => (
                 <Card key={w.id}>
-                  <CardContent className="flex items-center justify-between py-3">
-                    <div>
-                      <span className="font-medium">{w.label ?? w.channel}</span>{' '}
-                      <Badge variant="neutral">{w.channel}</Badge>{' '}
-                      <span className="text-xs text-fg-subtle">
-                        {w.events.length ? w.events.join(', ') : 'all events'}
-                      </span>
+                  <CardContent className="py-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <span className="font-medium">{w.label ?? w.channel}</span>{' '}
+                        <Badge variant="neutral">{w.channel}</Badge>{' '}
+                        <span className="text-xs text-fg-subtle">
+                          {w.events.length ? w.events.join(', ') : 'all events'}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <form action={testWebhookAction}>
+                          <input type="hidden" name="id" value={w.id} />
+                          <Button type="submit" variant="outline" size="sm">
+                            Test
+                          </Button>
+                        </form>
+                        <form action={deleteWebhookAction}>
+                          <input type="hidden" name="id" value={w.id} />
+                          <Button type="submit" variant="ghost" size="sm" className="text-danger hover:bg-danger/10">
+                            Remove
+                          </Button>
+                        </form>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <form action={testWebhookAction}>
+                    <details className="mt-2">
+                      <summary className="cursor-pointer text-xs text-accent hover:underline">Edit</summary>
+                      <form action={editWebhookAction} className="mt-3 space-y-3" data-testid={`webhook-edit-${w.id}`}>
                         <input type="hidden" name="id" value={w.id} />
-                        <Button type="submit" variant="outline" size="sm">
-                          Test
+                        <div className="space-y-1">
+                          <Label htmlFor={`channel-${w.id}`}>Channel</Label>
+                          <Select id={`channel-${w.id}`} name="channel" defaultValue={w.channel}>
+                            <option value="discord">Discord</option>
+                            <option value="slack">Slack</option>
+                            <option value="telegram">Telegram</option>
+                            <option value="google_chat">Google Chat</option>
+                            <option value="generic">Generic (JSON)</option>
+                          </Select>
+                        </div>
+                        <div className="space-y-1">
+                          <Label htmlFor={`label-${w.id}`}>Label</Label>
+                          <Input
+                            id={`label-${w.id}`}
+                            name="label"
+                            defaultValue={w.label ?? ''}
+                            placeholder="Team alerts"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label htmlFor={`url-${w.id}`}>Webhook URL</Label>
+                          <Input
+                            id={`url-${w.id}`}
+                            name="url"
+                            defaultValue={w.url ?? ''}
+                            placeholder="https://… (Discord/Slack/GChat/Generic)"
+                          />
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className="space-y-1">
+                            <Label htmlFor={`tgtoken-${w.id}`}>Telegram bot token</Label>
+                            <Input
+                              id={`tgtoken-${w.id}`}
+                              name="telegramToken"
+                              defaultValue={w.telegramToken ?? ''}
+                              placeholder="for Telegram"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <Label htmlFor={`tgchat-${w.id}`}>Telegram chat id</Label>
+                            <Input id={`tgchat-${w.id}`} name="telegramChatId" defaultValue={w.telegramChatId ?? ''} />
+                          </div>
+                        </div>
+                        <div className="space-y-1">
+                          <Label>Events (none = all)</Label>
+                          <div className="flex flex-wrap gap-2 text-xs">
+                            {ALL_EVENT_TYPES.map((e) => (
+                              <label
+                                key={e}
+                                className="flex items-center gap-1 rounded-md border border-border px-2 py-1"
+                              >
+                                <input type="checkbox" name="events" value={e} defaultChecked={w.events.includes(e)} />{' '}
+                                {e}
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+                        <label className="flex items-center gap-2 text-sm">
+                          <input type="checkbox" name="enabled" defaultChecked={w.enabled} /> Enabled
+                        </label>
+                        <Button type="submit" size="sm" data-testid={`webhook-edit-save-${w.id}`}>
+                          Save changes
                         </Button>
                       </form>
-                      <form action={deleteWebhookAction}>
-                        <input type="hidden" name="id" value={w.id} />
-                        <Button type="submit" variant="ghost" size="sm" className="text-danger hover:bg-danger/10">
-                          Remove
-                        </Button>
-                      </form>
-                    </div>
+                    </details>
                   </CardContent>
                 </Card>
               ))

@@ -52,11 +52,13 @@ test.describe.serial('settings', () => {
 
   test('create a scan profile with advanced config', async ({ page }) => {
     await page.goto('/settings/profiles');
-    await page.getByLabel('Name').fill('QA Deep UA');
+    // Per-row Edit forms now also expose Name/Exclude fields, so scope to the create form.
+    const create = page.locator('form', { has: page.getByRole('button', { name: 'Create profile' }) });
+    await create.getByLabel('Name').fill('QA Deep UA');
     // Per-tool fieldsets now expose separate httpx/nuclei User-Agent fields.
-    await page.locator('#httpxUserAgent').fill('vacti-qa/1.0');
-    await page.getByLabel('Exclude subdomains').fill('dev.example.com');
-    await page.getByRole('button', { name: 'Create profile' }).click();
+    await create.locator('#httpxUserAgent').fill('vacti-qa/1.0');
+    await create.getByLabel('Exclude subdomains').fill('dev.example.com');
+    await create.getByRole('button', { name: 'Create profile' }).click();
     await expect(page.getByText('QA Deep UA')).toBeVisible();
     await expect(page.getByText('UA set')).toBeVisible();
   });

@@ -16,7 +16,7 @@ import { userCan, Permission } from '@vacti/core';
 import { projects, targets } from '@vacti/db';
 import { getDb } from '../../../lib/db';
 import { getCurrentUser } from '../../../lib/session';
-import { createTargetAction, deleteTargetAction } from '../../../lib/recon-actions';
+import { createTargetAction, editTargetAction, deleteTargetAction } from '../../../lib/recon-actions';
 import { ProjectSwitcher } from '../../../components/project-switcher';
 import { getActiveProjectId } from '../../../lib/active-project';
 
@@ -91,31 +91,69 @@ export default async function TargetsPage({ searchParams }: { searchParams: Prom
           ) : (
             targetRows.map((t) => (
               <Card key={t.id}>
-                <CardContent className="flex items-center justify-between py-4">
-                  <Link href={`/targets/${t.id}`} className="font-mono text-sm text-accent hover:underline">
-                    {t.domain}
-                  </Link>
-                  <div className="flex items-center gap-2">
-                    {t.customHeaders ? <Badge variant="neutral">custom headers</Badge> : null}
-                    <Badge variant={t.predefinedSubdomains.length ? 'accent' : 'neutral'}>
-                      {t.predefinedSubdomains.length
-                        ? `${t.predefinedSubdomains.length} predefined subs`
-                        : 'discovery on'}
-                    </Badge>
-                    {userCan(user, Permission.ModifyTargets) ? (
-                      <form action={deleteTargetAction}>
-                        <input type="hidden" name="id" value={t.id} />
-                        <ConfirmButton
-                          size="sm"
-                          variant="ghost"
-                          className="text-danger hover:bg-danger/10"
-                          confirm={`Delete target ${t.domain} and all its scans/results? This cannot be undone.`}
-                        >
-                          Delete
-                        </ConfirmButton>
-                      </form>
-                    ) : null}
+                <CardContent className="py-4">
+                  <div className="flex items-center justify-between">
+                    <Link href={`/targets/${t.id}`} className="font-mono text-sm text-accent hover:underline">
+                      {t.domain}
+                    </Link>
+                    <div className="flex items-center gap-2">
+                      {t.customHeaders ? <Badge variant="neutral">custom headers</Badge> : null}
+                      <Badge variant={t.predefinedSubdomains.length ? 'accent' : 'neutral'}>
+                        {t.predefinedSubdomains.length
+                          ? `${t.predefinedSubdomains.length} predefined subs`
+                          : 'discovery on'}
+                      </Badge>
+                      {userCan(user, Permission.ModifyTargets) ? (
+                        <form action={deleteTargetAction}>
+                          <input type="hidden" name="id" value={t.id} />
+                          <ConfirmButton
+                            size="sm"
+                            variant="ghost"
+                            className="text-danger hover:bg-danger/10"
+                            confirm={`Delete target ${t.domain} and all its scans/results? This cannot be undone.`}
+                          >
+                            Delete
+                          </ConfirmButton>
+                        </form>
+                      ) : null}
+                    </div>
                   </div>
+                  {userCan(user, Permission.ModifyTargets) ? (
+                    <details className="mt-3">
+                      <summary className="cursor-pointer text-xs text-fg-muted hover:text-fg">Edit</summary>
+                      <form action={editTargetAction} className="mt-3 space-y-3">
+                        <input type="hidden" name="id" value={t.id} />
+                        <div className="space-y-1.5">
+                          <Label htmlFor={`domain-${t.id}`}>Domain</Label>
+                          <Input id={`domain-${t.id}`} name="domain" defaultValue={t.domain} required />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label htmlFor={`subs-${t.id}`}>Predefined subdomains</Label>
+                          <Input
+                            id={`subs-${t.id}`}
+                            name="predefinedSubdomains"
+                            defaultValue={t.predefinedSubdomains.join(' ')}
+                            placeholder="a.example.com b.example.com"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label htmlFor={`headers-${t.id}`}>Custom request headers</Label>
+                          <Textarea
+                            id={`headers-${t.id}`}
+                            name="customHeaders"
+                            rows={3}
+                            defaultValue={Object.entries((t.customHeaders ?? {}) as Record<string, string>)
+                              .map(([k, v]) => `${k}: ${v}`)
+                              .join('\n')}
+                            placeholder={'Authorization: Bearer …\nX-Api-Key: …'}
+                          />
+                        </div>
+                        <SubmitButton size="sm" pendingText="Saving…">
+                          Save changes
+                        </SubmitButton>
+                      </form>
+                    </details>
+                  ) : null}
                 </CardContent>
               </Card>
             ))

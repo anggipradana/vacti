@@ -14,7 +14,12 @@ import { userCan, Permission } from '@vacti/core';
 import { targets, scanProfiles, scanSchedules, projects } from '@vacti/db';
 import { getDb } from '../../../lib/db';
 import { getCurrentUser } from '../../../lib/session';
-import { createScheduleAction, toggleScheduleAction, deleteScheduleAction } from '../../../lib/recon-actions';
+import {
+  createScheduleAction,
+  editScheduleAction,
+  toggleScheduleAction,
+  deleteScheduleAction,
+} from '../../../lib/recon-actions';
 import { ProjectSwitcher } from '../../../components/project-switcher';
 import { getActiveProjectId } from '../../../lib/active-project';
 
@@ -129,35 +134,70 @@ export default async function SchedulesPage({ searchParams }: { searchParams: Pr
         <div className="space-y-2">
           {scheduleRows.map((s) => (
             <Card key={s.id} data-testid="schedule-row">
-              <CardContent className="flex flex-wrap items-center justify-between gap-3 py-3">
-                <div>
-                  <span className="font-mono text-sm">{s.domain ?? s.targetId.slice(0, 8)}</span>
-                  <span className="ml-3 font-mono text-xs text-fg-muted">{s.cron}</span>
-                  {s.lastRunAt ? (
-                    <span className="ml-3 text-xs text-fg-subtle">
-                      last run {new Date(s.lastRunAt).toISOString().slice(0, 16).replace('T', ' ')}
-                    </span>
-                  ) : null}
+              <CardContent className="py-3">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <span className="font-mono text-sm">{s.domain ?? s.targetId.slice(0, 8)}</span>
+                    <span className="ml-3 font-mono text-xs text-fg-muted">{s.cron}</span>
+                    {s.lastRunAt ? (
+                      <span className="ml-3 text-xs text-fg-subtle">
+                        last run {new Date(s.lastRunAt).toISOString().slice(0, 16).replace('T', ' ')}
+                      </span>
+                    ) : null}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant={s.enabled ? 'accent' : 'neutral'}>{s.enabled ? 'enabled' : 'paused'}</Badge>
+                    {canManage ? (
+                      <>
+                        <form action={toggleScheduleAction}>
+                          <input type="hidden" name="id" value={s.id} />
+                          <Button type="submit" variant="outline" size="sm">
+                            {s.enabled ? 'Pause' : 'Enable'}
+                          </Button>
+                        </form>
+                        <form action={deleteScheduleAction}>
+                          <input type="hidden" name="id" value={s.id} />
+                          <Button type="submit" variant="ghost" size="sm" className="text-danger hover:bg-danger/10">
+                            Delete
+                          </Button>
+                        </form>
+                      </>
+                    ) : null}
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Badge variant={s.enabled ? 'accent' : 'neutral'}>{s.enabled ? 'enabled' : 'paused'}</Badge>
-                  {canManage ? (
-                    <>
-                      <form action={toggleScheduleAction}>
-                        <input type="hidden" name="id" value={s.id} />
-                        <Button type="submit" variant="outline" size="sm">
-                          {s.enabled ? 'Pause' : 'Enable'}
-                        </Button>
-                      </form>
-                      <form action={deleteScheduleAction}>
-                        <input type="hidden" name="id" value={s.id} />
-                        <Button type="submit" variant="ghost" size="sm" className="text-danger hover:bg-danger/10">
-                          Delete
-                        </Button>
-                      </form>
-                    </>
-                  ) : null}
-                </div>
+                {canManage ? (
+                  <details className="mt-3">
+                    <summary className="cursor-pointer text-xs text-fg-muted hover:text-fg">Edit</summary>
+                    <form action={editScheduleAction} className="mt-3 grid items-end gap-3 sm:grid-cols-3">
+                      <input type="hidden" name="id" value={s.id} />
+                      <div className="space-y-1">
+                        <Label htmlFor={`cron-${s.id}`}>Cron (5-field)</Label>
+                        <Input id={`cron-${s.id}`} name="cron" defaultValue={s.cron} className="font-mono" required />
+                      </div>
+                      <div className="space-y-1">
+                        <Label htmlFor={`profileId-${s.id}`}>Profile</Label>
+                        <Select id={`profileId-${s.id}`} name="profileId" defaultValue={s.profileId ?? ''}>
+                          <option value="">Default</option>
+                          {profileRows.map((p) => (
+                            <option key={p.id} value={p.id}>
+                              {p.name}
+                            </option>
+                          ))}
+                        </Select>
+                      </div>
+                      <div className="space-y-1">
+                        <Label htmlFor={`enabled-${s.id}`}>Status</Label>
+                        <Select id={`enabled-${s.id}`} name="enabled" defaultValue={s.enabled ? '1' : '0'}>
+                          <option value="1">Enabled</option>
+                          <option value="0">Paused</option>
+                        </Select>
+                      </div>
+                      <SubmitButton size="sm" pendingText="Saving…" className="sm:col-span-3">
+                        Save changes
+                      </SubmitButton>
+                    </form>
+                  </details>
+                ) : null}
               </CardContent>
             </Card>
           ))}

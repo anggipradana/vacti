@@ -23,11 +23,12 @@ test.describe.serial('threat / schedules / search', () => {
     // Friendly pickers (freq/time/day) replaced the raw cron field; defaults are valid.
     await page.getByRole('button', { name: 'Add schedule' }).click();
     await expect(page.getByTestId('schedule-row')).toHaveCount(1);
-    await expect(page.getByTestId('schedule-row').getByText('enabled')).toBeVisible();
+    // exact:true → match the lowercase status badge, not the Edit form's "Enabled"/"Paused" options.
+    await expect(page.getByTestId('schedule-row').getByText('enabled', { exact: true })).toBeVisible();
     await page.getByRole('button', { name: 'Pause' }).first().click();
-    await expect(page.getByTestId('schedule-row').getByText('paused')).toBeVisible();
+    await expect(page.getByTestId('schedule-row').getByText('paused', { exact: true })).toBeVisible();
     await page.getByRole('button', { name: 'Enable' }).first().click();
-    await expect(page.getByTestId('schedule-row').getByText('enabled')).toBeVisible();
+    await expect(page.getByTestId('schedule-row').getByText('enabled', { exact: true })).toBeVisible();
     await page.getByRole('button', { name: 'Delete' }).first().click();
     await expect(page.getByTestId('schedule-row')).toHaveCount(0);
   });

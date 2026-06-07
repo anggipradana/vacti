@@ -9,11 +9,18 @@ import { Button } from '../../../components/ui/button';
 import { ConfirmButton } from '../../../components/ui/confirm-button';
 import { Badge } from '../../../components/ui/badge';
 import { EmptyState } from '../../../components/ui/empty-state';
+import { Select } from '../../../components/ui/select';
 import { userCan, Permission } from '@vacti/core';
+import { SECTORS } from '@vacti/threat-intel';
 import { projects } from '@vacti/db';
 import { getDb } from '../../../lib/db';
 import { getCurrentUser } from '../../../lib/session';
-import { createProjectAction, deleteProjectAction, setDefaultProjectAction } from '../../../lib/actions';
+import {
+  createProjectAction,
+  deleteProjectAction,
+  setDefaultProjectAction,
+  editProjectAction,
+} from '../../../lib/actions';
 
 export const dynamic = 'force-dynamic';
 
@@ -53,40 +60,71 @@ export default async function ProjectsPage() {
           ) : (
             rows.map((p) => (
               <Card key={p.id}>
-                <CardContent className="flex items-center justify-between py-4">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium">{p.name}</span>
-                      {p.isDefault ? (
-                        <Badge variant="accent" className="text-[10px]">
-                          Default
-                        </Badge>
-                      ) : null}
+                <CardContent className="py-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">{p.name}</span>
+                        {p.isDefault ? (
+                          <Badge variant="accent" className="text-[10px]">
+                            Default
+                          </Badge>
+                        ) : null}
+                      </div>
+                      <div className="font-mono text-xs text-fg-subtle">/{p.slug}</div>
                     </div>
-                    <div className="font-mono text-xs text-fg-subtle">/{p.slug}</div>
+                    {canManage ? (
+                      <div className="flex items-center gap-1.5">
+                        {!p.isDefault ? (
+                          <form action={setDefaultProjectAction}>
+                            <input type="hidden" name="id" value={p.id} />
+                            <Button type="submit" size="sm" variant="outline">
+                              Set default
+                            </Button>
+                          </form>
+                        ) : null}
+                        <form action={deleteProjectAction}>
+                          <input type="hidden" name="id" value={p.id} />
+                          <ConfirmButton
+                            size="sm"
+                            variant="ghost"
+                            className="text-danger hover:bg-danger/10"
+                            confirm={`Delete project "${p.name}" and ALL its targets, scans, findings and TI data? This cannot be undone.`}
+                          >
+                            Delete
+                          </ConfirmButton>
+                        </form>
+                      </div>
+                    ) : null}
                   </div>
                   {canManage ? (
-                    <div className="flex items-center gap-1.5">
-                      {!p.isDefault ? (
-                        <form action={setDefaultProjectAction}>
-                          <input type="hidden" name="id" value={p.id} />
-                          <Button type="submit" size="sm" variant="outline">
-                            Set default
-                          </Button>
-                        </form>
-                      ) : null}
-                      <form action={deleteProjectAction}>
+                    <details className="mt-3">
+                      <summary className="cursor-pointer text-xs text-fg-subtle">Edit</summary>
+                      <form action={editProjectAction} className="mt-3 flex flex-wrap items-end gap-3">
                         <input type="hidden" name="id" value={p.id} />
-                        <ConfirmButton
-                          size="sm"
-                          variant="ghost"
-                          className="text-danger hover:bg-danger/10"
-                          confirm={`Delete project "${p.name}" and ALL its targets, scans, findings and TI data? This cannot be undone.`}
-                        >
-                          Delete
-                        </ConfirmButton>
+                        <div className="space-y-1.5">
+                          <Label htmlFor={`name-${p.id}`}>Name</Label>
+                          <Input id={`name-${p.id}`} name="name" defaultValue={p.name} required className="w-48" />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label htmlFor={`sector-${p.id}`}>Sector</Label>
+                          <Select id={`sector-${p.id}`} name="sector" defaultValue={p.sector} className="w-40">
+                            {Object.keys(SECTORS).map((s) => (
+                              <option key={s} value={s}>
+                                {s}
+                              </option>
+                            ))}
+                          </Select>
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label htmlFor={`slug-${p.id}`}>Slug</Label>
+                          <Input id={`slug-${p.id}`} name="slug" defaultValue={p.slug} className="w-40" />
+                        </div>
+                        <Button type="submit" size="sm">
+                          Save
+                        </Button>
                       </form>
-                    </div>
+                    </details>
                   ) : null}
                 </CardContent>
               </Card>

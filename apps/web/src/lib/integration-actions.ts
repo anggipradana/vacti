@@ -32,6 +32,30 @@ export async function addWebhookAction(formData: FormData) {
   revalidatePath('/settings/integrations');
 }
 
+export async function editWebhookAction(formData: FormData) {
+  await requirePermission(Permission.ModifySystemConfig);
+  const id = String(formData.get('id') ?? '');
+  const channel = String(formData.get('channel') ?? 'discord');
+  if (!id || !['discord', 'slack', 'telegram', 'google_chat', 'generic'].includes(channel)) return;
+  const v = (k: string) => {
+    const s = String(formData.get(k) ?? '').trim();
+    return s || null;
+  };
+  await getDb()
+    .update(webhooks)
+    .set({
+      channel,
+      label: v('label'),
+      url: v('url'),
+      telegramToken: v('telegramToken'),
+      telegramChatId: v('telegramChatId'),
+      events: formData.getAll('events').map(String),
+      enabled: formData.get('enabled') !== null,
+    })
+    .where(eq(webhooks.id, id));
+  revalidatePath('/settings/integrations');
+}
+
 export async function deleteWebhookAction(formData: FormData) {
   await requirePermission(Permission.ModifySystemConfig);
   const id = String(formData.get('id') ?? '');
