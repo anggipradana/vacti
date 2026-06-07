@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { and, eq, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { Permission, isNewsStatus, isLeakStatus, REVIEW_TOGGLE } from '@vacti/core';
-import { isSector, fetchSectorNews, fetchBrandNews } from '@vacti/threat-intel';
+import { isSector, fetchSectorNews, fetchBrandNews, capNews, NEWS_CAP } from '@vacti/threat-intel';
 import { manualIndicators, leakcheckData, projects, threatNews, brandNews } from '@vacti/db';
 import { getDb } from './db';
 import { getQueue } from './queue';
@@ -55,6 +55,8 @@ export async function setSectorAction(formData: FormData) {
   } catch {
     // Best-effort; the enqueued refresh will retry.
   }
+  // Keep only the newest NEWS_CAP headlines for this sector.
+  await capNews(db, NEWS_CAP, { sector });
   const q = await getQueue();
   await q.enqueue('ti-refresh', tiJob, { projectId });
   revalidatePath('/threat');
@@ -117,6 +119,8 @@ export async function refreshBrandNewsAction(formData: FormData) {
   } catch {
     // Feed outage must not fail the action.
   }
+  // Keep only the newest NEWS_CAP brand headlines for this project.
+  await capNews(db, NEWS_CAP, { projectId });
   revalidatePath('/threat');
 }
 
