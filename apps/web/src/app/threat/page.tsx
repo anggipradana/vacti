@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/ca
 import { StatCard } from '../../components/ui/stat-card';
 import { RiskGauge } from '../../components/ui/risk-gauge';
 import { Button } from '../../components/ui/button';
+import { SubmitButton } from '../../components/ui/submit-button';
 import { Textarea } from '../../components/ui/textarea';
 import { Label } from '../../components/ui/label';
 import { Select } from '../../components/ui/select';
@@ -279,9 +280,9 @@ export default async function ThreatPage({
                       </option>
                     ))}
                   </Select>
-                  <Button type="submit" variant="outline" size="sm">
+                  <SubmitButton variant="outline" size="sm" pendingText="Loading…">
                     Apply sector
-                  </Button>
+                  </SubmitButton>
                 </form>
                 <form
                   action={aiTriageNewsAction}
@@ -289,9 +290,9 @@ export default async function ThreatPage({
                 >
                   <input type="hidden" name="projectId" value={projectId} />
                   <input type="hidden" name="kind" value="sector" />
-                  <Button type="submit" variant="ghost" size="sm">
+                  <SubmitButton variant="ghost" size="sm" pendingText="Analyzing…">
                     AI: filter irrelevant
-                  </Button>
+                  </SubmitButton>
                 </form>
               </>
             ) : null}

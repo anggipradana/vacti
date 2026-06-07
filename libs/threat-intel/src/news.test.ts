@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseFeed, matchesSector, fetchSectorNews, sectorSearchUrl, sectorFeeds } from './news';
+import { parseFeed, matchesSector, fetchSectorNews, sectorSearchUrl, sectorFeeds, isSecurityRelated } from './news';
 
 const RSS = `<?xml version="1.0"?><rss><channel>
   <item><title>Major bank hit by phishing fraud</title><link>https://x/1</link>
@@ -64,6 +64,41 @@ describe('fetchSectorNews', () => {
     // Both 'ok' and 'dup' return the same banking item (link https://x/1) → deduped to 1.
     expect(news).toHaveLength(1);
     expect(news[0]!.link).toBe('https://x/1');
+  });
+});
+
+describe('isSecurityRelated', () => {
+  const [sec] = parseFeed(RSS, 'T'); // "Major bank hit by phishing fraud"
+  it('keeps cyber-security items, drops generic sector/lifestyle news', () => {
+    expect(isSecurityRelated(sec!)).toBe(true);
+    const generic = parseFeed(
+      `<rss><channel><item><title>Bank opens a new branch in Bali</title><link>https://b/1</link><description>Grand opening event.</description></item></channel></rss>`,
+      'T',
+    )[0]!;
+    expect(isSecurityRelated(generic)).toBe(false);
+  });
+});
+
+describe('fetchSectorNews relevance filter', () => {
+  it('drops sector-matching but non-security items from general (non-curated) feeds', async () => {
+    const NOISY = `<rss><channel>
+      <item><title>Bank opens a new branch in Bali</title><link>https://n/1</link><description>Grand opening.</description></item>
+      <item><title>Bank customers hit by phishing breach</title><link>https://n/2</link><description>Credentials stolen.</description></item>
+    </channel></rss>`;
+    const feeds = [{ url: 'gen', source: 'General' }]; // no curated flag → security filter applies
+    const fetchImpl = (async () => ({ ok: true, text: async () => NOISY }) as Response) as typeof fetch;
+    const news = await fetchSectorNews('banking', { feeds, fetchImpl });
+    expect(news.map((n) => n.link)).toEqual(['https://n/2']); // only the security one survives
+  });
+
+  it('keeps all sector items from curated security feeds (no extra security-term filter)', async () => {
+    const CURATED = `<rss><channel>
+      <item><title>Banking sector regulatory roundup</title><link>https://c/1</link><description>bank policy news</description></item>
+    </channel></rss>`;
+    const feeds = [{ url: 'sec', source: 'SecFeed', curated: true }];
+    const fetchImpl = (async () => ({ ok: true, text: async () => CURATED }) as Response) as typeof fetch;
+    const news = await fetchSectorNews('banking', { feeds, fetchImpl });
+    expect(news).toHaveLength(1); // curated → kept despite no explicit security term
   });
 });
 

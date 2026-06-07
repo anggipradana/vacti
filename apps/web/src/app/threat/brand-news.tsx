@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/ca
 import { Select } from '../../components/ui/select';
 import { Input } from '../../components/ui/input';
 import { Button } from '../../components/ui/button';
+import { SubmitButton } from '../../components/ui/submit-button';
 import { Badge } from '../../components/ui/badge';
 import { NewsStatusBadge } from '../../components/ui/finding-status';
 import { NEWS_STATUS_LABEL } from '@vacti/core';
@@ -118,9 +119,9 @@ export async function BrandNews({
                   className="h-8 w-44 text-xs"
                   aria-label="Brand search term"
                 />
-                <Button type="submit" variant="primary" size="sm">
+                <SubmitButton variant="primary" size="sm" pendingText="Searching…">
                   Search now
-                </Button>
+                </SubmitButton>
               </form>
               <form action={bulkReviewBrandNewsAction} className="flex items-center gap-1.5">
                 <input type="hidden" name="projectId" value={projectId} />
@@ -142,9 +143,9 @@ export async function BrandNews({
               >
                 <input type="hidden" name="projectId" value={projectId} />
                 <input type="hidden" name="kind" value="brand" />
-                <Button type="submit" variant="ghost" size="sm">
+                <SubmitButton variant="ghost" size="sm" pendingText="Analyzing…">
                   AI: filter irrelevant
-                </Button>
+                </SubmitButton>
               </form>
             </>
           ) : (
