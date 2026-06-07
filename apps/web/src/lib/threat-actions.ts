@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { Permission, isNewsStatus, isLeakStatus, REVIEW_TOGGLE } from '@vacti/core';
 import { isSector, fetchSectorNews, fetchBrandNews, capNews, NEWS_CAP } from '@vacti/threat-intel';
@@ -121,6 +121,26 @@ export async function refreshBrandNewsAction(formData: FormData) {
   }
   // Keep only the newest NEWS_CAP brand headlines for this project.
   await capNews(db, NEWS_CAP, { projectId });
+  revalidatePath('/threat');
+}
+
+/** Set the status of a SELECTED set of sector news headlines (checkbox multi-select). */
+export async function bulkSetNewsStatusByIdsAction(formData: FormData) {
+  await requirePermission(Permission.ModifyScanResults);
+  const status = String(formData.get('status') ?? '');
+  const ids = formData.getAll('ids').map(String).filter(Boolean);
+  if (!ids.length || !isNewsStatus(status)) return;
+  await getDb().update(threatNews).set({ status }).where(inArray(threatNews.id, ids));
+  revalidatePath('/threat');
+}
+
+/** Set the status of a SELECTED set of brand news headlines (checkbox multi-select). */
+export async function bulkSetBrandNewsStatusByIdsAction(formData: FormData) {
+  await requirePermission(Permission.ModifyScanResults);
+  const status = String(formData.get('status') ?? '');
+  const ids = formData.getAll('ids').map(String).filter(Boolean);
+  if (!ids.length || !isNewsStatus(status)) return;
+  await getDb().update(brandNews).set({ status }).where(inArray(brandNews.id, ids));
   revalidatePath('/threat');
 }
 

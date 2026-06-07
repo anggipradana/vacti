@@ -53,6 +53,19 @@ export async function bulkSetVulnStatusByIdsAction(formData: FormData) {
   if (scanId) revalidatePath(`/scans/${scanId}`);
 }
 
+/** Set the status of a SELECTED set of leaked-credential rows (checkbox multi-select). */
+export async function bulkSetLeakStatusByIdsAction(formData: FormData) {
+  await requirePermission(Permission.ModifyScanResults);
+  const status = String(formData.get('status') ?? '');
+  const ids = formData.getAll('ids').map(String).filter(Boolean);
+  if (!ids.length || !isLeakStatus(status)) return;
+  await getDb()
+    .update(leakcheckData)
+    .set({ status, checked: status !== 'new' })
+    .where(inArray(leakcheckData.id, ids));
+  revalidatePath('/threat');
+}
+
 export async function setLeakStatusAction(formData: FormData) {
   await requirePermission(Permission.ModifyScanResults);
   const id = String(formData.get('id') ?? '');

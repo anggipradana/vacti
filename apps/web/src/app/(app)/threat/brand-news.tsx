@@ -2,22 +2,16 @@ import { Newspaper } from 'lucide-react';
 import { desc, eq } from 'drizzle-orm';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card';
 import { Select } from '../../../components/ui/select';
-import { AutoSubmitSelect } from '../../../components/ui/auto-submit-select';
 import { Input } from '../../../components/ui/input';
 import { Button } from '../../../components/ui/button';
 import { SubmitButton } from '../../../components/ui/submit-button';
 import { ConfirmButton } from '../../../components/ui/confirm-button';
-import { Badge } from '../../../components/ui/badge';
-import { NewsStatusBadge } from '../../../components/ui/finding-status';
 import { NEWS_STATUS_LABEL } from '@vacti/core';
 import { brandNews } from '@vacti/db';
 import { getDb } from '../../../lib/db';
-import {
-  setBrandNewsStatusAction,
-  bulkReviewBrandNewsAction,
-  refreshBrandNewsAction,
-} from '../../../lib/threat-actions';
+import { bulkReviewBrandNewsAction, refreshBrandNewsAction } from '../../../lib/threat-actions';
 import { aiTriageNewsAction } from '../../../lib/ai-actions';
+import { BrandNewsList } from './brand-news-list';
 
 /**
  * Brand monitoring: public news mentioning the project's brand/domain (Google News RSS, key-less,
@@ -126,55 +120,19 @@ export async function BrandNews({
       <CardContent className="pt-0">
         {rows.length === 0 ? (
           <p className="py-2 text-sm text-fg-muted">No recent public news mentioning this brand.</p>
-        ) : items.length === 0 ? (
-          <p className="py-2 text-sm text-fg-muted">No headlines match this status filter.</p>
         ) : (
-          <ul className="divide-y divide-border">
-            {items.map((n) => (
-              <li key={n.id} className="flex items-start justify-between gap-3 py-2.5">
-                <div className="min-w-0">
-                  <a
-                    href={n.link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-sm font-medium text-accent hover:underline"
-                  >
-                    {n.title}
-                  </a>
-                  <div className="mt-0.5 text-xs text-fg-subtle">
-                    {n.source}
-                    {n.publishedAt ? ` · ${new Date(n.publishedAt).toISOString().slice(0, 10)}` : ''}
-                    {n.security ? ' · security' : ''}
-                  </div>
-                </div>
-                {canTriage ? (
-                  <div className="flex shrink-0 items-center gap-1.5">
-                    <NewsStatusBadge status={n.status} />
-                    <form action={setBrandNewsStatusAction} className="flex items-center gap-1.5">
-                      <input type="hidden" name="id" value={n.id} />
-                      <AutoSubmitSelect
-                        key={n.status}
-                        name="status"
-                        defaultValue={n.status}
-                        className="h-8 w-36 text-xs"
-                        aria-label="Change status"
-                      >
-                        {Object.entries(NEWS_STATUS_LABEL).map(([val, label]) => (
-                          <option key={val} value={val}>
-                            {label}
-                          </option>
-                        ))}
-                      </AutoSubmitSelect>
-                    </form>
-                  </div>
-                ) : (
-                  <Badge variant="neutral" className="shrink-0">
-                    {NEWS_STATUS_LABEL[n.status as keyof typeof NEWS_STATUS_LABEL] ?? n.status}
-                  </Badge>
-                )}
-              </li>
-            ))}
-          </ul>
+          <BrandNewsList
+            items={items.map((n) => ({
+              id: n.id,
+              title: n.title,
+              link: n.link,
+              source: n.source,
+              publishedAt: n.publishedAt ? new Date(n.publishedAt).toISOString() : null,
+              security: Boolean(n.security),
+              status: n.status,
+            }))}
+            canTriage={canTriage}
+          />
         )}
       </CardContent>
     </Card>
