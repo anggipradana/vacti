@@ -1,5 +1,5 @@
 import { Newspaper } from 'lucide-react';
-import { desc, eq, sql } from 'drizzle-orm';
+import { desc, eq } from 'drizzle-orm';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card';
 import { Select } from '../../../components/ui/select';
 import { Input } from '../../../components/ui/input';
@@ -8,7 +8,6 @@ import { SubmitButton } from '../../../components/ui/submit-button';
 import { Badge } from '../../../components/ui/badge';
 import { NewsStatusBadge } from '../../../components/ui/finding-status';
 import { NEWS_STATUS_LABEL } from '@vacti/core';
-import { fetchBrandNews } from '@vacti/threat-intel';
 import { brandNews } from '@vacti/db';
 import { getDb } from '../../../lib/db';
 import {
@@ -21,7 +20,7 @@ import { aiTriageNewsAction } from '../../../lib/ai-actions';
 /**
  * Brand monitoring: public news mentioning the project's brand/domain (Google News RSS, key-less,
  * security-biased). Persisted per project so analysts can triage each headline (status survives
- * refreshes). Streamed via Suspense; a fresh fetch is upserted on load, then read back from the DB.
+ * refreshes). Rendered from the DB; refreshed by the worker ti-refresh job + the "Search now" button.
  */
 export async function BrandNews({
   projectId,
@@ -40,47 +39,8 @@ export async function BrandNews({
 }) {
   const db = getDb();
 
-  // Pull a fresh feed and upsert it (preserving any triage status already set), best-effort.
-  try {
-    const [security, general] = await Promise.all([
-      fetchBrandNews(brand, { security: true, limit: 10 }),
-      fetchBrandNews(brand, { security: false, limit: 10 }),
-    ]);
-    const seen = new Set<string>();
-    const fresh = [
-      ...security.map((n) => ({ ...n, security: true })),
-      ...general.map((n) => ({ ...n, security: false })),
-    ].filter((n) => (seen.has(n.link) ? false : (seen.add(n.link), true)));
-    if (fresh.length) {
-      await db
-        .insert(brandNews)
-        .values(
-          fresh.map((n) => ({
-            projectId,
-            title: n.title.slice(0, 500),
-            link: n.link,
-            source: n.source,
-            summary: n.summary,
-            publishedAt: n.publishedAt,
-            security: n.security,
-          })),
-        )
-        .onConflictDoUpdate({
-          target: [brandNews.projectId, brandNews.link],
-          set: {
-            title: sql`excluded.title`,
-            source: sql`excluded.source`,
-            summary: sql`excluded.summary`,
-            publishedAt: sql`excluded.published_at`,
-            security: sql`excluded.security`,
-            fetchedAt: sql`now()`,
-          },
-        });
-    }
-  } catch {
-    // Feed outage must not break the page — fall back to whatever is already stored.
-  }
-
+  // Render straight from the DB (fast + reliable — no external fetch on the render path). Brand news
+  // is populated by the worker's ti-refresh job and the on-demand "Search now" button.
   const rows = await db
     .select()
     .from(brandNews)
