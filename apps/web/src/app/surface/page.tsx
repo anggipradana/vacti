@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
-import { and, eq, ilike, desc, count, sql } from 'drizzle-orm';
+import { and, eq, ilike, desc, count, sql, inArray } from 'drizzle-orm';
 import { ShieldAlert, FileSearch, Network } from 'lucide-react';
 import { AppShell } from '../../components/shell/app-shell';
 import { PageHeader } from '../../components/ui/page-header';
@@ -15,7 +15,7 @@ import { Reveal } from '../../components/ui/reveal';
 import { LeakStatusBadge } from '../../components/ui/finding-status';
 import { LEAK_STATUS_LABEL, userCan, Permission } from '@vacti/core';
 import { analyzeEndpoints } from '@vacti/recon';
-import { projects, discoveredUrls, exposureFindings, ipResolutions, ipResolutionSightings } from '@vacti/db';
+import { projects, scans, discoveredUrls, exposureFindings, ipResolutions, ipResolutionSightings } from '@vacti/db';
 import { getDb } from '../../lib/db';
 import { getCurrentUser } from '../../lib/session';
 import { getActiveProjectId } from '../../lib/active-project';
@@ -35,6 +35,7 @@ export default async function SurfacePage({
     estatus?: string;
     upage?: string;
     fpage?: string;
+    scan?: string;
   }>;
 }) {
   const user = await getCurrentUser();
@@ -58,16 +59,19 @@ export default async function SurfacePage({
   const estatus = sp.estatus ?? 'all';
   const upage = Math.max(1, Number(sp.upage ?? 1) || 1);
   const fpage = Math.max(1, Number(sp.fpage ?? 1) || 1);
+  const diffScanId = (sp.scan ?? '').trim(); // when set: show only NEW discoveries from this scan
 
   const urlWhere = and(
     eq(discoveredUrls.projectId, projectId),
     cat !== 'all' ? eq(discoveredUrls.categorySlug, cat) : undefined,
     q ? ilike(discoveredUrls.urlText, `%${q}%`) : undefined,
+    diffScanId ? eq(discoveredUrls.firstScanId, diffScanId) : undefined,
   );
   const findWhere = and(
     eq(exposureFindings.projectId, projectId),
     etype !== 'all' ? eq(exposureFindings.findingType, etype) : undefined,
     estatus !== 'all' ? eq(exposureFindings.status, estatus) : undefined,
+    diffScanId ? eq(exposureFindings.scanId, diffScanId) : undefined,
   );
 
   const [catCounts, urls, urlTotal, types, finds, findTotal, ips, ipTotal] = await Promise.all([
@@ -120,10 +124,18 @@ export default async function SurfacePage({
     .limit(5000);
   const endpoints = analyzeEndpoints(allUrlRows.map((r) => r.u));
 
+  // Scan-diff: recent passive/full scans for the picker ("show only new discoveries from a scan").
+  const passiveScans = await db
+    .select({ id: scans.id, createdAt: scans.createdAt, mode: scans.mode })
+    .from(scans)
+    .where(and(eq(scans.projectId, projectId), inArray(scans.mode, ['passive', 'full'])))
+    .orderBy(desc(scans.createdAt))
+    .limit(20);
+
   const urlPages = Math.max(1, Math.ceil(Number(urlTotal[0]!.n) / PAGE));
   const findPages = Math.max(1, Math.ceil(Number(findTotal[0]!.n) / PAGE));
   const totalUrls = catCounts.reduce((a, c) => a + Number(c.n), 0);
-  const keep = `project=${projectId}`;
+  const keep = `project=${projectId}${diffScanId ? `&scan=${diffScanId}` : ''}`;
 
   return (
     <AppShell user={{ email: user.email, isSysAdmin: user.isSysAdmin }}>
@@ -150,6 +162,33 @@ export default async function SurfacePage({
           </div>
         }
       />
+
+      {/* Scan-diff: show only what a chosen scan newly discovered. */}
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <form method="get" className="flex items-center gap-1.5">
+          <input type="hidden" name="project" value={projectId} />
+          <Select name="scan" defaultValue={diffScanId} className="h-8 w-64 text-xs" aria-label="Diff: new in scan">
+            <option value="">Diff: all discoveries</option>
+            {passiveScans.map((s) => (
+              <option key={s.id} value={s.id}>
+                New in {s.mode} scan {s.id.slice(0, 8)} ·{' '}
+                {new Date(s.createdAt).toISOString().slice(0, 16).replace('T', ' ')}
+              </option>
+            ))}
+          </Select>
+          <Button type="submit" variant="ghost" size="sm">
+            Apply diff
+          </Button>
+        </form>
+        {diffScanId ? (
+          <span className="flex items-center gap-2 text-xs text-fg-muted">
+            <Badge variant="accent">Showing NEW discoveries from scan {diffScanId.slice(0, 8)}</Badge>
+            <a href={`/surface?project=${projectId}`} className="text-accent hover:underline">
+              clear
+            </a>
+          </span>
+        ) : null}
+      </div>
 
       <div className="mb-4 grid grid-cols-2 gap-4 lg:grid-cols-4">
         <Card>

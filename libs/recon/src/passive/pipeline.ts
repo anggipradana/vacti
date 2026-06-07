@@ -208,6 +208,7 @@ export async function runPassiveScan(
         host: hostOf(u.url),
         urlText: u.url,
         urlSha256: sha256(`${input.projectId}:${u.url}`),
+        firstScanId: input.scanId,
         sources: [...u.sources],
         pathnameExtension: cat.extension,
         categorySlug: cat.categorySlug,

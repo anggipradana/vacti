@@ -176,6 +176,13 @@
       "when": 1780821681476,
       "tag": "0024_magical_moonstone",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1780821926911,
+      "tag": "0025_natural_shockwave",
+      "breakpoints": true
     }
   ]
 }
