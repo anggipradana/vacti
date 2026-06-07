@@ -32,3 +32,13 @@ Values that govern every convention and practice below.
    - **Exposure findings** (regex-detected secrets/credentials) are confidential PII (principle 5):
      stored for triage, masked in the UI, CONFIDENTIAL in reports, never logged.
      See [Passive Recon & Exposure](../../docs/planning/11-PASSIVE-RECON-AND-EXPOSURE.md).
+
+10. **CRUD completeness; destructive actions are guarded.** A resource is not "done" until it has
+    full lifecycle management — **create, read, update, delete** — in both the UI and the typed API
+    (no create-only resources). Destructive actions MUST:
+    - enforce **RBAC server-side** (`requirePermission`) — never trust the client;
+    - require **explicit confirmation** in the UI (`ConfirmButton`/dialog);
+    - be **audited** (`recordAudit`);
+    - **cascade** correctly via FK `onDelete` (deleting a project removes its targets/scans/findings/TI/passive data);
+    - protect invariants (e.g. never delete the last SysAdmin or let an admin delete themselves into lockout).
+      See the management-CRUD checklist (§10) in [02-FEATURE-PARITY-CHECKLIST](../../docs/planning/02-FEATURE-PARITY-CHECKLIST.md).
