@@ -115,3 +115,15 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Loading skeleton that only becomes visible if navigation takes >200ms, so fast page loads
+   (the common case) never flash an empty skeleton — feedback for slow loads only. */
+@keyframes vactiDelayedAppear {
+  to {
+    opacity: 1;
+  }
+}
+.delayed-appear {
+  opacity: 0;
+  animation: vactiDelayedAppear 0.15s ease-out 0.2s forwards;
+}
