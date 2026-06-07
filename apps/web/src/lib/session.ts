@@ -1,4 +1,5 @@
 import 'server-only';
+import { cache } from 'react';
 import { randomBytes } from 'node:crypto';
 import { cookies } from 'next/headers';
 import { eq } from 'drizzle-orm';
@@ -22,7 +23,9 @@ export async function createSession(userId: string): Promise<void> {
   });
 }
 
-export async function getCurrentUser() {
+// Per-request memoised: the shared layout + the page both call this on every navigation; cache()
+// collapses those into a single DB round-trip per render (lighter, faster nav).
+export const getCurrentUser = cache(async () => {
   const id = (await cookies()).get(COOKIE)?.value;
   if (!id) return null;
   const db = getDb();
@@ -30,7 +33,7 @@ export async function getCurrentUser() {
   if (!session || session.expiresAt < new Date()) return null;
   const [user] = await db.select().from(users).where(eq(users.id, session.userId));
   return user ?? null;
-}
+});
 
 export async function destroySession(): Promise<void> {
   const jar = await cookies();

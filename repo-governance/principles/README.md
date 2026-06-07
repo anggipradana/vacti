@@ -42,3 +42,21 @@ Values that govern every convention and practice below.
     - **cascade** correctly via FK `onDelete` (deleting a project removes its targets/scans/findings/TI/passive data);
     - protect invariants (e.g. never delete the last SysAdmin or let an admin delete themselves into lockout).
       See the management-CRUD checklist (§10) in [02-FEATURE-PARITY-CHECKLIST](../../docs/planning/02-FEATURE-PARITY-CHECKLIST.md).
+
+11. **Reliable, light & fast — non-negotiable.** The platform must stay responsive and dependable in
+    production, not just correct. This is a hard requirement, equal to security and correctness:
+    - **Serve a production build.** The live web app runs `next start` (compiled, minified) under a
+      supervisor — **never `next dev`** in production (dev recompiles per request + ships unminified
+      JS). Worker + app both **self-heal** (auto-restart with backoff). See
+      [deploy.md](../../docs/how-to/deploy.md).
+    - **Navigation feels instant.** Authenticated pages share ONE persistent shell layout
+      (`app/(app)/layout.tsx`) with a `loading.tsx` boundary, so clicking a menu swaps only the
+      content (with an immediate skeleton) instead of re-rendering the whole shell. Use `next/link`
+      (client nav + prefetch), never `<a>` for in-app links.
+    - **Do the minimum work per request.** Push filtering/pagination into SQL (don't load-then-slice
+      large sets); fan out independent queries with `Promise.all`; memoise per-request reads multiple
+      components need (e.g. `getCurrentUser` via React `cache()`); never block on the network without
+      parallelism + a timeout + a visible pending state.
+    - **No silent slowness.** Heavy/remote work MUST surface a pending state (`SubmitButton`,
+      `loading.tsx`, Suspense) — a frozen UI reads as broken. Performance/reliability regressions are
+      treated as bugs, not polish.
