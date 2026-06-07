@@ -5,6 +5,7 @@ import { PageHeader } from '../../../components/ui/page-header';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card';
 import { Table, THead, TBody, TR, TH, TD } from '../../../components/ui/table';
 import { Select } from '../../../components/ui/select';
+import { AutoSubmitSelect } from '../../../components/ui/auto-submit-select';
 import { Button } from '../../../components/ui/button';
 import { Badge } from '../../../components/ui/badge';
 import { Input } from '../../../components/ui/input';
@@ -301,16 +302,19 @@ export default async function SurfacePage({
                           <div className="flex items-center gap-1.5">
                             <form action={setExposureStatusAction} className="flex items-center gap-1.5">
                               <input type="hidden" name="id" value={f.id} />
-                              <Select key={f.status} name="status" defaultValue={f.status} className="h-8 w-36 text-xs">
+                              <AutoSubmitSelect
+                                key={f.status}
+                                name="status"
+                                defaultValue={f.status}
+                                className="h-8 w-36 text-xs"
+                                aria-label="Change status"
+                              >
                                 {Object.entries(LEAK_STATUS_LABEL).map(([v, l]) => (
                                   <option key={v} value={v}>
                                     {l}
                                   </option>
                                 ))}
-                              </Select>
-                              <Button type="submit" size="sm" variant="ghost">
-                                Set
-                              </Button>
+                              </AutoSubmitSelect>
                             </form>
                             <form action={deleteExposureAction}>
                               <input type="hidden" name="id" value={f.id} />

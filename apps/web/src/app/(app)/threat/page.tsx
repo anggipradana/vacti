@@ -11,6 +11,7 @@ import { SubmitButton } from '../../../components/ui/submit-button';
 import { Textarea } from '../../../components/ui/textarea';
 import { Label } from '../../../components/ui/label';
 import { Select } from '../../../components/ui/select';
+import { AutoSubmitSelect } from '../../../components/ui/auto-submit-select';
 import { Badge } from '../../../components/ui/badge';
 import { Table, THead, TBody, TR, TH, TD } from '../../../components/ui/table';
 import { EmptyState } from '../../../components/ui/empty-state';
@@ -327,16 +328,19 @@ export default async function ThreatPage({
                       <NewsStatusBadge status={n.status} />
                       <form action={setNewsStatusAction} className="flex items-center gap-1.5">
                         <input type="hidden" name="id" value={n.id} />
-                        <Select key={n.status} name="status" defaultValue={n.status} className="h-8 w-36 text-xs">
+                        <AutoSubmitSelect
+                          key={n.status}
+                          name="status"
+                          defaultValue={n.status}
+                          className="h-8 w-36 text-xs"
+                          aria-label="Change status"
+                        >
                           {Object.entries(NEWS_STATUS_LABEL).map(([val, label]) => (
                             <option key={val} value={val}>
                               {label}
                             </option>
                           ))}
-                        </Select>
-                        <Button type="submit" size="sm" variant="ghost">
-                          Set
-                        </Button>
+                        </AutoSubmitSelect>
                       </form>
                     </div>
                   ) : (
@@ -477,16 +481,19 @@ export default async function ThreatPage({
                     <LeakStatusBadge status={l.status} />
                     <form action={setLeakStatusAction} className="flex items-center gap-1.5">
                       <input type="hidden" name="id" value={l.id} />
-                      <Select key={l.status} name="status" defaultValue={l.status} className="h-8 w-40 text-xs">
+                      <AutoSubmitSelect
+                        key={l.status}
+                        name="status"
+                        defaultValue={l.status}
+                        className="h-8 w-40 text-xs"
+                        aria-label="Change status"
+                      >
                         {Object.entries(LEAK_STATUS_LABEL).map(([val, label]) => (
                           <option key={val} value={val}>
                             {label}
                           </option>
                         ))}
-                      </Select>
-                      <Button type="submit" size="sm" variant="ghost">
-                        Set
-                      </Button>
+                      </AutoSubmitSelect>
                     </form>
                     <form action={deleteLeakAction}>
                       <input type="hidden" name="id" value={l.id} />

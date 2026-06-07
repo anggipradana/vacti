@@ -72,8 +72,7 @@ test.describe.serial('attack surface page', () => {
     await page.goto(`/surface?project=${ids.project}`);
     const row = page.locator('tr', { has: page.getByText('aws-key', { exact: true }) }).first();
     const sel = row.locator('select[name="status"]');
-    await sel.selectOption('confirmed');
-    await row.getByRole('button', { name: 'Set', exact: true }).click();
+    await sel.selectOption('confirmed'); // auto-submits on change (no Set button)
     await expect(row.locator('select[name="status"]')).toHaveValue('confirmed');
   });
 });
