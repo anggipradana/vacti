@@ -280,9 +280,13 @@ export default async function ThreatPage({
                       </option>
                     ))}
                   </Select>
-                  <SubmitButton variant="outline" size="sm" pendingText="Loading…">
+                  <ConfirmButton
+                    variant="outline"
+                    size="sm"
+                    confirm="Fetching this sector's news keeps only the newest 15 headlines and removes older stored ones. Continue?"
+                  >
                     Apply sector
-                  </SubmitButton>
+                  </ConfirmButton>
                 </form>
                 <form
                   action={aiTriageNewsAction}

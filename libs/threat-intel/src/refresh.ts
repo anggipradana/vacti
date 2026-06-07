@@ -1,4 +1,4 @@
-import { and, eq, notInArray, sql } from 'drizzle-orm';
+import { and, desc, eq, notInArray, sql } from 'drizzle-orm';
 import {
   targets,
   manualIndicators,
@@ -59,6 +59,47 @@ export async function pruneOldNews(db: Database, days: number, scope: { sector: 
     }
   } catch {
     // Retention is housekeeping — never let it break a refresh.
+  }
+}
+
+/** Hard cap on curated news kept per sector / per project (keep only the newest). */
+export const NEWS_CAP = 15;
+
+/**
+ * Keep only the newest `limit` news rows for a sector/project (by published date, falling back to
+ * fetch date); delete the rest. Keeps the table small and predictable. Best-effort.
+ */
+export async function capNews(
+  db: Database,
+  limit: number,
+  scope: { sector: string } | { projectId: string },
+): Promise<void> {
+  try {
+    if ('sector' in scope) {
+      const keep = await db
+        .select({ id: threatNews.id })
+        .from(threatNews)
+        .where(eq(threatNews.sector, scope.sector))
+        .orderBy(desc(sql`coalesce(${threatNews.publishedAt}, ${threatNews.fetchedAt})`))
+        .limit(limit);
+      const ids = keep.map((r) => r.id);
+      if (ids.length) {
+        await db.delete(threatNews).where(and(eq(threatNews.sector, scope.sector), notInArray(threatNews.id, ids)));
+      }
+    } else {
+      const keep = await db
+        .select({ id: brandNews.id })
+        .from(brandNews)
+        .where(eq(brandNews.projectId, scope.projectId))
+        .orderBy(desc(sql`coalesce(${brandNews.publishedAt}, ${brandNews.fetchedAt})`))
+        .limit(limit);
+      const ids = keep.map((r) => r.id);
+      if (ids.length) {
+        await db.delete(brandNews).where(and(eq(brandNews.projectId, scope.projectId), notInArray(brandNews.id, ids)));
+      }
+    }
+  } catch {
+    // Cap is housekeeping — never let it break a refresh.
   }
 }
 
@@ -175,6 +216,7 @@ export async function refreshThreatIntel(deps: RefreshDeps): Promise<void> {
     }
     // Retention: drop stale sector headlines (keeps analyst-flagged ones) so the table stays light.
     await pruneOldNews(db, retentionDays, { sector });
+    await capNews(db, NEWS_CAP, { sector });
 
     // Brand monitoring — public news mentioning the project's brand/domain (per project, triageable).
     await setStatus('running', 96, 'fetching brand news');
@@ -222,6 +264,7 @@ export async function refreshThreatIntel(deps: RefreshDeps): Promise<void> {
       }
       // Retention: drop stale brand headlines (keeps analyst-flagged ones).
       await pruneOldNews(db, retentionDays, { projectId });
+      await capNews(db, NEWS_CAP, { projectId });
     }
 
     await setStatus('completed', 100, `${lookups.length} indicator(s)`);

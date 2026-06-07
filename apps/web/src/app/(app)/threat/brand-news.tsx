@@ -6,6 +6,7 @@ import { AutoSubmitSelect } from '../../../components/ui/auto-submit-select';
 import { Input } from '../../../components/ui/input';
 import { Button } from '../../../components/ui/button';
 import { SubmitButton } from '../../../components/ui/submit-button';
+import { ConfirmButton } from '../../../components/ui/confirm-button';
 import { Badge } from '../../../components/ui/badge';
 import { NewsStatusBadge } from '../../../components/ui/finding-status';
 import { NEWS_STATUS_LABEL } from '@vacti/core';
@@ -84,9 +85,13 @@ export async function BrandNews({
                   className="h-8 w-44 text-xs"
                   aria-label="Brand search term"
                 />
-                <SubmitButton variant="primary" size="sm" pendingText="Searching…">
+                <ConfirmButton
+                  variant="primary"
+                  size="sm"
+                  confirm="Searching for new news keeps only the newest 15 headlines and removes older stored ones. Continue?"
+                >
                   Search now
-                </SubmitButton>
+                </ConfirmButton>
               </form>
               <form action={bulkReviewBrandNewsAction} className="flex items-center gap-1.5">
                 <input type="hidden" name="projectId" value={projectId} />

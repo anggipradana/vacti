@@ -12,7 +12,7 @@ import {
   brandNews,
   type Database,
 } from '@vacti/db';
-import { refreshThreatIntel, pruneOldNews } from './refresh';
+import { refreshThreatIntel, pruneOldNews, capNews, NEWS_CAP } from './refresh';
 import { computeProjectRisk } from './risk-aggregate';
 
 const url = process.env.DATABASE_URL;
@@ -66,5 +66,32 @@ describe.skipIf(!url)('threat-intel integration', () => {
     const rows = await db.select().from(brandNews).where(eq(brandNews.projectId, p!.id));
     const links = rows.map((r) => r.link).sort();
     expect(links).toEqual(['l-flagged', 'l-recent']); // old 'new' pruned; flagged + recent kept
+  }, 30000);
+
+  it('capNews keeps only the newest NEWS_CAP brand rows', async () => {
+    const db = handle.db;
+    const [p] = await db
+      .insert(projects)
+      .values({ slug: `cap${Date.now()}`, name: 'Cap' })
+      .returning();
+    // Insert 20 rows with increasing publishedAt; only the newest NEWS_CAP (15) should survive.
+    const base = Date.now() - 40 * 24 * 3600 * 1000;
+    await db.insert(brandNews).values(
+      Array.from({ length: 20 }, (_, i) => ({
+        projectId: p!.id,
+        title: `n${i}`,
+        link: `cap-${i}`,
+        source: 's',
+        publishedAt: new Date(base + i * 3600 * 1000),
+        status: 'new',
+      })),
+    );
+    await capNews(db, NEWS_CAP, { projectId: p!.id });
+    const rows = await db.select().from(brandNews).where(eq(brandNews.projectId, p!.id));
+    expect(rows).toHaveLength(NEWS_CAP);
+    // The survivors are the newest 15 (cap-5 .. cap-19); cap-0 (oldest) is gone.
+    const links = new Set(rows.map((r) => r.link));
+    expect(links.has('cap-19')).toBe(true);
+    expect(links.has('cap-0')).toBe(false);
   }, 30000);
 });
