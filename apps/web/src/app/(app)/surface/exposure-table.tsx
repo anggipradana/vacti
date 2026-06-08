@@ -5,6 +5,7 @@ import { LEAK_STATUS_LABEL } from '@vacti/core';
 import { Table, THead, TBody, TR, TH, TD } from '../../../components/ui/table';
 import { Button } from '../../../components/ui/button';
 import { Input } from '../../../components/ui/input';
+import { Textarea } from '../../../components/ui/textarea';
 import { Select } from '../../../components/ui/select';
 import { Badge } from '../../../components/ui/badge';
 import { Reveal } from '../../../components/ui/reveal';
@@ -13,6 +14,7 @@ import { AutoSubmitSelect } from '../../../components/ui/auto-submit-select';
 import { ConfirmButton } from '../../../components/ui/confirm-button';
 import {
   setExposureStatusAction,
+  setExposureNoteAction,
   bulkSetExposureStatusByIdsAction,
   deleteExposureAction,
 } from '../../../lib/surface-actions';
@@ -28,6 +30,7 @@ export interface ExposureRow {
   snippet: string | null;
   urlText: string | null;
   status: string;
+  analystNote: string | null;
 }
 
 const PAGE_SIZE = 25;
@@ -204,39 +207,60 @@ export function ExposureTable({ findings, canTriage }: { findings: ExposureRow[]
                 <TD>
                   <Reveal value={f.snippet} />
                 </TD>
-                <TD className="max-w-md truncate font-mono text-xs text-fg-subtle" title={f.urlText ?? ''}>
-                  {f.urlText}
+                <TD className="max-w-md font-mono text-xs text-fg-subtle">
+                  <div className="truncate" title={f.urlText ?? ''}>
+                    {f.urlText}
+                  </div>
+                  {f.analystNote ? (
+                    <p className="mt-1 whitespace-normal rounded-md border border-border bg-surface-2 p-1.5 font-sans">
+                      <strong>Note:</strong> {f.analystNote}
+                    </p>
+                  ) : null}
                 </TD>
                 <TD>
                   {canTriage ? (
-                    <div className="flex items-center gap-1.5">
-                      <form action={setExposureStatusAction} className="flex items-center gap-1.5">
-                        <input type="hidden" name="id" value={f.id} />
-                        <AutoSubmitSelect
-                          key={f.status}
-                          name="status"
-                          defaultValue={f.status}
-                          className="h-8 w-36 text-xs"
-                          aria-label="Change status"
-                        >
-                          {STATUS_OPTIONS.map(([val, label]) => (
-                            <option key={val} value={val}>
-                              {label}
-                            </option>
-                          ))}
-                        </AutoSubmitSelect>
-                      </form>
-                      <form action={deleteExposureAction}>
-                        <input type="hidden" name="id" value={f.id} />
-                        <ConfirmButton
-                          size="sm"
-                          variant="ghost"
-                          className="text-danger hover:bg-danger/10"
-                          confirm="Delete this exposure finding?"
-                        >
-                          Delete
-                        </ConfirmButton>
-                      </form>
+                    <div className="flex flex-col gap-1.5">
+                      <div className="flex items-center gap-1.5">
+                        <form action={setExposureStatusAction} className="flex items-center gap-1.5">
+                          <input type="hidden" name="id" value={f.id} />
+                          <AutoSubmitSelect
+                            key={f.status}
+                            name="status"
+                            defaultValue={f.status}
+                            className="h-8 w-36 text-xs"
+                            aria-label="Change status"
+                          >
+                            {STATUS_OPTIONS.map(([val, label]) => (
+                              <option key={val} value={val}>
+                                {label}
+                              </option>
+                            ))}
+                          </AutoSubmitSelect>
+                        </form>
+                        <form action={deleteExposureAction}>
+                          <input type="hidden" name="id" value={f.id} />
+                          <ConfirmButton
+                            size="sm"
+                            variant="ghost"
+                            className="text-danger hover:bg-danger/10"
+                            confirm="Delete this exposure finding?"
+                          >
+                            Delete
+                          </ConfirmButton>
+                        </form>
+                      </div>
+                      <details className="text-xs text-fg-muted">
+                        <summary className="cursor-pointer text-accent">
+                          {f.analystNote ? 'Edit note' : 'Add note'}
+                        </summary>
+                        <form action={setExposureNoteAction} className="mt-1 space-y-1">
+                          <input type="hidden" name="id" value={f.id} />
+                          <Textarea name="note" defaultValue={f.analystNote ?? ''} rows={2} className="text-xs" />
+                          <Button type="submit" size="sm" variant="outline">
+                            Save note
+                          </Button>
+                        </form>
+                      </details>
                     </div>
                   ) : (
                     <LeakStatusBadge status={f.status} />

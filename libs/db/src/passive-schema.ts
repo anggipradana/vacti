@@ -69,6 +69,8 @@ export const exposureFindings = pgTable(
     snippet: text('snippet'), // CONFIDENTIAL: masked in UI, never logged
     urlText: text('url_text'),
     status: text('status').notNull().default('new'), // reuse triage statuses
+    // Free-form analyst note (investigation context, false-positive reason, etc.).
+    analystNote: text('analyst_note'),
     createdAt: createdAt(),
   },
   (t) => ({

@@ -39,6 +39,18 @@ export async function bulkReviewVulnsAction(formData: FormData) {
   revalidatePath(`/scans/${scanId}`);
 }
 
+/** Set/clear an analyst note on a vulnerability finding. ModifyScanResults + audit. */
+export async function setVulnNoteAction(formData: FormData) {
+  const actor = await requirePermission(Permission.ModifyScanResults);
+  const id = String(formData.get('id') ?? '');
+  const scanId = String(formData.get('scanId') ?? '');
+  const note = String(formData.get('note') ?? '').trim() || null;
+  if (!id) return;
+  await getDb().update(vulnerabilities).set({ analystNote: note }).where(eq(vulnerabilities.id, id));
+  await recordAudit({ actorId: actor.id, action: 'vuln.note', resource: `vuln:${id}` });
+  if (scanId) revalidatePath(`/scans/${scanId}`);
+}
+
 /** Set the status of a SELECTED set of vulnerabilities (checkbox multi-select). */
 export async function bulkSetVulnStatusByIdsAction(formData: FormData) {
   await requirePermission(Permission.ModifyScanResults);
