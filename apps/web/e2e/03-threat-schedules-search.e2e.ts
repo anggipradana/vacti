@@ -10,7 +10,7 @@ test.describe.serial('threat / schedules / search', () => {
     await page.getByLabel('Value').fill('evil.example.com');
     await page.getByRole('button', { name: 'Add indicator' }).click();
     await expect(page.getByText('evil.example.com')).toBeVisible();
-    // Refresh enqueues (no worker in e2e) — must not error.
+    // Refresh enqueues (no worker in e2e) - must not error.
     await page.getByRole('button', { name: 'Refresh' }).click();
     await expect(page.getByRole('heading', { name: 'Threat Intelligence' })).toBeVisible();
     // AI narrative generate (no key → graceful no-op, no crash).

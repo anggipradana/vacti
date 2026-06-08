@@ -3,7 +3,7 @@ import { Pool } from 'pg';
 
 /**
  * Triage QA: every status control (single "Set" + bulk "Apply") must actually change the status AND
- * have the per-row dropdown reflect the new value in place — no reload. Regression guard for the
+ * have the per-row dropdown reflect the new value in place - no reload. Regression guard for the
  * uncontrolled-<select> bug where the dropdown kept showing "new" after a successful update.
  * Covers all four triaged entities: sector news, leaked credentials, brand monitoring, vulnerabilities.
  */
@@ -66,7 +66,7 @@ async function expectSetUpdatesInPlace(row: import('@playwright/test').Locator) 
   const opts = await sel.locator('option').evaluateAll((os) => (os as HTMLOptionElement[]).map((o) => o.value));
   const target = opts.find((o) => o !== before)!;
   await sel.selectOption(target); // auto-submits the form on change
-  // No reload — the dropdown must reflect the new status after in-place revalidation.
+  // No reload - the dropdown must reflect the new status after in-place revalidation.
   await expect(row.locator('select[name="status"]')).toHaveValue(target);
 }
 

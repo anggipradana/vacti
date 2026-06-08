@@ -56,7 +56,7 @@ async function main(): Promise<void> {
       setGlobalDispatcher(dispatcher);
       console.log(`[worker] outbound proxy enabled (${new URL(env.PROXY_URL).protocol})`);
     } else {
-      console.warn('[worker] PROXY_URL set but invalid — ignoring');
+      console.warn('[worker] PROXY_URL set but invalid - ignoring');
     }
   }
   console.log('[worker] running migrations…');
@@ -64,7 +64,7 @@ async function main(): Promise<void> {
   const { db } = createDb(env.DATABASE_URL);
 
   // Reap orphaned scans: a freshly-started worker means nothing is mid-flight, so any scan still
-  // marked 'running' was abandoned by a worker that died (restart/crash) — its pg-boss job is gone
+  // marked 'running' was abandoned by a worker that died (restart/crash) - its pg-boss job is gone
   // and nothing will ever resume it. Fail it cleanly so it never stays stuck ("no stuck scans").
   const reaped = await db
     .update(scans)
@@ -108,7 +108,7 @@ async function main(): Promise<void> {
   await queue.work('scan', scanJobSchema, async ({ scanId }) => {
     const [scan] = await db.select().from(scans).where(eq(scans.id, scanId));
     if (!scan) return;
-    // Cancelled while still queued — never start it.
+    // Cancelled while still queued - never start it.
     if (scan.status === 'cancelled' || scan.cancelRequested) {
       await db.update(scans).set({ status: 'cancelled', finishedAt: new Date() }).where(eq(scans.id, scanId));
       return;
@@ -308,7 +308,7 @@ async function main(): Promise<void> {
 
   await queue.work('echo', z.object({ msg: z.string() }), async (p) => console.log(`[worker] echo: ${p.msg}`));
 
-  // Scheduled scans — a once-a-minute tick evaluates scan_schedules (lightweight cron, no Celery-beat).
+  // Scheduled scans - a once-a-minute tick evaluates scan_schedules (lightweight cron, no Celery-beat).
   await queue.work('schedule-tick', z.unknown(), async () => {
     const now = new Date();
     const minute = Math.floor(now.getTime() / 60000);
@@ -330,7 +330,7 @@ async function main(): Promise<void> {
   });
   await queue.schedule('schedule-tick', '* * * * *');
 
-  // Daily news refresh at 02:00 UTC = 09:00 WIB — enqueues a TI refresh (which fetches sector +
+  // Daily news refresh at 02:00 UTC = 09:00 WIB - enqueues a TI refresh (which fetches sector +
   // brand news, then caps each to NEWS_CAP) for every project, so news stays fresh automatically.
   await queue.work('news-refresh-daily', z.unknown(), async () => {
     const projs = await db.select({ id: projects.id }).from(projects);

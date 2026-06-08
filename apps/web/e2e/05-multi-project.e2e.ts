@@ -60,13 +60,13 @@ test.describe.serial('multi-project scoping', () => {
 
   test('set a default project: shows a Default badge and becomes the active project', async ({ page }) => {
     await page.goto('/projects');
-    // The Alpha card's "Set default" button — scope to the card containing the Alpha slug.
+    // The Alpha card's "Set default" button - scope to the card containing the Alpha slug.
     const alphaCard = page.locator('[data-testid="project-list"] > *', { hasText: A.slug });
     await alphaCard.getByRole('button', { name: 'Set default' }).click();
     // Badge appears on Alpha; its own "Set default" button is now gone.
     await expect(alphaCard.getByText('Default', { exact: true })).toBeVisible();
     await expect(alphaCard.getByRole('button', { name: 'Set default' })).toHaveCount(0);
-    // Setting default also makes it the active project (cookie) — dashboard scopes to Alpha (1 target).
+    // Setting default also makes it the active project (cookie) - dashboard scopes to Alpha (1 target).
     await page.goto('/dashboard');
     await expect(page.getByTestId('stat-targets')).toHaveText('1');
   });
