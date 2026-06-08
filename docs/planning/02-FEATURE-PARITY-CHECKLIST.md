@@ -83,27 +83,27 @@
 
 ## 5. Integrasi (WAJIB)
 
-| #   | Fitur ReNgGinaNg                                                    | Status | Epic  | Catatan                                                              |
-| --- | ------------------------------------------------------------------- | ------ | ----- | -------------------------------------------------------------------- |
-| 5.1 | Notifications webhook (Discord, Slack, Telegram, Google Chat, Lark) | ✅     | AI    | Per-event; **Discord rich embed + Google Chat cardsV2** (2026-06-05) |
-| 5.2 | AI enrichment vuln (description/impact/remediation)                 | ✅     | AI    | Hasil di-cache                                                       |
-| 5.3 | AI executive summary report                                         | ✅     | AI    |                                                                      |
-| 5.4 | AI threat analysis/ringkasan                                        | ✅     | AI    |                                                                      |
-| 5.5 | Provider AI                                                         | ➕     | AI    | **Vercel AI SDK**: Claude default + OpenAI + Ollama (abstraction)    |
-| 5.6 | API Key Vault (OTX, LeakCheck, AI) terenkripsi                      | ✅     | AI/PF | Enkripsi at-rest                                                     |
-| 5.7 | HackerOne / Bug bounty sync-import-submit                           | ❌     | —     | Dibuang                                                              |
+| #   | Fitur ReNgGinaNg                                                    | Status | Epic  | Catatan                                                                                                                                   |
+| --- | ------------------------------------------------------------------- | ------ | ----- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| 5.1 | Notifications webhook (Discord, Slack, Telegram, Google Chat, Lark) | ✅     | AI    | Per-event; **Discord rich embed + Google Chat cardsV2** (2026-06-05)                                                                      |
+| 5.2 | AI enrichment vuln (description/impact/remediation)                 | ✅     | AI    | Hasil di-cache                                                                                                                            |
+| 5.3 | AI executive summary report                                         | ✅     | AI    |                                                                                                                                           |
+| 5.4 | AI threat analysis/ringkasan                                        | ✅     | AI    |                                                                                                                                           |
+| 5.5 | Provider AI                                                         | ➕     | AI    | **Vercel AI SDK**: Claude default + OpenAI + Ollama (abstraction); per-proyek **Base URL** opsional → gateway kompatibel OpenAI/Anthropic |
+| 5.6 | API Key Vault (OTX, LeakCheck, AI) terenkripsi                      | ✅     | AI/PF | Enkripsi at-rest                                                                                                                          |
+| 5.7 | HackerOne / Bug bounty sync-import-submit                           | ❌     | —     | Dibuang                                                                                                                                   |
 
 ## 6. API (WAJIB — warga kelas satu)
 
-| #   | Fitur ReNgGinaNg                                                                              | Status | Epic  | Catatan                                                                                                                  |
-| --- | --------------------------------------------------------------------------------------------- | ------ | ----- | ------------------------------------------------------------------------------------------------------------------------ |
-| 6.1 | REST API semua resource (project/target/scan/subdomain/endpoint/port/vuln/TI/report/settings) | ✅➕   | AI    | typed                                                                                                                    |
-| 6.2 | OpenAPI terdokumentasi                                                                        | ✅➕   | AI    | Auto-generated                                                                                                           |
-| 6.3 | Auth session + API token                                                                      | ✅     | PF/AI | Token utk otomasi/CI eksternal                                                                                           |
-| 6.4 | RBAC (SysAdmin / PenetrationTester / Auditor)                                                 | ✅     | PF    | Permission: modify_system_config, modify_scan_config, modify_scan_results, modify_report, initiate_scans, modify_targets |
-| 6.5 | Realtime progress (SSE/WebSocket)                                                             | ✅     | RE/AI | SSE                                                                                                                      |
-| 6.6 | Datatables server-side (operator `= & \| > < !`)                                              | ✅     | UI/AI | Server-side pagination (scans `?limit/offset/total`)                                                                     |
-| 6.7 | Mind-map visualisasi                                                                          | ❌     | —     | Dibuang (nice-to-have)                                                                                                   |
+| #   | Fitur ReNgGinaNg                                                                              | Status | Epic  | Catatan                                                                                                                                                  |
+| --- | --------------------------------------------------------------------------------------------- | ------ | ----- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 6.1 | REST API semua resource (project/target/scan/subdomain/endpoint/port/vuln/TI/report/settings) | ✅➕   | AI    | typed                                                                                                                                                    |
+| 6.2 | OpenAPI terdokumentasi                                                                        | ✅➕   | AI    | Redoc `/api/docs` + `/api/openapi.json`; **ditaut in-app** (Settings → API Tokens). API-first: parity REST penuh + schema req/resp lengkap (in progress) |
+| 6.3 | Auth session + API token                                                                      | ✅     | PF/AI | Token utk otomasi/CI eksternal                                                                                                                           |
+| 6.4 | RBAC (SysAdmin / PenetrationTester / Auditor)                                                 | ✅     | PF    | Permission: modify_system_config, modify_scan_config, modify_scan_results, modify_report, initiate_scans, modify_targets                                 |
+| 6.5 | Realtime progress (SSE/WebSocket)                                                             | ✅     | RE/AI | SSE                                                                                                                                                      |
+| 6.6 | Datatables server-side (operator `= & \| > < !`)                                              | ✅     | UI/AI | Server-side pagination (scans `?limit/offset/total`)                                                                                                     |
+| 6.7 | Mind-map visualisasi                                                                          | ❌     | —     | Dibuang (nice-to-have)                                                                                                                                   |
 
 ## 7. Dashboard & UI
 
@@ -141,23 +141,23 @@ scanner aktif → tidak menambah biner & tidak melanggar set tool aktif. Spec pe
 [11-PASSIVE-RECON-AND-EXPOSURE.md](11-PASSIVE-RECON-AND-EXPOSURE.md). Status: sebagian besar **SUDAH
 diimplementasikan** (2026-06-07); sisa 9.9–9.11 belum.
 
-| #    | Fitur (ex-SCOPTIX)                                        | Status | Modul   | Catatan                                                                    |
-| ---- | --------------------------------------------------------- | ------ | ------- | -------------------------------------------------------------------------- |
-| 9.1  | Passive subdomain (VirusTotal passive DNS)                | ✅➕   | RE      | Mode scan `passive`/`full`; `runPassiveScan`                               |
-| 9.2  | Passive archived-URL (Wayback CDX)                        | ✅➕   | RE      | Arsip pasif (1 API call), **bukan** crawler — merevisi 1.9                 |
-| 9.3  | VT undetected-URLs (+tanggal) → DiscoveredUrl             | ✅➕   | RE      | `discovered_urls` + `external_seen_at`                                     |
-| 9.4  | Passive DNS / IP resolution history (origin di balik WAF) | ✅➕   | RE/TI   | `ip_resolutions` + sightings; IP directory (VT + URLScan)                  |
-| 9.5  | Exposure findings (regex secret detection, pure-TS)       | ✅➕   | RE(+TI) | 23 aturan; mengisi komponen **Exposure** risk score; cross-link LeakCheck  |
-| 9.6  | Content analysis / kategori file by-ekstensi (editable)   | ✅➕   | RE      | 8 kategori auto-seed; `extension_categories`/suffix rules                  |
-| 9.7  | Endpoint/parameter discovery (turunan analisis URL)       | ✅➕   | RE      | `analyzeEndpoints` → kartu Attack Surface                                  |
-| 9.8  | Deep-fetch konten (opt-in) + **SSRF guard wajib**         | ✅➕   | RE      | `scans.deep_scan`; body→exposure source=body; size-capped                  |
-| 9.9  | Multi-key rotation + kuota + backoff                      | ✅➕   | PF      | Postgres rotator (round-robin/quota/backoff) + per-subdomain VT enrichment |
-| 9.10 | SOCKS proxy (global + per-key) untuk OSINT/deep-fetch     | ✅➕   | PF      | `PROXY_URL` http(s)/socks via undici dispatcher (worker)                   |
-| 9.11 | Scan diff diperluas (finding + IP + arsip)                | ✅➕   | RE      | `first_scan_id` → "new in scan" diff di Attack Surface                     |
-| 9.12 | Export CSV/ZIP hasil scan                                 | ✅➕   | RE/UI   | Route `/surface/export`; zip writer pure-TS tanpa dep                      |
-| 9.13 | Dashboard discovery-over-time + by-source                 | ✅     | UI      | Chart "URL discovery · last 14 days"                                       |
-| 9.14 | Engine URLScan.io (ketiga)                                | ✅     | RE/TI   | Keyless/with-key; URL + IP (IP directory jalan tanpa VT key)               |
-| 9.x  | Redis/BullMQ + rotator Redis + posture "no-auth"          | ❌     | —       | Bertentangan prinsip ringan/security → pakai pg-boss+Postgres, tetap RBAC  |
+| #    | Fitur (ex-SCOPTIX)                                        | Status | Modul   | Catatan                                                                                                                                     |
+| ---- | --------------------------------------------------------- | ------ | ------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| 9.1  | Passive subdomain (VirusTotal passive DNS)                | ✅➕   | RE      | Mode scan `passive`/`full`; `runPassiveScan`                                                                                                |
+| 9.2  | Passive archived-URL (Wayback CDX)                        | ✅➕   | RE      | Arsip pasif (1 API call), **bukan** crawler — merevisi 1.9; `matchType=domain` → cakup domain **+ semua subdomain** (VT sudah harvest subs) |
+| 9.3  | VT undetected-URLs (+tanggal) → DiscoveredUrl             | ✅➕   | RE      | `discovered_urls` + `external_seen_at`                                                                                                      |
+| 9.4  | Passive DNS / IP resolution history (origin di balik WAF) | ✅➕   | RE/TI   | `ip_resolutions` + sightings; IP directory (VT + URLScan)                                                                                   |
+| 9.5  | Exposure findings (regex secret detection, pure-TS)       | ✅➕   | RE(+TI) | 23 aturan; mengisi komponen **Exposure** risk score; cross-link LeakCheck                                                                   |
+| 9.6  | Content analysis / kategori file by-ekstensi (editable)   | ✅➕   | RE      | 8 kategori auto-seed; `extension_categories`/suffix rules                                                                                   |
+| 9.7  | Endpoint/parameter discovery (turunan analisis URL)       | ✅➕   | RE      | `analyzeEndpoints` → kartu Attack Surface                                                                                                   |
+| 9.8  | Deep-fetch konten (opt-in) + **SSRF guard wajib**         | ✅➕   | RE      | `scans.deep_scan`; body→exposure source=body; size-capped                                                                                   |
+| 9.9  | Multi-key rotation + kuota + backoff                      | ✅➕   | PF      | Postgres rotator (round-robin/quota/backoff) + per-subdomain VT enrichment                                                                  |
+| 9.10 | SOCKS proxy (global + per-key) untuk OSINT/deep-fetch     | ✅➕   | PF      | `PROXY_URL` http(s)/socks via undici dispatcher (worker)                                                                                    |
+| 9.11 | Scan diff diperluas (finding + IP + arsip)                | ✅➕   | RE      | `first_scan_id` → "new in scan" diff di Attack Surface                                                                                      |
+| 9.12 | Export CSV/ZIP hasil scan                                 | ✅➕   | RE/UI   | Route `/surface/export`; zip writer pure-TS tanpa dep                                                                                       |
+| 9.13 | Dashboard discovery-over-time + by-source                 | ✅     | UI      | Chart "URL discovery · last 14 days"                                                                                                        |
+| 9.14 | Engine URLScan.io (ketiga)                                | ✅     | RE/TI   | Keyless/with-key; URL + IP (IP directory jalan tanpa VT key)                                                                                |
+| 9.x  | Redis/BullMQ + rotator Redis + posture "no-auth"          | ❌     | —       | Bertentangan prinsip ringan/security → pakai pg-boss+Postgres, tetap RBAC                                                                   |
 
 **SUDAH dikirim (2026-06-07):** 9.1–9.8, 9.12, 9.13, 9.14 — engine VT/Wayback/URLScan, exposure
 regex (23 aturan), kategori file, endpoint/param, deep-fetch (SSRF-guarded), export CSV/ZIP, chart
@@ -173,21 +173,46 @@ Setiap resource harus punya **CRUD lengkap** lewat UI + API (API-first), dengan 
 audit, konfirmasi untuk destructive action, dan cascade delete yang benar. Audit menemukan banyak
 "create-only" — dilengkapi di sesi ini.
 
-| #     | Resource                         | Create      | Read | Update             | Delete | Catatan                                                         |
-| ----- | -------------------------------- | ----------- | ---- | ------------------ | ------ | --------------------------------------------------------------- |
-| 10.1  | User                             | ✅➕ (baru) | ✅   | ✅ (role)          | ✅➕   | Add user (email/pass/role) + delete; guard last-SysAdmin & self |
-| 10.2  | Project                          | ✅          | ✅   | —                  | ✅➕   | Delete cascade (targets/scans/TI/passive)                       |
-| 10.3  | Target                           | ✅          | ✅   | —                  | ✅➕   | Delete cascade (scans + hasil)                                  |
-| 10.4  | Scan                             | ✅          | ✅   | ✅ (cancel/status) | ✅➕   | Delete cascade (subdomain/endpoint/port/vuln/activity)          |
-| 10.5  | Finding (vuln)                   | (scan)      | ✅   | ✅ (status/AI)     | ✅➕   | Delete satuan                                                   |
-| 10.6  | Leaked credential                | (TI)        | ✅   | ✅ (status)        | ✅➕   | Delete satuan                                                   |
-| 10.7  | Exposure finding                 | (passive)   | ✅   | ✅ (status)        | ✅➕   | Delete satuan                                                   |
-| 10.8  | Manual indicator                 | ✅          | ✅   | —                  | ✅➕   | Delete via web (API sudah ada)                                  |
-| 10.9  | Scan profile                     | ✅          | ✅   | —                  | ✅     | Sudah ada                                                       |
-| 10.10 | Webhook/Token/Signatory/Schedule | ✅          | ✅   | —                  | ✅     | Sudah ada                                                       |
+| #     | Resource                         | Create      | Read | Update                | Delete | Catatan                                                                                                   |
+| ----- | -------------------------------- | ----------- | ---- | --------------------- | ------ | --------------------------------------------------------------------------------------------------------- |
+| 10.1  | User                             | ✅➕ (baru) | ✅   | ✅➕ (role/pass)      | ✅➕   | Add user (email/pass/role) + delete; admin **reset password user lain**; guard last-SysAdmin & self       |
+| 10.2  | Project                          | ✅          | ✅   | ✅➕ (rename)         | ✅➕   | Edit nama/sektor/slug; **default project** (tampil saat login); delete cascade (targets/scans/TI/passive) |
+| 10.3  | Target                           | ✅          | ✅   | ✅➕                  | ✅➕   | Edit domain/headers/predefined-subs; delete cascade (scans + hasil)                                       |
+| 10.4  | Scan                             | ✅          | ✅   | ✅ (cancel/status)    | ✅➕   | Delete cascade (subdomain/endpoint/port/vuln/activity)                                                    |
+| 10.5  | Finding (vuln)                   | (scan)      | ✅   | ✅➕ (status/AI/note) | ✅➕   | Status + **analyst note** (RBAC-gated, audited); delete satuan                                            |
+| 10.6  | Leaked credential                | (TI)        | ✅   | ✅ (status)           | ✅➕   | Delete satuan                                                                                             |
+| 10.7  | Exposure finding                 | (passive)   | ✅   | ✅➕ (status/note)    | ✅➕   | Status + **analyst note** (RBAC-gated, audited); delete satuan                                            |
+| 10.8  | Manual indicator                 | ✅          | ✅   | ✅➕                  | ✅➕   | Edit + delete via web (API sudah ada)                                                                     |
+| 10.9  | Scan profile                     | ✅          | ✅   | ✅➕                  | ✅     | Edit nama/config (UA/tags/templates/rate/keywords)                                                        |
+| 10.10 | Webhook/Token/Signatory/Schedule | ✅          | ✅   | ✅➕                  | ✅     | Edit webhook, signatory, schedule (cron/profile/enabled); token rotate/delete                             |
+| 10.11 | Recon note (per target)          | ✅          | ✅   | ✅➕                  | ✅     | Edit + delete catatan/TODO target                                                                         |
 
 Aturan destructive action (lihat governance principle 10): RBAC server-side, konfirmasi di UI
 (`ConfirmButton`), `recordAudit`, cascade FK `onDelete`, dan jangan biarkan UI/API "create-only".
+
+**Update/Edit lengkap (2026-06-08).** Audit "create+delete-only" ditutup — **Update penuh** kini ada
+untuk: project (nama/sektor/slug), target (domain/headers/predefined-subs), scan profile, schedule
+(cron/profil/enabled), webhook, manual indicator, report signatory, dan recon note.
+
+**Account self-service (Settings → Account).** User bisa ganti **password & email** sendiri + **sign
+out of all devices** (revoke seluruh sesi). Admin: tambah/hapus user, ubah role, dan **reset password
+user lain**.
+
+**Pagination server-side** pada daftar **Projects** + **Targets** (limit/offset di SQL, `?ppage=`).
+
+---
+
+## 11. Triage table UX (2026-06-08)
+
+Setiap tabel triase punya alat triase massal yang konsisten. Berlaku untuk: **findings (vuln),
+leaked credentials, sector news, brand news, exposure**.
+
+| #    | Kemampuan                      | Status | Modul | Catatan                                                           |
+| ---- | ------------------------------ | ------ | ----- | ----------------------------------------------------------------- |
+| 11.1 | Pencarian teks                 | ✅➕   | UI    | Filter cepat per-tabel                                            |
+| 11.2 | Multi-select (checkbox) + bulk | ✅➕   | UI    | Pilih banyak baris → **"apply to selected"** (ubah status massal) |
+| 11.3 | Ubah status per-baris instan   | ✅➕   | UI    | Auto-submit `<select>` (tanpa tombol Set)                         |
+| 11.4 | Filter status + pagination     | ✅➕   | UI    | Filter status + limit/offset SQL                                  |
 
 ---
 
@@ -313,3 +338,34 @@ terpisah (typecheck 12/12, lint, unit 9 proyek, e2e 22/22 hijau).
   ke preset lama tanpa menimpa kustomisasi.
 - ➕ **Notifikasi otomatis**: event `vuln.found` (high/critical saat scan selesai) & `ti.refreshed`
   (delta leak baru) lewat webhook per-proyek (Telegram/Discord/Google Chat/Slack).
+
+## Addendum — News triage, AI relevance & AI gateway (2026-06-08)
+
+Lanjutan threat-intel news (extends §2 + addendum 2026-06-05) dan AI provider (extends §5.5).
+
+- ➕ **News cap** newest **15** per sektor/proyek (`NEWS_CAP`); **auto-refresh harian 09:00 WIB**
+  (worker cron `0 2 * * *` UTC). "Search now" / "Apply sector" minta **konfirmasi** sebelum
+  mengganti set berita.
+- ➕ **AI relevance triage** ("AI: filter irrelevant") untuk sector + brand news — **belajar** dari
+  tanda Irrelevant/Relevant analis.
+- ➕ Label status **"Dismissed" → "Irrelevant"** (nilai DB `dismissed` tetap, tanpa migrasi).
+- ➕ **Brand monitoring**: brand query kustom **dipersist** + "Search now" on-demand; render dari DB
+  (tanpa fetch saat render).
+- ➕ **AI Base URL** (§5.5): per-proyek opsional → arahkan ke gateway kompatibel OpenAI/Anthropic
+  (provider/key tidak berubah).
+
+## Addendum — Performance, reliability & docs discoverability (2026-06-08)
+
+Penegasan governance **principle 11** (reliable, light & fast) di tingkat build/runtime, plus
+penemuan dokumentasi/API.
+
+- ✅ **Production build di bawah supervisor self-healing** — app live jalan `next start` (BUKAN
+  `next dev`); worker self-heal juga (auto-restart + backoff). Lihat [how-to/deploy](../how-to/deploy.md).
+- ✅ **Navigasi instan**: layout shell persisten (app + settings) + boundary `loading.tsx` + `next/link`
+  (client nav + prefetch).
+- ✅ **Kerja minimum per-request**: **indeks DB** di kolom FK/filter panas; filter/paginate/agregat
+  **sisi SQL** (tren dashboard, join schedules/audit); `cache()` per-request untuk `getCurrentUser`;
+  fetch eksternal di-capped + paralel (`Promise.all`).
+- ➕ **Docs discoverability**: API reference (`/api/docs` Redoc + `/api/openapi.json`) ditaut in-app
+  (Settings → API Tokens); [docs/tutorials/getting-started.md](../tutorials/getting-started.md)
+  adalah panduan pemakaian penuh.
