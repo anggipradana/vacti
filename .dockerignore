@@ -2,6 +2,12 @@ node_modules
 **/node_modules
 .next
 **/.next
+.next-prod
+.next-build
+.next-e2e
+**/.next-prod
+**/.next-build
+**/.next-e2e
 .nx
 .git
 coverage

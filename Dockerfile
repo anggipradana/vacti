@@ -4,9 +4,11 @@
 FROM node:20-bookworm-slim AS build
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
-COPY package.json package-lock.json ./
-RUN npm ci
+# Copy the whole monorepo BEFORE install: npm workspaces needs every libs/*/package.json present so
+# it can create the @vacti/* symlinks in node_modules (installing first would skip them).
 COPY . .
+# --legacy-peer-deps: framer-motion declares a React 18 peer but works with React 19 (project pin).
+RUN npm ci --legacy-peer-deps
 RUN npx next build apps/web
 
 # ---- app runtime (Next.js production server) ----
@@ -40,7 +42,8 @@ RUN set -eux; cd /tmp; \
     "naabu:${NAABU_VERSION}" \
     "nuclei:${NUCLEI_VERSION}"; do \
     name="${spec%%:*}"; ver="${spec##*:}"; \
-    curl -fsSL -o tool.zip "https://github.com/projectdiscovery/${name}/releases/download/v${ver}/${name}_${ver}_linux_amd64.zip"; \
+    curl -fsSL --retry 5 --retry-delay 3 --retry-all-errors \
+      -o tool.zip "https://github.com/projectdiscovery/${name}/releases/download/v${ver}/${name}_${ver}_linux_amd64.zip"; \
     unzip -o tool.zip "${name}" -d /usr/local/bin; \
     chmod +x "/usr/local/bin/${name}"; \
     rm tool.zip; \
