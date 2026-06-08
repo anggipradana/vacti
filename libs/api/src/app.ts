@@ -1,10 +1,10 @@
 import { Hono } from 'hono';
-import { and, desc, eq, count as sqlCount } from 'drizzle-orm';
 import { z } from 'zod';
-import { hashToken, hashPassword } from '@vacti/auth';
+import { hashToken, hashPassword, generateApiToken } from '@vacti/auth';
 import {
   isVulnStatus,
   isLeakStatus,
+  isNewsStatus,
   hasPermission,
   roleFromUser,
   isRoleName,
@@ -14,7 +14,7 @@ import {
   type RoleName,
 } from '@vacti/core';
 import type { Context } from 'hono';
-import { computeProjectRisk } from '@vacti/threat-intel';
+import { computeProjectRisk, isSector } from '@vacti/threat-intel';
 import { diffScans, type ScanResultKeys } from '@vacti/recon';
 import { dispatchWebhook, type Channel } from '@vacti/integrations';
 import { openApiSpec, redocHtml } from './openapi';
@@ -22,6 +22,7 @@ import {
   apiTokens,
   users,
   projects,
+  projectMembers,
   targets,
   scanProfiles,
   scans,
@@ -34,6 +35,8 @@ import {
   otxThreatData,
   leakcheckData,
   threatIntelStatus,
+  threatNews,
+  brandNews,
   webhooks,
   scanSchedules,
   searchAll,
@@ -42,6 +45,7 @@ import {
   ipResolutions,
   type Database,
 } from '@vacti/db';
+import { and, eq, desc, count as sqlCount, inArray } from 'drizzle-orm';
 
 export interface ApiDeps {
   db: Database;
@@ -150,6 +154,29 @@ export function buildApi(deps: ApiDeps): Hono<{ Variables: Vars }> {
       .returning();
     return c.json({ target: row }, 201);
   });
+  app.patch('/targets/:id', async (c) => {
+    const g = guard(c, Permission.ModifyTargets);
+    if (g) return g;
+    const body = z
+      .object({
+        domain: z.string().trim().min(1),
+        predefinedSubdomains: z.array(z.string()).optional(),
+        customHeaders: z.record(z.string()).nullable().optional(),
+      })
+      .safeParse(await c.req.json().catch(() => ({})));
+    if (!body.success) return c.json({ error: body.error.issues }, 400);
+    const [row] = await db
+      .update(targets)
+      .set({
+        domain: body.data.domain,
+        predefinedSubdomains: body.data.predefinedSubdomains ?? [],
+        customHeaders: body.data.customHeaders ?? null,
+      })
+      .where(eq(targets.id, c.req.param('id')))
+      .returning();
+    if (!row) return c.json({ error: 'not found' }, 404);
+    return c.json({ target: row });
+  });
 
   // Scan profiles
   app.get('/profiles', async (c) => c.json({ profiles: await db.select().from(scanProfiles) }));
@@ -160,6 +187,50 @@ export function buildApi(deps: ApiDeps): Hono<{ Variables: Vars }> {
     if (!parsed.success) return c.json({ error: parsed.error.issues }, 400);
     const [row] = await db.insert(scanProfiles).values(parsed.data).returning();
     return c.json({ profile: row }, 201);
+  });
+  app.patch('/profiles/:id', async (c) => {
+    const g = guard(c, Permission.ModifyScanConfig);
+    if (g) return g;
+    // Mirrors editProfileAction's field set: name + per-tool toggles, ports, severities, rate, config.
+    const body = z
+      .object({
+        name: z.string().trim().min(1),
+        tools: z
+          .object({
+            subfinder: z.boolean().optional(),
+            httpx: z.boolean().optional(),
+            naabu: z.boolean().optional(),
+            nuclei: z.boolean().optional(),
+            wordfence: z.boolean().optional(),
+          })
+          .optional(),
+        ports: z.string().optional(),
+        severities: z.array(z.string()).optional(),
+        rate: z.number().nullable().optional(),
+        config: z.record(z.unknown()).nullable().optional(),
+      })
+      .safeParse(await c.req.json().catch(() => ({})));
+    if (!body.success) return c.json({ error: body.error.issues }, 400);
+    const set: Record<string, unknown> = { name: body.data.name };
+    if (body.data.tools !== undefined) set.tools = body.data.tools;
+    if (body.data.ports !== undefined) set.ports = body.data.ports.trim() || 'top-100';
+    if (body.data.severities !== undefined)
+      set.severities = body.data.severities.length ? body.data.severities : ['critical', 'high', 'medium', 'low'];
+    if (body.data.rate !== undefined) set.rate = body.data.rate;
+    if (body.data.config !== undefined) set.config = body.data.config;
+    const [row] = await db
+      .update(scanProfiles)
+      .set(set)
+      .where(eq(scanProfiles.id, c.req.param('id')))
+      .returning();
+    if (!row) return c.json({ error: 'not found' }, 404);
+    return c.json({ profile: row });
+  });
+  app.delete('/profiles/:id', async (c) => {
+    const g = guard(c, Permission.ModifyScanConfig);
+    if (g) return g;
+    await db.delete(scanProfiles).where(eq(scanProfiles.id, c.req.param('id')));
+    return c.json({ ok: true });
   });
 
   // Scans
@@ -217,6 +288,53 @@ export function buildApi(deps: ApiDeps): Hono<{ Variables: Vars }> {
       db.select().from(vulnerabilities).where(eq(vulnerabilities.scanId, id)),
     ]);
     return c.json({ subdomains: subs, endpoints: eps, ports: prt, vulnerabilities: vulns });
+  });
+
+  // ── Projects ──
+  app.post('/projects', async (c) => {
+    const g = guard(c, Permission.ModifyTargets);
+    if (g) return g;
+    const body = z
+      .object({ name: z.string().trim().min(1), slug: z.string().trim() })
+      .safeParse(await c.req.json().catch(() => ({})));
+    if (!body.success || !/^[a-z][a-z0-9-]*$/.test(body.data.slug)) return c.json({ error: 'invalid' }, 400);
+    const [project] = await db.insert(projects).values({ name: body.data.name, slug: body.data.slug }).returning();
+    await db.insert(projectMembers).values({ projectId: project!.id, userId: c.get('userId'), role: Role.SysAdmin });
+    return c.json({ project }, 201);
+  });
+  app.patch('/projects/:id', async (c) => {
+    const g = guard(c, Permission.ModifyTargets);
+    if (g) return g;
+    const body = z
+      .object({ name: z.string().trim().min(1), sector: z.string(), slug: z.string().trim().optional() })
+      .safeParse(await c.req.json().catch(() => ({})));
+    if (!body.success || !isSector(body.data.sector)) return c.json({ error: 'invalid' }, 400);
+    const set: { name: string; sector: string; updatedAt: Date; slug?: string } = {
+      name: body.data.name,
+      sector: body.data.sector,
+      updatedAt: new Date(),
+    };
+    if (body.data.slug) {
+      if (!/^[a-z][a-z0-9-]*$/.test(body.data.slug)) return c.json({ error: 'invalid' }, 400);
+      set.slug = body.data.slug;
+    }
+    const [row] = await db
+      .update(projects)
+      .set(set)
+      .where(eq(projects.id, c.req.param('id')))
+      .returning();
+    if (!row) return c.json({ error: 'not found' }, 404);
+    return c.json({ project: row });
+  });
+  app.post('/projects/:id/default', async (c) => {
+    const g = guard(c, Permission.ModifyTargets);
+    if (g) return g;
+    const id = c.req.param('id');
+    // Single default: clear the flag everywhere, then set it on the chosen project.
+    await db.update(projects).set({ isDefault: false }).where(eq(projects.isDefault, true));
+    const [row] = await db.update(projects).set({ isDefault: true }).where(eq(projects.id, id)).returning();
+    if (!row) return c.json({ error: 'not found' }, 404);
+    return c.json({ project: row });
   });
 
   // ── Destructive CRUD (RBAC-guarded, cascade via FK) ──
@@ -291,6 +409,63 @@ export function buildApi(deps: ApiDeps): Hono<{ Variables: Vars }> {
     await db.delete(users).where(eq(users.id, id));
     return c.json({ ok: true });
   });
+  app.patch('/users/:id', async (c) => {
+    const g = guard(c, Permission.ModifySystemConfig);
+    if (g) return g;
+    const id = c.req.param('id');
+    const body = z.object({ role: z.string() }).safeParse(await c.req.json().catch(() => ({})));
+    if (!body.success || !isRoleName(body.data.role)) return c.json({ error: 'invalid' }, 400);
+    const role = body.data.role;
+    // Don't let an admin demote themselves out of the last SysAdmin seat.
+    if (id === c.get('userId') && role !== Role.SysAdmin) {
+      const admins = (await db.select().from(users).where(eq(users.role, Role.SysAdmin))).length;
+      if (admins <= 1) return c.json({ error: 'last sysadmin' }, 409);
+    }
+    const [row] = await db
+      .update(users)
+      .set({ role, isSysAdmin: role === Role.SysAdmin, updatedAt: new Date() })
+      .where(eq(users.id, id))
+      .returning();
+    if (!row) return c.json({ error: 'not found' }, 404);
+    return c.json({ user: { id: row.id, email: row.email, role: row.role } });
+  });
+  app.post('/users/:id/reset-password', async (c) => {
+    const g = guard(c, Permission.ModifySystemConfig);
+    if (g) return g;
+    const body = z.object({ password: z.string().min(8) }).safeParse(await c.req.json().catch(() => ({})));
+    if (!body.success) return c.json({ error: 'invalid' }, 400);
+    const [row] = await db
+      .update(users)
+      .set({ passwordHash: await hashPassword(body.data.password), updatedAt: new Date() })
+      .where(eq(users.id, c.req.param('id')))
+      .returning();
+    if (!row) return c.json({ error: 'not found' }, 404);
+    return c.json({ ok: true });
+  });
+
+  // ── API tokens (scoped to the authed user) ──
+  app.get('/tokens', async (c) => {
+    const rows = await db
+      .select({ id: apiTokens.id, label: apiTokens.label, createdAt: apiTokens.createdAt })
+      .from(apiTokens)
+      .where(eq(apiTokens.userId, c.get('userId')));
+    return c.json({ tokens: rows });
+  });
+  app.post('/tokens', async (c) => {
+    const body = z.object({ label: z.string().optional() }).safeParse(await c.req.json().catch(() => ({})));
+    const label = body.success ? body.data.label?.trim() || 'token' : 'token';
+    const { plaintext, hash } = generateApiToken();
+    const [row] = await db
+      .insert(apiTokens)
+      .values({ userId: c.get('userId'), label, tokenHash: hash })
+      .returning();
+    // Plaintext is returned ONCE here and never stored — only the hash persists.
+    return c.json({ token: plaintext, id: row!.id, label: row!.label }, 201);
+  });
+  app.delete('/tokens/:id', async (c) => {
+    await db.delete(apiTokens).where(and(eq(apiTokens.id, c.req.param('id')), eq(apiTokens.userId, c.get('userId'))));
+    return c.json({ ok: true });
+  });
 
   // Attack-surface (passive recon) read endpoints — scoped to a project.
   app.get('/surface/urls', async (c) => {
@@ -325,6 +500,46 @@ export function buildApi(deps: ApiDeps): Hono<{ Variables: Vars }> {
       .orderBy(desc(exposureFindings.createdAt))
       .limit(500);
     return c.json({ findings: rows });
+  });
+  app.post('/surface/findings/bulk/status', async (c) => {
+    const g = guard(c, Permission.ModifyScanResults);
+    if (g) return g;
+    const body = z
+      .object({ ids: z.array(z.string()), status: z.string() })
+      .safeParse(await c.req.json().catch(() => ({})));
+    if (!body.success || !body.data.ids.length || !isLeakStatus(body.data.status))
+      return c.json({ error: 'invalid' }, 400);
+    await db
+      .update(exposureFindings)
+      .set({ status: body.data.status })
+      .where(inArray(exposureFindings.id, body.data.ids));
+    return c.json({ ok: true });
+  });
+  app.post('/surface/findings/:id/status', async (c) => {
+    const g = guard(c, Permission.ModifyScanResults);
+    if (g) return g;
+    const body = z.object({ status: z.string() }).safeParse(await c.req.json().catch(() => ({})));
+    if (!body.success || !isLeakStatus(body.data.status)) return c.json({ error: 'invalid status' }, 400);
+    const [row] = await db
+      .update(exposureFindings)
+      .set({ status: body.data.status })
+      .where(eq(exposureFindings.id, c.req.param('id')))
+      .returning();
+    if (!row) return c.json({ error: 'not found' }, 404);
+    return c.json({ finding: row });
+  });
+  app.post('/surface/findings/:id/note', async (c) => {
+    const g = guard(c, Permission.ModifyScanResults);
+    if (g) return g;
+    const body = z.object({ note: z.string().optional() }).safeParse(await c.req.json().catch(() => ({})));
+    if (!body.success) return c.json({ error: body.error.issues }, 400);
+    const [row] = await db
+      .update(exposureFindings)
+      .set({ analystNote: body.data.note?.trim() || null })
+      .where(eq(exposureFindings.id, c.req.param('id')))
+      .returning();
+    if (!row) return c.json({ error: 'not found' }, 404);
+    return c.json({ finding: row });
   });
   app.get('/surface/ips', async (c) => {
     const projectId = c.req.query('projectId');
@@ -427,6 +642,39 @@ export function buildApi(deps: ApiDeps): Hono<{ Variables: Vars }> {
     const [row] = await db.insert(scanSchedules).values(body.data).returning();
     return c.json({ schedule: row }, 201);
   });
+  app.patch('/schedules/:id', async (c) => {
+    const g = guard(c, Permission.InitiateScans);
+    if (g) return g;
+    const body = z
+      .object({ cron: z.string(), profileId: z.string().uuid().nullable().optional(), enabled: z.boolean().optional() })
+      .safeParse(await c.req.json().catch(() => ({})));
+    if (!body.success || !isValidCron(body.data.cron)) return c.json({ error: 'invalid schedule' }, 400);
+    const set: { cron: string; profileId: string | null; enabled?: boolean } = {
+      cron: body.data.cron,
+      profileId: body.data.profileId ?? null,
+    };
+    if (body.data.enabled !== undefined) set.enabled = body.data.enabled;
+    const [row] = await db
+      .update(scanSchedules)
+      .set(set)
+      .where(eq(scanSchedules.id, c.req.param('id')))
+      .returning();
+    if (!row) return c.json({ error: 'not found' }, 404);
+    return c.json({ schedule: row });
+  });
+  app.post('/schedules/:id/toggle', async (c) => {
+    const g = guard(c, Permission.InitiateScans);
+    if (g) return g;
+    const id = c.req.param('id');
+    const [row] = await db.select().from(scanSchedules).where(eq(scanSchedules.id, id));
+    if (!row) return c.json({ error: 'not found' }, 404);
+    const [updated] = await db
+      .update(scanSchedules)
+      .set({ enabled: !row.enabled })
+      .where(eq(scanSchedules.id, id))
+      .returning();
+    return c.json({ schedule: updated });
+  });
   app.delete('/schedules/:id', async (c) => {
     const g = guard(c, Permission.InitiateScans);
     if (g) return g;
@@ -457,6 +705,16 @@ export function buildApi(deps: ApiDeps): Hono<{ Variables: Vars }> {
     return c.json({ status: 'queued' }, 202);
   });
 
+  // Brand-monitoring refresh. There is no brand-only job, so this reuses the ti-refresh enqueue.
+  app.post('/threat-intel/brand-refresh', async (c) => {
+    const g = guard(c, Permission.ModifyScanResults);
+    if (g) return g;
+    const body = z.object({ projectId: z.string().uuid() }).safeParse(await c.req.json().catch(() => ({})));
+    if (!body.success) return c.json({ error: body.error.issues }, 400);
+    await deps.enqueueTiRefresh(body.data.projectId);
+    return c.json({ status: 'queued' }, 202);
+  });
+
   app.get('/indicators', async (c) => {
     const projectId = c.req.query('projectId');
     const rows = projectId
@@ -479,6 +737,25 @@ export function buildApi(deps: ApiDeps): Hono<{ Variables: Vars }> {
     const [row] = await db.insert(manualIndicators).values(body.data).returning();
     return c.json({ indicator: row }, 201);
   });
+  app.patch('/indicators/:id', async (c) => {
+    const g = guard(c, Permission.ModifyScanResults);
+    if (g) return g;
+    const body = z
+      .object({
+        type: z.enum(['domain', 'subdomain', 'ip']),
+        value: z.string().trim().min(1),
+        note: z.string().optional(),
+      })
+      .safeParse(await c.req.json().catch(() => ({})));
+    if (!body.success) return c.json({ error: body.error.issues }, 400);
+    const [row] = await db
+      .update(manualIndicators)
+      .set({ type: body.data.type, value: body.data.value, note: body.data.note?.trim() || null })
+      .where(eq(manualIndicators.id, c.req.param('id')))
+      .returning();
+    if (!row) return c.json({ error: 'not found' }, 404);
+    return c.json({ indicator: row });
+  });
   app.delete('/indicators/:id', async (c) => {
     const g = guard(c, Permission.ModifyScanResults);
     if (g) return g;
@@ -486,7 +763,88 @@ export function buildApi(deps: ApiDeps): Hono<{ Variables: Vars }> {
     return c.json({ status: 'deleted' });
   });
 
-  // Finding triage status
+  // ── Sector news (per-sector threat headlines) ──
+  app.get('/news', async (c) => {
+    const sector = c.req.query('sector');
+    const rows = sector
+      ? await db.select().from(threatNews).where(eq(threatNews.sector, sector)).orderBy(desc(threatNews.publishedAt))
+      : await db.select().from(threatNews).orderBy(desc(threatNews.publishedAt)).limit(500);
+    return c.json({ news: rows });
+  });
+  app.post('/news/bulk/status', async (c) => {
+    const g = guard(c, Permission.ModifyScanResults);
+    if (g) return g;
+    const body = z
+      .object({ ids: z.array(z.string()), status: z.string() })
+      .safeParse(await c.req.json().catch(() => ({})));
+    if (!body.success || !body.data.ids.length || !isNewsStatus(body.data.status))
+      return c.json({ error: 'invalid' }, 400);
+    await db.update(threatNews).set({ status: body.data.status }).where(inArray(threatNews.id, body.data.ids));
+    return c.json({ ok: true });
+  });
+  app.post('/news/:id/status', async (c) => {
+    const g = guard(c, Permission.ModifyScanResults);
+    if (g) return g;
+    const body = z.object({ status: z.string() }).safeParse(await c.req.json().catch(() => ({})));
+    if (!body.success || !isNewsStatus(body.data.status)) return c.json({ error: 'invalid status' }, 400);
+    const [row] = await db
+      .update(threatNews)
+      .set({ status: body.data.status })
+      .where(eq(threatNews.id, c.req.param('id')))
+      .returning();
+    if (!row) return c.json({ error: 'not found' }, 404);
+    return c.json({ news: row });
+  });
+
+  // ── Brand news (per-project brand-monitoring headlines) ──
+  app.get('/brand-news', async (c) => {
+    const projectId = c.req.query('projectId');
+    const rows = projectId
+      ? await db.select().from(brandNews).where(eq(brandNews.projectId, projectId)).orderBy(desc(brandNews.publishedAt))
+      : await db.select().from(brandNews).orderBy(desc(brandNews.publishedAt)).limit(500);
+    return c.json({ news: rows });
+  });
+  app.post('/brand-news/bulk/status', async (c) => {
+    const g = guard(c, Permission.ModifyScanResults);
+    if (g) return g;
+    const body = z
+      .object({ ids: z.array(z.string()), status: z.string() })
+      .safeParse(await c.req.json().catch(() => ({})));
+    if (!body.success || !body.data.ids.length || !isNewsStatus(body.data.status))
+      return c.json({ error: 'invalid' }, 400);
+    await db.update(brandNews).set({ status: body.data.status }).where(inArray(brandNews.id, body.data.ids));
+    return c.json({ ok: true });
+  });
+  app.post('/brand-news/:id/status', async (c) => {
+    const g = guard(c, Permission.ModifyScanResults);
+    if (g) return g;
+    const body = z.object({ status: z.string() }).safeParse(await c.req.json().catch(() => ({})));
+    if (!body.success || !isNewsStatus(body.data.status)) return c.json({ error: 'invalid status' }, 400);
+    const [row] = await db
+      .update(brandNews)
+      .set({ status: body.data.status })
+      .where(eq(brandNews.id, c.req.param('id')))
+      .returning();
+    if (!row) return c.json({ error: 'not found' }, 404);
+    return c.json({ news: row });
+  });
+
+  // Finding triage status. NOTE: bulk routes are registered before `/:id/...` so the
+  // static `bulk` segment is never captured as an `:id` param by the router.
+  app.post('/vulnerabilities/bulk/status', async (c) => {
+    const g = guard(c, Permission.ModifyScanResults);
+    if (g) return g;
+    const body = z
+      .object({ ids: z.array(z.string()), status: z.string() })
+      .safeParse(await c.req.json().catch(() => ({})));
+    if (!body.success || !body.data.ids.length || !isVulnStatus(body.data.status))
+      return c.json({ error: 'invalid' }, 400);
+    await db
+      .update(vulnerabilities)
+      .set({ status: body.data.status, statusChangedAt: new Date() })
+      .where(inArray(vulnerabilities.id, body.data.ids));
+    return c.json({ ok: true });
+  });
   app.post('/vulnerabilities/:id/status', async (c) => {
     const g = guard(c, Permission.ModifyScanResults);
     if (g) return g;
@@ -503,6 +861,34 @@ export function buildApi(deps: ApiDeps): Hono<{ Variables: Vars }> {
     return c.json({ vulnerability: row });
   });
 
+  app.post('/vulnerabilities/:id/note', async (c) => {
+    const g = guard(c, Permission.ModifyScanResults);
+    if (g) return g;
+    const body = z.object({ note: z.string().optional() }).safeParse(await c.req.json().catch(() => ({})));
+    if (!body.success) return c.json({ error: body.error.issues }, 400);
+    const [row] = await db
+      .update(vulnerabilities)
+      .set({ analystNote: body.data.note?.trim() || null })
+      .where(eq(vulnerabilities.id, c.req.param('id')))
+      .returning();
+    if (!row) return c.json({ error: 'not found' }, 404);
+    return c.json({ vulnerability: row });
+  });
+
+  app.post('/leaks/bulk/status', async (c) => {
+    const g = guard(c, Permission.ModifyScanResults);
+    if (g) return g;
+    const body = z
+      .object({ ids: z.array(z.string()), status: z.string() })
+      .safeParse(await c.req.json().catch(() => ({})));
+    if (!body.success || !body.data.ids.length || !isLeakStatus(body.data.status))
+      return c.json({ error: 'invalid' }, 400);
+    await db
+      .update(leakcheckData)
+      .set({ status: body.data.status, checked: body.data.status !== 'new' })
+      .where(inArray(leakcheckData.id, body.data.ids));
+    return c.json({ ok: true });
+  });
   app.post('/leaks/:id/status', async (c) => {
     const g = guard(c, Permission.ModifyScanResults);
     if (g) return g;
@@ -557,6 +943,39 @@ export function buildApi(deps: ApiDeps): Hono<{ Variables: Vars }> {
     if (!body.success) return c.json({ error: body.error.issues }, 400);
     const [row] = await db.insert(webhooks).values(body.data).returning();
     return c.json({ webhook: row }, 201);
+  });
+  app.patch('/webhooks/:id', async (c) => {
+    const g = guard(c, Permission.ModifySystemConfig);
+    if (g) return g;
+    const body = z
+      .object({
+        channel: z.enum(['discord', 'slack', 'telegram', 'google_chat', 'generic']),
+        label: z.string().nullable().optional(),
+        url: z.string().nullable().optional(),
+        telegramToken: z.string().nullable().optional(),
+        telegramChatId: z.string().nullable().optional(),
+        events: z.array(z.string()).optional(),
+        enabled: z.boolean().optional(),
+      })
+      .safeParse(await c.req.json().catch(() => ({})));
+    if (!body.success) return c.json({ error: body.error.issues }, 400);
+    const norm = (s: string | null | undefined) => (s && s.trim() ? s.trim() : null);
+    const set: Record<string, unknown> = {
+      channel: body.data.channel,
+      label: norm(body.data.label),
+      url: norm(body.data.url),
+      telegramToken: norm(body.data.telegramToken),
+      telegramChatId: norm(body.data.telegramChatId),
+      events: body.data.events ?? [],
+    };
+    if (body.data.enabled !== undefined) set.enabled = body.data.enabled;
+    const [row] = await db
+      .update(webhooks)
+      .set(set)
+      .where(eq(webhooks.id, c.req.param('id')))
+      .returning();
+    if (!row) return c.json({ error: 'not found' }, 404);
+    return c.json({ webhook: row });
   });
   app.delete('/webhooks/:id', async (c) => {
     const g = guard(c, Permission.ModifySystemConfig);

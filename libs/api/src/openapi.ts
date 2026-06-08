@@ -15,6 +15,30 @@ export function openApiSpec(): Record<string, unknown> {
     description: 'Conflicts with an invariant (duplicate / self / last SysAdmin)',
     ...json(ref('Error')),
   };
+  // Common `{ ok: true }` / `{ status: 'deleted' }` style success bodies.
+  const okBody = { type: 'object', properties: { ok: { type: 'boolean' } } };
+  const deletedOk = { description: 'Deleted', ...json(okBody) };
+  const deletedStatus = {
+    description: 'Deleted',
+    ...json({ type: 'object', properties: { status: { type: 'string', example: 'deleted' } } }),
+  };
+  // Bulk triage status: `{ ids: [...], status }` → `{ ok: true }`.
+  const bulkStatusBody = {
+    required: true,
+    ...json({
+      type: 'object',
+      required: ['ids', 'status'],
+      properties: { ids: { type: 'array', items: { type: 'string', format: 'uuid' } }, status: { type: 'string' } },
+    }),
+  };
+  const noteBody = {
+    required: true,
+    ...json({ type: 'object', properties: { note: { type: 'string', nullable: true } } }),
+  };
+  const statusBody = {
+    required: true,
+    ...json({ type: 'object', required: ['status'], properties: { status: { type: 'string' } } }),
+  };
 
   return {
     openapi: '3.1.0',
@@ -32,11 +56,15 @@ export function openApiSpec(): Record<string, unknown> {
     security: bearer,
     tags: [
       { name: 'System' },
+      { name: 'Projects' },
       { name: 'Targets' },
       { name: 'Scans' },
       { name: 'Schedules' },
       { name: 'Threat Intel' },
+      { name: 'Attack Surface' },
       { name: 'Webhooks' },
+      { name: 'Users' },
+      { name: 'Tokens' },
       { name: 'Search' },
     ],
     components: {
@@ -177,6 +205,140 @@ export function openApiSpec(): Record<string, unknown> {
             },
           },
         },
+        Project: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+            slug: { type: 'string' },
+            name: { type: 'string' },
+            sector: { type: 'string', description: 'SectorName for the threat-news feed' },
+            isDefault: { type: 'boolean' },
+            brandQuery: { type: 'string', nullable: true },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time' },
+          },
+        },
+        User: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+            email: { type: 'string', format: 'email' },
+            role: { type: 'string', enum: ['SysAdmin', 'PenetrationTester', 'Auditor'] },
+          },
+        },
+        ApiToken: {
+          type: 'object',
+          description: 'API-token metadata. The secret value is never returned by list/read.',
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+            label: { type: 'string' },
+            createdAt: { type: 'string', format: 'date-time' },
+          },
+        },
+        CreatedApiToken: {
+          type: 'object',
+          description: 'Returned ONCE on creation; the plaintext token is never stored or shown again.',
+          properties: {
+            token: { type: 'string', description: 'Plaintext API token (vct_…) — copy it now.' },
+            id: { type: 'string', format: 'uuid' },
+            label: { type: 'string' },
+          },
+        },
+        Leak: {
+          type: 'object',
+          description: 'Leaked-credential record. identifier/password are CONFIDENTIAL PII.',
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+            projectId: { type: 'string', format: 'uuid' },
+            domain: { type: 'string' },
+            source: { type: 'string', nullable: true },
+            identifier: { type: 'string', nullable: true },
+            origin: { type: 'string', nullable: true },
+            type: { type: 'string', enum: ['domain', 'origin'] },
+            checked: { type: 'boolean' },
+            status: { type: 'string' },
+            createdAt: { type: 'string', format: 'date-time' },
+          },
+        },
+        DiscoveredUrl: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+            projectId: { type: 'string', format: 'uuid' },
+            targetId: { type: 'string', format: 'uuid', nullable: true },
+            scanId: { type: 'string', format: 'uuid', nullable: true },
+            host: { type: 'string', nullable: true },
+            urlText: { type: 'string' },
+            sources: { type: 'array', items: { type: 'string', enum: ['virustotal', 'wayback'] } },
+            pathnameExtension: { type: 'string', nullable: true },
+            categorySlug: { type: 'string', nullable: true },
+            deepScanState: {
+              type: 'string',
+              enum: ['skipped', 'pending', 'done', 'failed', 'blocked'],
+            },
+            httpStatus: { type: 'integer', nullable: true },
+            contentLength: { type: 'integer', nullable: true },
+            createdAt: { type: 'string', format: 'date-time' },
+          },
+        },
+        ExposureFinding: {
+          type: 'object',
+          description: 'Secret/credential pattern matched in a URL or fetched body. snippet is CONFIDENTIAL.',
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+            projectId: { type: 'string', format: 'uuid' },
+            discoveredUrlId: { type: 'string', format: 'uuid', nullable: true },
+            scanId: { type: 'string', format: 'uuid', nullable: true },
+            source: { type: 'string', enum: ['url', 'body'] },
+            findingType: { type: 'string' },
+            snippet: { type: 'string', nullable: true, description: 'CONFIDENTIAL — masked in UI' },
+            urlText: { type: 'string', nullable: true },
+            status: { type: 'string' },
+            analystNote: { type: 'string', nullable: true },
+            createdAt: { type: 'string', format: 'date-time' },
+          },
+        },
+        IpResolution: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+            projectId: { type: 'string', format: 'uuid' },
+            ipAddress: { type: 'string' },
+            latestResolvedAt: { type: 'string', format: 'date-time' },
+            hostnameCount: { type: 'integer' },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time' },
+          },
+        },
+        News: {
+          type: 'object',
+          description: 'Per-sector threat headline (RSS), triageable.',
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+            sector: { type: 'string' },
+            title: { type: 'string' },
+            link: { type: 'string' },
+            source: { type: 'string' },
+            summary: { type: 'string', nullable: true },
+            publishedAt: { type: 'string', format: 'date-time', nullable: true },
+            status: { type: 'string' },
+          },
+        },
+        BrandNews: {
+          type: 'object',
+          description: 'Per-project brand-monitoring headline, triageable.',
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+            projectId: { type: 'string', format: 'uuid' },
+            title: { type: 'string' },
+            link: { type: 'string' },
+            source: { type: 'string' },
+            summary: { type: 'string', nullable: true },
+            publishedAt: { type: 'string', format: 'date-time', nullable: true },
+            security: { type: 'boolean' },
+            status: { type: 'string' },
+          },
+        },
       },
     },
     paths: {
@@ -185,7 +347,28 @@ export function openApiSpec(): Record<string, unknown> {
           summary: 'Health check (public)',
           tags: ['System'],
           security: [],
-          responses: { '200': { description: 'OK' } },
+          responses: {
+            '200': {
+              description: 'OK',
+              ...json({ type: 'object', properties: { status: { type: 'string', example: 'ok' } } }),
+            },
+          },
+        },
+      },
+      '/api/openapi.json': {
+        get: {
+          summary: 'This OpenAPI document (public)',
+          tags: ['System'],
+          security: [],
+          responses: { '200': { description: 'OK', ...json({ type: 'object', additionalProperties: true }) } },
+        },
+      },
+      '/api/docs': {
+        get: {
+          summary: 'Redoc API documentation UI (public)',
+          tags: ['System'],
+          security: [],
+          responses: { '200': { description: 'HTML documentation page' } },
         },
       },
       '/api/whoami': {
@@ -193,7 +376,19 @@ export function openApiSpec(): Record<string, unknown> {
           summary: 'Current principal',
           tags: ['System'],
           security: bearer,
-          responses: { '200': { description: 'OK' }, '401': unauthorized },
+          responses: {
+            '200': {
+              description: 'OK',
+              ...json({
+                type: 'object',
+                properties: {
+                  userId: { type: 'string', format: 'uuid' },
+                  email: { type: 'string', format: 'email', nullable: true },
+                },
+              }),
+            },
+            '401': unauthorized,
+          },
         },
       },
       '/api/search': {
@@ -237,14 +432,91 @@ export function openApiSpec(): Record<string, unknown> {
           summary: 'List scan profiles',
           tags: ['Scans'],
           security: bearer,
-          responses: { '200': { description: 'OK' }, '401': unauthorized },
+          responses: {
+            '200': {
+              description: 'OK',
+              ...json({ type: 'object', properties: { profiles: { type: 'array', items: ref('ScanProfile') } } }),
+            },
+            '401': unauthorized,
+          },
         },
         post: {
           summary: 'Create a scan profile',
           tags: ['Scans'],
           security: bearer,
-          requestBody: { required: true, ...json(ref('ScanProfile')) },
-          responses: { '201': { description: 'Created' }, '400': badRequest, '403': forbidden },
+          requestBody: {
+            required: true,
+            ...json({
+              type: 'object',
+              required: ['name', 'tools'],
+              properties: {
+                projectId: { type: 'string', format: 'uuid' },
+                name: { type: 'string' },
+                tools: {
+                  type: 'object',
+                  properties: {
+                    subfinder: { type: 'boolean' },
+                    httpx: { type: 'boolean' },
+                    naabu: { type: 'boolean' },
+                    nuclei: { type: 'boolean' },
+                    wordfence: { type: 'boolean' },
+                  },
+                },
+                ports: { type: 'string', default: 'top-100' },
+                severities: { type: 'array', items: { type: 'string' } },
+              },
+            }),
+          },
+          responses: {
+            '201': { description: 'Created', ...json({ type: 'object', properties: { profile: ref('ScanProfile') } }) },
+            '400': badRequest,
+            '403': forbidden,
+          },
+        },
+      },
+      '/api/profiles/{id}': {
+        patch: {
+          summary: 'Update a scan profile',
+          tags: ['Scans'],
+          security: bearer,
+          parameters: [idParam],
+          requestBody: {
+            required: true,
+            ...json({
+              type: 'object',
+              required: ['name'],
+              properties: {
+                name: { type: 'string' },
+                tools: {
+                  type: 'object',
+                  properties: {
+                    subfinder: { type: 'boolean' },
+                    httpx: { type: 'boolean' },
+                    naabu: { type: 'boolean' },
+                    nuclei: { type: 'boolean' },
+                    wordfence: { type: 'boolean' },
+                  },
+                },
+                ports: { type: 'string' },
+                severities: { type: 'array', items: { type: 'string' } },
+                rate: { type: 'number', nullable: true },
+                config: { type: 'object', nullable: true, additionalProperties: true },
+              },
+            }),
+          },
+          responses: {
+            '200': { description: 'OK', ...json({ type: 'object', properties: { profile: ref('ScanProfile') } }) },
+            '400': badRequest,
+            '403': forbidden,
+            '404': notFound,
+          },
+        },
+        delete: {
+          summary: 'Delete a scan profile',
+          tags: ['Scans'],
+          security: bearer,
+          parameters: [idParam],
+          responses: { '200': deletedOk, '403': forbidden },
         },
       },
       '/api/scans': {
@@ -285,6 +557,8 @@ export function openApiSpec(): Record<string, unknown> {
               properties: {
                 targetId: { type: 'string', format: 'uuid' },
                 profileId: { type: 'string', format: 'uuid' },
+                mode: { type: 'string', enum: ['active', 'passive', 'full'] },
+                deepScan: { type: 'boolean' },
               },
             }),
           },
@@ -302,14 +576,26 @@ export function openApiSpec(): Record<string, unknown> {
           tags: ['Scans'],
           security: bearer,
           parameters: [idParam],
-          responses: { '200': { description: 'OK' }, '404': notFound },
+          responses: {
+            '200': {
+              description: 'OK',
+              ...json({
+                type: 'object',
+                properties: {
+                  scan: ref('Scan'),
+                  activity: { type: 'array', items: { type: 'object', additionalProperties: true } },
+                },
+              }),
+            },
+            '404': notFound,
+          },
         },
         delete: {
           summary: 'Delete a scan (cascades activity/results)',
           tags: ['Scans'],
           security: bearer,
           parameters: [idParam],
-          responses: { '200': { description: 'Deleted' }, '403': forbidden },
+          responses: { '200': deletedOk, '403': forbidden },
         },
       },
       '/api/scans/{id}/results': {
@@ -318,7 +604,21 @@ export function openApiSpec(): Record<string, unknown> {
           tags: ['Scans'],
           security: bearer,
           parameters: [idParam],
-          responses: { '200': { description: 'OK' }, '404': notFound },
+          responses: {
+            '200': {
+              description: 'OK',
+              ...json({
+                type: 'object',
+                properties: {
+                  subdomains: { type: 'array', items: { type: 'object', additionalProperties: true } },
+                  endpoints: { type: 'array', items: { type: 'object', additionalProperties: true } },
+                  ports: { type: 'array', items: { type: 'object', additionalProperties: true } },
+                  vulnerabilities: { type: 'array', items: ref('Vulnerability') },
+                },
+              }),
+            },
+            '404': notFound,
+          },
         },
       },
       '/api/scans/{id}/events': {
@@ -337,8 +637,14 @@ export function openApiSpec(): Record<string, unknown> {
           security: bearer,
           parameters: [idParam],
           responses: {
-            '200': { description: 'Cancelled / terminal' },
-            '202': { description: 'Cancellation requested' },
+            '200': {
+              description: 'Cancelled / terminal',
+              ...json({ type: 'object', properties: { scan: ref('Scan') } }),
+            },
+            '202': {
+              description: 'Cancellation requested',
+              ...json({ type: 'object', properties: { scan: ref('Scan') } }),
+            },
             '403': forbidden,
             '404': notFound,
           },
@@ -418,12 +724,49 @@ export function openApiSpec(): Record<string, unknown> {
         },
       },
       '/api/schedules/{id}': {
+        patch: {
+          summary: 'Update a scan schedule',
+          tags: ['Schedules'],
+          security: bearer,
+          parameters: [idParam],
+          requestBody: {
+            required: true,
+            ...json({
+              type: 'object',
+              required: ['cron'],
+              properties: {
+                cron: { type: 'string' },
+                profileId: { type: 'string', format: 'uuid', nullable: true },
+                enabled: { type: 'boolean' },
+              },
+            }),
+          },
+          responses: {
+            '200': { description: 'OK', ...json({ type: 'object', properties: { schedule: ref('Schedule') } }) },
+            '400': badRequest,
+            '403': forbidden,
+            '404': notFound,
+          },
+        },
         delete: {
           summary: 'Delete a scan schedule',
           tags: ['Schedules'],
           security: bearer,
           parameters: [idParam],
-          responses: { '200': { description: 'Deleted' }, '403': forbidden },
+          responses: { '200': deletedStatus, '403': forbidden },
+        },
+      },
+      '/api/schedules/{id}/toggle': {
+        post: {
+          summary: 'Toggle a scan schedule enabled flag',
+          tags: ['Schedules'],
+          security: bearer,
+          parameters: [idParam],
+          responses: {
+            '200': { description: 'OK', ...json({ type: 'object', properties: { schedule: ref('Schedule') } }) },
+            '403': forbidden,
+            '404': notFound,
+          },
         },
       },
       '/api/threat-intel': {
@@ -432,7 +775,22 @@ export function openApiSpec(): Record<string, unknown> {
           tags: ['Threat Intel'],
           security: bearer,
           parameters: [{ ...projectId, required: true }],
-          responses: { '200': { description: 'OK' }, '400': badRequest },
+          responses: {
+            '200': {
+              description: 'OK',
+              ...json({
+                type: 'object',
+                properties: {
+                  risk: { type: 'object', additionalProperties: true, description: 'Unified project risk score' },
+                  otx: { type: 'array', items: { type: 'object', additionalProperties: true } },
+                  leaks: { type: 'array', items: ref('Leak') },
+                  indicators: { type: 'array', items: ref('Indicator') },
+                  status: { type: 'object', additionalProperties: true, nullable: true },
+                },
+              }),
+            },
+            '400': badRequest,
+          },
         },
       },
       '/api/threat-intel/refresh': {
@@ -448,7 +806,31 @@ export function openApiSpec(): Record<string, unknown> {
               properties: { projectId: { type: 'string', format: 'uuid' } },
             }),
           },
-          responses: { '202': { description: 'Queued' }, '400': badRequest, '403': forbidden },
+          responses: {
+            '202': { description: 'Queued', ...json({ type: 'object', properties: { status: { type: 'string' } } }) },
+            '400': badRequest,
+            '403': forbidden,
+          },
+        },
+      },
+      '/api/threat-intel/brand-refresh': {
+        post: {
+          summary: 'Enqueue a brand-monitoring refresh',
+          tags: ['Threat Intel'],
+          security: bearer,
+          requestBody: {
+            required: true,
+            ...json({
+              type: 'object',
+              required: ['projectId'],
+              properties: { projectId: { type: 'string', format: 'uuid' } },
+            }),
+          },
+          responses: {
+            '202': { description: 'Queued', ...json({ type: 'object', properties: { status: { type: 'string' } } }) },
+            '400': badRequest,
+            '403': forbidden,
+          },
         },
       },
       '/api/indicators': {
@@ -489,12 +871,36 @@ export function openApiSpec(): Record<string, unknown> {
         },
       },
       '/api/indicators/{id}': {
+        patch: {
+          summary: 'Update a manual indicator',
+          tags: ['Threat Intel'],
+          security: bearer,
+          parameters: [idParam],
+          requestBody: {
+            required: true,
+            ...json({
+              type: 'object',
+              required: ['type', 'value'],
+              properties: {
+                type: { type: 'string', enum: ['domain', 'subdomain', 'ip'] },
+                value: { type: 'string' },
+                note: { type: 'string' },
+              },
+            }),
+          },
+          responses: {
+            '200': { description: 'OK', ...json({ type: 'object', properties: { indicator: ref('Indicator') } }) },
+            '400': badRequest,
+            '403': forbidden,
+            '404': notFound,
+          },
+        },
         delete: {
           summary: 'Delete a manual indicator',
           tags: ['Threat Intel'],
           security: bearer,
           parameters: [idParam],
-          responses: { '200': { description: 'Deleted' }, '403': forbidden },
+          responses: { '200': deletedStatus, '403': forbidden },
         },
       },
       '/api/leaks/{id}/status': {
@@ -503,11 +909,13 @@ export function openApiSpec(): Record<string, unknown> {
           tags: ['Threat Intel'],
           security: bearer,
           parameters: [idParam],
-          requestBody: {
-            required: true,
-            ...json({ type: 'object', required: ['status'], properties: { status: { type: 'string' } } }),
+          requestBody: statusBody,
+          responses: {
+            '200': { description: 'OK', ...json({ type: 'object', properties: { leak: ref('Leak') } }) },
+            '400': badRequest,
+            '403': forbidden,
+            '404': notFound,
           },
-          responses: { '200': { description: 'OK' }, '400': badRequest, '403': forbidden, '404': notFound },
         },
       },
       '/api/leaks/{id}/toggle': {
@@ -516,7 +924,11 @@ export function openApiSpec(): Record<string, unknown> {
           tags: ['Threat Intel'],
           security: bearer,
           parameters: [idParam],
-          responses: { '200': { description: 'OK' }, '403': forbidden, '404': notFound },
+          responses: {
+            '200': { description: 'OK', ...json({ type: 'object', properties: { leak: ref('Leak') } }) },
+            '403': forbidden,
+            '404': notFound,
+          },
         },
       },
       '/api/webhooks': {
@@ -536,17 +948,65 @@ export function openApiSpec(): Record<string, unknown> {
           summary: 'Create a webhook',
           tags: ['Webhooks'],
           security: bearer,
-          requestBody: { required: true, ...json(ref('Webhook')) },
-          responses: { '201': { description: 'Created' }, '400': badRequest, '403': forbidden },
+          requestBody: {
+            required: true,
+            ...json({
+              type: 'object',
+              required: ['projectId', 'channel'],
+              properties: {
+                projectId: { type: 'string', format: 'uuid' },
+                channel: { type: 'string', enum: ['discord', 'slack', 'telegram', 'google_chat', 'generic'] },
+                label: { type: 'string' },
+                url: { type: 'string', format: 'uri' },
+                telegramToken: { type: 'string' },
+                telegramChatId: { type: 'string' },
+                events: { type: 'array', items: { type: 'string' } },
+                enabled: { type: 'boolean', default: true },
+              },
+            }),
+          },
+          responses: {
+            '201': { description: 'Created', ...json({ type: 'object', properties: { webhook: ref('Webhook') } }) },
+            '400': badRequest,
+            '403': forbidden,
+          },
         },
       },
       '/api/webhooks/{id}': {
+        patch: {
+          summary: 'Update a webhook',
+          tags: ['Webhooks'],
+          security: bearer,
+          parameters: [idParam],
+          requestBody: {
+            required: true,
+            ...json({
+              type: 'object',
+              required: ['channel'],
+              properties: {
+                channel: { type: 'string', enum: ['discord', 'slack', 'telegram', 'google_chat', 'generic'] },
+                label: { type: 'string', nullable: true },
+                url: { type: 'string', nullable: true },
+                telegramToken: { type: 'string', nullable: true },
+                telegramChatId: { type: 'string', nullable: true },
+                events: { type: 'array', items: { type: 'string' } },
+                enabled: { type: 'boolean' },
+              },
+            }),
+          },
+          responses: {
+            '200': { description: 'OK', ...json({ type: 'object', properties: { webhook: ref('Webhook') } }) },
+            '400': badRequest,
+            '403': forbidden,
+            '404': notFound,
+          },
+        },
         delete: {
           summary: 'Delete a webhook',
           tags: ['Webhooks'],
           security: bearer,
           parameters: [idParam],
-          responses: { '200': { description: 'Deleted' }, '403': forbidden },
+          responses: { '200': deletedStatus, '403': forbidden },
         },
       },
       '/api/webhooks/{id}/test': {
@@ -555,25 +1015,143 @@ export function openApiSpec(): Record<string, unknown> {
           tags: ['Webhooks'],
           security: bearer,
           parameters: [idParam],
-          responses: { '200': { description: 'OK' }, '403': forbidden, '404': notFound },
+          responses: {
+            '200': {
+              description: 'OK',
+              ...json({ type: 'object', properties: { result: { type: 'object', additionalProperties: true } } }),
+            },
+            '403': forbidden,
+            '404': notFound,
+          },
+        },
+      },
+      '/api/projects': {
+        post: {
+          summary: 'Create a project',
+          tags: ['Projects'],
+          security: bearer,
+          requestBody: {
+            required: true,
+            ...json({
+              type: 'object',
+              required: ['name', 'slug'],
+              properties: {
+                name: { type: 'string' },
+                slug: { type: 'string', pattern: '^[a-z][a-z0-9-]*$' },
+              },
+            }),
+          },
+          responses: {
+            '201': { description: 'Created', ...json({ type: 'object', properties: { project: ref('Project') } }) },
+            '400': badRequest,
+            '403': forbidden,
+          },
         },
       },
       '/api/projects/{id}': {
+        patch: {
+          summary: 'Update a project',
+          tags: ['Projects'],
+          security: bearer,
+          parameters: [idParam],
+          requestBody: {
+            required: true,
+            ...json({
+              type: 'object',
+              required: ['name', 'sector'],
+              properties: {
+                name: { type: 'string' },
+                sector: { type: 'string' },
+                slug: { type: 'string', pattern: '^[a-z][a-z0-9-]*$' },
+              },
+            }),
+          },
+          responses: {
+            '200': { description: 'OK', ...json({ type: 'object', properties: { project: ref('Project') } }) },
+            '400': badRequest,
+            '403': forbidden,
+            '404': notFound,
+          },
+        },
         delete: {
           summary: 'Delete a project (cascades targets/scans/findings)',
           tags: ['Projects'],
           security: bearer,
           parameters: [idParam],
-          responses: { '200': { description: 'Deleted' }, '403': forbidden },
+          responses: { '200': deletedOk, '403': forbidden },
+        },
+      },
+      '/api/projects/{id}/default': {
+        post: {
+          summary: 'Set a project as the default workspace',
+          tags: ['Projects'],
+          security: bearer,
+          parameters: [idParam],
+          responses: {
+            '200': { description: 'OK', ...json({ type: 'object', properties: { project: ref('Project') } }) },
+            '403': forbidden,
+            '404': notFound,
+          },
         },
       },
       '/api/targets/{id}': {
+        patch: {
+          summary: 'Update a target',
+          tags: ['Targets'],
+          security: bearer,
+          parameters: [idParam],
+          requestBody: {
+            required: true,
+            ...json({
+              type: 'object',
+              required: ['domain'],
+              properties: {
+                domain: { type: 'string' },
+                predefinedSubdomains: { type: 'array', items: { type: 'string' } },
+                customHeaders: { type: 'object', additionalProperties: { type: 'string' }, nullable: true },
+              },
+            }),
+          },
+          responses: {
+            '200': { description: 'OK', ...json({ type: 'object', properties: { target: ref('Target') } }) },
+            '400': badRequest,
+            '403': forbidden,
+            '404': notFound,
+          },
+        },
         delete: {
           summary: 'Delete a target (cascades subdomains/endpoints/ports)',
           tags: ['Targets'],
           security: bearer,
           parameters: [idParam],
-          responses: { '200': { description: 'Deleted' }, '403': forbidden },
+          responses: { '200': deletedOk, '403': forbidden },
+        },
+      },
+      '/api/vulnerabilities/bulk/status': {
+        post: {
+          summary: 'Bulk-set vulnerability triage status',
+          tags: ['Scans'],
+          security: bearer,
+          requestBody: bulkStatusBody,
+          responses: { '200': { description: 'OK', ...json(okBody) }, '400': badRequest, '403': forbidden },
+        },
+      },
+      '/api/vulnerabilities/{id}/note': {
+        post: {
+          summary: 'Set a vulnerability analyst note',
+          tags: ['Scans'],
+          security: bearer,
+          parameters: [idParam],
+          requestBody: noteBody,
+          responses: {
+            '200': {
+              description: 'OK',
+              ...json({ type: 'object', properties: { vulnerability: ref('Vulnerability') } }),
+            },
+            '400': badRequest,
+            '403': forbidden,
+            '404': notFound,
+          },
         },
       },
       '/api/vulnerabilities/{id}': {
@@ -582,7 +1160,16 @@ export function openApiSpec(): Record<string, unknown> {
           tags: ['Scans'],
           security: bearer,
           parameters: [idParam],
-          responses: { '200': { description: 'Deleted' }, '403': forbidden },
+          responses: { '200': deletedOk, '403': forbidden },
+        },
+      },
+      '/api/leaks/bulk/status': {
+        post: {
+          summary: 'Bulk-set leak triage status',
+          tags: ['Threat Intel'],
+          security: bearer,
+          requestBody: bulkStatusBody,
+          responses: { '200': { description: 'OK', ...json(okBody) }, '400': badRequest, '403': forbidden },
         },
       },
       '/api/leaks/{id}': {
@@ -591,7 +1178,7 @@ export function openApiSpec(): Record<string, unknown> {
           tags: ['Threat Intel'],
           security: bearer,
           parameters: [idParam],
-          responses: { '200': { description: 'Deleted' }, '403': forbidden },
+          responses: { '200': deletedOk, '403': forbidden },
         },
       },
       '/api/surface/findings/{id}': {
@@ -600,7 +1187,7 @@ export function openApiSpec(): Record<string, unknown> {
           tags: ['Attack Surface'],
           security: bearer,
           parameters: [idParam],
-          responses: { '200': { description: 'Deleted' }, '403': forbidden },
+          responses: { '200': deletedOk, '403': forbidden },
         },
       },
       '/api/users': {
@@ -620,20 +1207,277 @@ export function openApiSpec(): Record<string, unknown> {
               },
             }),
           },
-          responses: { '200': { description: 'Created' }, '400': badRequest, '403': forbidden, '409': conflict },
+          responses: {
+            '200': { description: 'Created', ...json(ref('User')) },
+            '400': badRequest,
+            '403': forbidden,
+            '409': conflict,
+          },
         },
       },
       '/api/users/{id}': {
+        patch: {
+          summary: "Change a user's role (SysAdmin only; protects last SysAdmin)",
+          tags: ['Users'],
+          security: bearer,
+          parameters: [idParam],
+          requestBody: {
+            required: true,
+            ...json({
+              type: 'object',
+              required: ['role'],
+              properties: { role: { type: 'string', enum: ['SysAdmin', 'PenetrationTester', 'Auditor'] } },
+            }),
+          },
+          responses: {
+            '200': { description: 'OK', ...json({ type: 'object', properties: { user: ref('User') } }) },
+            '400': badRequest,
+            '403': forbidden,
+            '404': notFound,
+            '409': conflict,
+          },
+        },
         delete: {
           summary: 'Delete a user (SysAdmin only; never self or last SysAdmin)',
           tags: ['Users'],
           security: bearer,
           parameters: [idParam],
           responses: {
-            '200': { description: 'Deleted' },
+            '200': deletedOk,
             '403': forbidden,
             '404': notFound,
             '409': conflict,
+          },
+        },
+      },
+      '/api/users/{id}/reset-password': {
+        post: {
+          summary: "Reset a user's password (SysAdmin only)",
+          tags: ['Users'],
+          security: bearer,
+          parameters: [idParam],
+          requestBody: {
+            required: true,
+            ...json({
+              type: 'object',
+              required: ['password'],
+              properties: { password: { type: 'string', minLength: 8 } },
+            }),
+          },
+          responses: { '200': deletedOk, '400': badRequest, '403': forbidden, '404': notFound },
+        },
+      },
+      '/api/tokens': {
+        get: {
+          summary: 'List your API tokens (metadata only)',
+          tags: ['Tokens'],
+          security: bearer,
+          responses: {
+            '200': {
+              description: 'OK',
+              ...json({ type: 'object', properties: { tokens: { type: 'array', items: ref('ApiToken') } } }),
+            },
+            '401': unauthorized,
+          },
+        },
+        post: {
+          summary: 'Create an API token (plaintext returned once)',
+          tags: ['Tokens'],
+          security: bearer,
+          requestBody: {
+            required: false,
+            ...json({ type: 'object', properties: { label: { type: 'string' } } }),
+          },
+          responses: {
+            '201': { description: 'Created', ...json(ref('CreatedApiToken')) },
+            '401': unauthorized,
+          },
+        },
+      },
+      '/api/tokens/{id}': {
+        delete: {
+          summary: 'Revoke one of your API tokens',
+          tags: ['Tokens'],
+          security: bearer,
+          parameters: [idParam],
+          responses: { '200': deletedOk, '401': unauthorized },
+        },
+      },
+      '/api/surface/urls': {
+        get: {
+          summary: 'List discovered URLs for a project (paginated)',
+          tags: ['Attack Surface'],
+          security: bearer,
+          parameters: [
+            { ...projectId, required: true },
+            { name: 'category', in: 'query', schema: { type: 'string' } },
+            { name: 'limit', in: 'query', schema: { type: 'integer', default: 100, minimum: 1, maximum: 500 } },
+            { name: 'offset', in: 'query', schema: { type: 'integer', default: 0 } },
+          ],
+          responses: {
+            '200': {
+              description: 'OK',
+              ...json({
+                type: 'object',
+                properties: {
+                  urls: { type: 'array', items: ref('DiscoveredUrl') },
+                  total: { type: 'integer' },
+                  limit: { type: 'integer' },
+                  offset: { type: 'integer' },
+                },
+              }),
+            },
+            '400': badRequest,
+          },
+        },
+      },
+      '/api/surface/findings': {
+        get: {
+          summary: 'List exposure findings for a project',
+          tags: ['Attack Surface'],
+          security: bearer,
+          parameters: [
+            { ...projectId, required: true },
+            { name: 'type', in: 'query', schema: { type: 'string' }, description: 'Filter by findingType' },
+          ],
+          responses: {
+            '200': {
+              description: 'OK',
+              ...json({ type: 'object', properties: { findings: { type: 'array', items: ref('ExposureFinding') } } }),
+            },
+            '400': badRequest,
+          },
+        },
+      },
+      '/api/surface/findings/bulk/status': {
+        post: {
+          summary: 'Bulk-set exposure-finding triage status',
+          tags: ['Attack Surface'],
+          security: bearer,
+          requestBody: bulkStatusBody,
+          responses: { '200': { description: 'OK', ...json(okBody) }, '400': badRequest, '403': forbidden },
+        },
+      },
+      '/api/surface/findings/{id}/status': {
+        post: {
+          summary: 'Set an exposure-finding triage status',
+          tags: ['Attack Surface'],
+          security: bearer,
+          parameters: [idParam],
+          requestBody: statusBody,
+          responses: {
+            '200': { description: 'OK', ...json({ type: 'object', properties: { finding: ref('ExposureFinding') } }) },
+            '400': badRequest,
+            '403': forbidden,
+            '404': notFound,
+          },
+        },
+      },
+      '/api/surface/findings/{id}/note': {
+        post: {
+          summary: 'Set an exposure-finding analyst note',
+          tags: ['Attack Surface'],
+          security: bearer,
+          parameters: [idParam],
+          requestBody: noteBody,
+          responses: {
+            '200': { description: 'OK', ...json({ type: 'object', properties: { finding: ref('ExposureFinding') } }) },
+            '400': badRequest,
+            '403': forbidden,
+            '404': notFound,
+          },
+        },
+      },
+      '/api/surface/ips': {
+        get: {
+          summary: 'List passive-DNS IP resolutions for a project',
+          tags: ['Attack Surface'],
+          security: bearer,
+          parameters: [{ ...projectId, required: true }],
+          responses: {
+            '200': {
+              description: 'OK',
+              ...json({ type: 'object', properties: { ips: { type: 'array', items: ref('IpResolution') } } }),
+            },
+            '400': badRequest,
+          },
+        },
+      },
+      '/api/news': {
+        get: {
+          summary: 'List sector threat-news headlines',
+          tags: ['Threat Intel'],
+          security: bearer,
+          parameters: [{ name: 'sector', in: 'query', schema: { type: 'string' } }],
+          responses: {
+            '200': {
+              description: 'OK',
+              ...json({ type: 'object', properties: { news: { type: 'array', items: ref('News') } } }),
+            },
+            '401': unauthorized,
+          },
+        },
+      },
+      '/api/news/bulk/status': {
+        post: {
+          summary: 'Bulk-set sector-news triage status',
+          tags: ['Threat Intel'],
+          security: bearer,
+          requestBody: bulkStatusBody,
+          responses: { '200': { description: 'OK', ...json(okBody) }, '400': badRequest, '403': forbidden },
+        },
+      },
+      '/api/news/{id}/status': {
+        post: {
+          summary: 'Set a sector-news triage status',
+          tags: ['Threat Intel'],
+          security: bearer,
+          parameters: [idParam],
+          requestBody: statusBody,
+          responses: {
+            '200': { description: 'OK', ...json({ type: 'object', properties: { news: ref('News') } }) },
+            '400': badRequest,
+            '403': forbidden,
+            '404': notFound,
+          },
+        },
+      },
+      '/api/brand-news': {
+        get: {
+          summary: 'List brand-monitoring headlines for a project',
+          tags: ['Threat Intel'],
+          security: bearer,
+          parameters: [projectId],
+          responses: {
+            '200': {
+              description: 'OK',
+              ...json({ type: 'object', properties: { news: { type: 'array', items: ref('BrandNews') } } }),
+            },
+            '401': unauthorized,
+          },
+        },
+      },
+      '/api/brand-news/bulk/status': {
+        post: {
+          summary: 'Bulk-set brand-news triage status',
+          tags: ['Threat Intel'],
+          security: bearer,
+          requestBody: bulkStatusBody,
+          responses: { '200': { description: 'OK', ...json(okBody) }, '400': badRequest, '403': forbidden },
+        },
+      },
+      '/api/brand-news/{id}/status': {
+        post: {
+          summary: 'Set a brand-news triage status',
+          tags: ['Threat Intel'],
+          security: bearer,
+          parameters: [idParam],
+          requestBody: statusBody,
+          responses: {
+            '200': { description: 'OK', ...json({ type: 'object', properties: { news: ref('BrandNews') } }) },
+            '400': badRequest,
+            '403': forbidden,
+            '404': notFound,
           },
         },
       },

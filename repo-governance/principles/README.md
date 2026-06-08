@@ -49,13 +49,15 @@ Values that govern every convention and practice below.
       supervisor — **never `next dev`** in production (dev recompiles per request + ships unminified
       JS). Worker + app both **self-heal** (auto-restart with backoff). See
       [deploy.md](../../docs/how-to/deploy.md).
-    - **Navigation feels instant.** Authenticated pages share ONE persistent shell layout
-      (`app/(app)/layout.tsx`) with a `loading.tsx` boundary, so clicking a menu swaps only the
-      content (with an immediate skeleton) instead of re-rendering the whole shell. Use `next/link`
-      (client nav + prefetch), never `<a>` for in-app links.
-    - **Do the minimum work per request.** Push filtering/pagination into SQL (don't load-then-slice
-      large sets); fan out independent queries with `Promise.all`; memoise per-request reads multiple
-      components need (e.g. `getCurrentUser` via React `cache()`); never block on the network without
+    - **Navigation feels instant.** Authenticated pages share persistent shell layouts (app +
+      settings, e.g. `app/(app)/layout.tsx`) with `loading.tsx` boundaries, so clicking a menu swaps
+      only the content (with an immediate skeleton) instead of re-rendering the whole shell. Use
+      `next/link` (client nav + prefetch), never `<a>` for in-app links.
+    - **Do the minimum work per request.** Index hot FK/filter columns; push
+      filtering/pagination/aggregation into SQL (don't load-then-slice large sets — e.g. dashboard
+      trend, schedules/audit joins, Projects/Targets lists); fan out independent queries with
+      `Promise.all`; memoise per-request reads multiple components need (e.g. `getCurrentUser` via
+      React `cache()`); cap and parallelise external fetches; never block on the network without
       parallelism + a timeout + a visible pending state.
     - **No silent slowness.** Heavy/remote work MUST surface a pending state (`SubmitButton`,
       `loading.tsx`, Suspense) — a frozen UI reads as broken. Performance/reliability regressions are

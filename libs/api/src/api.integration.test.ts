@@ -52,6 +52,21 @@ describe.skipIf(!url)('@vacti/api', () => {
     expect((await app.request('/api/docs')).status).toBe(200);
   });
 
+  it('documents EVERY route in OpenAPI (no undocumented endpoint)', async () => {
+    const spec = (await (await app.request('/api/openapi.json')).json()) as { paths: Record<string, unknown> };
+    const documented = new Set(Object.keys(spec.paths));
+    // Every real HTTP route in the app must have a matching OpenAPI path (`:param` → `{param}`).
+    const routePaths = [
+      ...new Set(
+        (app.routes as { method: string; path: string }[])
+          .filter((r) => ['GET', 'POST', 'PATCH', 'PUT', 'DELETE'].includes(r.method))
+          .map((r) => r.path.replace(/:([A-Za-z0-9_]+)/g, '{$1}')),
+      ),
+    ];
+    const undocumented = routePaths.filter((p) => !documented.has(p));
+    expect(undocumented).toEqual([]);
+  });
+
   it('requires a bearer token', async () => {
     expect((await app.request('/api/whoami')).status).toBe(401);
   });
@@ -182,6 +197,16 @@ describe.skipIf(!url)('@vacti/api', () => {
       expect(wh.status).toBe(201);
     });
 
+    it('Auditor is denied a new mutating endpoint (project create)', async () => {
+      const aud = await tokenFor('Auditor');
+      const r = await app.request('/api/projects', {
+        method: 'POST',
+        headers: aud(),
+        body: JSON.stringify({ name: 'Denied', slug: `denied${Date.now()}` }),
+      });
+      expect(r.status).toBe(403);
+    });
+
     it('user CRUD: SysAdmin creates + deletes; PenTester denied; guards enforced', async () => {
       const sa = await tokenFor('SysAdmin');
       const pt = await tokenFor('PenetrationTester');
@@ -217,6 +242,90 @@ describe.skipIf(!url)('@vacti/api', () => {
       expect(weak.status).toBe(400);
       // SysAdmin deletes the user.
       const del = await app.request(`/api/users/${id}`, { method: 'DELETE', headers: sa() });
+      expect(del.status).toBe(200);
+    });
+  });
+
+  describe('parity endpoints', () => {
+    it('creates then updates a project', async () => {
+      const slug = `parity${Date.now()}`;
+      const created = await app.request('/api/projects', {
+        method: 'POST',
+        headers: auth(),
+        body: JSON.stringify({ name: 'Parity', slug }),
+      });
+      expect(created.status).toBe(201);
+      const { project } = (await created.json()) as { project: { id: string } };
+      const updated = await app.request(`/api/projects/${project.id}`, {
+        method: 'PATCH',
+        headers: auth(),
+        body: JSON.stringify({ name: 'Parity 2', sector: 'banking' }),
+      });
+      expect(updated.status).toBe(200);
+      const body = (await updated.json()) as { project: { name: string; sector: string } };
+      expect(body.project.name).toBe('Parity 2');
+      expect(body.project.sector).toBe('banking');
+      // Invalid sector rejected.
+      const bad = await app.request(`/api/projects/${project.id}`, {
+        method: 'PATCH',
+        headers: auth(),
+        body: JSON.stringify({ name: 'x', sector: 'not-a-sector' }),
+      });
+      expect(bad.status).toBe(400);
+    });
+
+    it('updates then deletes a scan profile', async () => {
+      const created = await app.request('/api/profiles', {
+        method: 'POST',
+        headers: auth(),
+        body: JSON.stringify({ name: 'P', tools: { httpx: true } }),
+      });
+      expect(created.status).toBe(201);
+      const { profile } = (await created.json()) as { profile: { id: string } };
+      const updated = await app.request(`/api/profiles/${profile.id}`, {
+        method: 'PATCH',
+        headers: auth(),
+        body: JSON.stringify({ name: 'P2', ports: 'top-1000' }),
+      });
+      expect(updated.status).toBe(200);
+      expect(((await updated.json()) as { profile: { name: string } }).profile.name).toBe('P2');
+      const del = await app.request(`/api/profiles/${profile.id}`, { method: 'DELETE', headers: auth() });
+      expect(del.status).toBe(200);
+    });
+
+    it('bulk-sets vulnerability status (validates the status)', async () => {
+      const ok = await app.request('/api/vulnerabilities/bulk/status', {
+        method: 'POST',
+        headers: auth(),
+        body: JSON.stringify({ ids: ['00000000-0000-0000-0000-000000000000'], status: 'false_positive' }),
+      });
+      expect(ok.status).toBe(200);
+      const bad = await app.request('/api/vulnerabilities/bulk/status', {
+        method: 'POST',
+        headers: auth(),
+        body: JSON.stringify({ ids: ['00000000-0000-0000-0000-000000000000'], status: 'bogus' }),
+      });
+      expect(bad.status).toBe(400);
+    });
+
+    it('API tokens: create (plaintext once) + list + delete', async () => {
+      const created = await app.request('/api/tokens', {
+        method: 'POST',
+        headers: auth(),
+        body: JSON.stringify({ label: 'scripted' }),
+      });
+      expect(created.status).toBe(201);
+      const { token: plaintext, id } = (await created.json()) as { token: string; id: string };
+      expect(plaintext.length).toBeGreaterThan(10);
+
+      const listed = await app.request('/api/tokens', { headers: auth() });
+      expect(listed.status).toBe(200);
+      const { tokens } = (await listed.json()) as { tokens: { id: string; tokenHash?: string }[] };
+      expect(tokens.some((t) => t.id === id)).toBe(true);
+      // The hash must never be exposed.
+      expect(tokens.every((t) => t.tokenHash === undefined)).toBe(true);
+
+      const del = await app.request(`/api/tokens/${id}`, { method: 'DELETE', headers: auth() });
       expect(del.status).toBe(200);
     });
   });
