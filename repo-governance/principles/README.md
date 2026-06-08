@@ -5,7 +5,12 @@ Values that govern every convention and practice below.
 1. **Simplicity over completeness.** One straight recon pipeline, not a tool zoo. Drop redundant
    scanners. Prefer the smallest design that satisfies the requirement.
 2. **Lightweight by default.** Postgres-backed queue (pg-boss), no Redis/Celery/Ollama-required.
-   Three services. All-Go recon binaries, no Ruby.
+   Three services. All-Go recon binaries, no Ruby. **All three vacti services run in Docker**
+   (`db` + `worker` + `app`); the `worker` image is self-contained — it bakes in the pinned recon
+   toolset (subfinder/httpx/naabu/nuclei) + nuclei-templates + Chromium, so nothing vacti-specific is
+   installed on the host. The only host-side, non-vacti piece is the optional `cloudflared` proxy
+   (just forwards to the app's published port). Bare-metal supervisors (`scripts/run-*.sh`) are a
+   fallback for hosts without Docker. See [deploy.md](../../docs/how-to/deploy.md).
 3. **Type-safety end to end.** Drizzle → Zod → tRPC → UI. The compiler catches drift before runtime.
 4. **Reliability is a feature.** Jobs survive restarts; scans are cancellable and complete
    idempotently. Risk score is identical across every surface (±0).

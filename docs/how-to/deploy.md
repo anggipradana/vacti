@@ -1,34 +1,52 @@
 # How to Deploy vacti (Docker Compose)
 
-> Status: placeholder — completed in platform-foundation task 008.
+**Docker Compose is the canonical, recommended deployment.** All three vacti services run in
+containers — nothing vacti-specific needs to be installed on the host:
 
-vacti runs as three services: `app` (Next.js), `worker` (pg-boss + recon tools + Chromium), and
-`db` (PostgreSQL 16).
+- `db` — PostgreSQL 16 (data in the `vacti-pg` volume).
+- `worker` — **self-contained recon engine**: the image bakes in the pinned active-scan toolset
+  (subfinder / httpx / naabu / nuclei), the nuclei-templates catalog, and Chromium (for PDF reports).
+  Runs DB migrations on boot, then consumes the pg-boss queue (scans / TI / schedules / daily news).
+- `app` — Next.js production build (`next start`), published on host port **3100**.
 
-1. Provision a host with Docker + Docker Compose and network egress to scan targets + external APIs.
-2. Set environment variables (see `.env.example`). Generate secrets with `openssl rand -base64 32`.
-3. `make up` (or `docker compose up --build -d`).
-4. Migrations run on worker boot; the first admin is seeded from `ADMIN_*` env.
-5. (Optional) Front with your own reverse proxy/TLS.
+The only thing kept off-Docker is the optional public-access proxy (`cloudflared`) — it is not part of
+the app, it just forwards to `http://localhost:3100`.
 
-## Public access via Cloudflare Tunnel
+## Deploy
 
-vacti needs no inbound ports or public IP — expose it with `cloudflared`:
+1. Install Docker + Docker Compose on the host (network egress to scan targets + external APIs).
+2. Create `.env` (see `.env.example`); generate secrets with `openssl rand -base64 32`
+   (`ENCRYPTION_KEY` must be 32 bytes base64). Optional: `ADMIN_EMAIL`/`ADMIN_PASSWORD`,
+   `OTX_API_KEY`, `LEAKCHECK_API_KEY`, `VT_API_KEY`, AI keys, `NEWS_RETENTION_DAYS`.
+3. `docker compose up --build -d` (first build is heavy — it downloads the recon binaries + Chromium).
+4. Migrations run on worker boot; open `http://localhost:3100` and create the first admin
+   (or seed via `ADMIN_*`).
+
+Upgrading after a code change: `docker compose up --build -d` rebuilds and recreates the changed
+services. Bump the `*_VERSION` build args in the `worker` stage of the `Dockerfile` to upgrade tools.
+
+## Public access via Cloudflare Tunnel (host-side, not a vacti service)
+
+vacti needs no inbound ports or public IP — expose it with `cloudflared`, pointed at the app's
+published host port:
 
 ```bash
 cloudflared tunnel login
 cloudflared tunnel create vacti
 cloudflared tunnel route dns vacti <your-domain>
-cloudflared tunnel run --url http://localhost:3000 vacti
+cloudflared tunnel run --url http://localhost:3100 vacti
 ```
 
 Or run `cloudflared` as a compose sidecar using a `TUNNEL_TOKEN`. Cloudflare terminates TLS at the
 edge, so vacti ships no certificates. See [API & deploy notes](../planning/03-API-AND-DEPLOY.md).
 
-## Bare-metal / WSL (without Docker)
+## Bare-metal / WSL (fallback — only when Docker is unavailable)
 
-Docker Compose is canonical. If you run the services directly on a host (e.g. WSL), use the committed
-supervisors so both self-heal with capped backoff:
+Docker Compose (above) is canonical and keeps vacti off the host. Use bare-metal **only** where the
+Docker engine isn't available (e.g. a WSL box without Docker). It requires the recon tools to be
+installed on the host PATH (`subfinder`/`httpx`/`naabu`/`nuclei`) + Chromium for reports — exactly
+what the worker image bundles for you. Run the committed supervisors so both self-heal with capped
+backoff:
 
 - **Worker:** `scripts/run-worker.sh` (see file header).
 - **Web app:** `scripts/run-app.sh` — serves a **production build** via `next start`.

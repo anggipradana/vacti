@@ -19,22 +19,27 @@ afterthought. This makes the platform easy to test, script, and integrate with o
 
 ## Deployment — Cloudflare Tunnel (`cloudflared`)
 
-vacti is self-hosted as three services (`app` + `worker` + `db`). Public exposure is via a
-**Cloudflare Tunnel** (no inbound ports / public IP needed); a domain will be attached later.
+vacti is self-hosted as three **containerised** services (`app` + `worker` + `db`) via Docker
+Compose — nothing vacti-specific runs on the host. The `worker` image is self-contained (pinned
+subfinder/httpx/naabu/nuclei + nuclei-templates + Chromium). Public exposure is via a **Cloudflare
+Tunnel** — the only host-side, non-vacti piece — which just forwards to the app's published port.
 
 Steps:
 
-1. `docker compose up -d` (app on `:3000`, worker, postgres).
+1. `docker compose up --build -d` (db + self-contained worker + app; app published on host `:3100`).
 2. Install `cloudflared` and authenticate (`cloudflared tunnel login`).
-3. Create a tunnel and route the (to-be-purchased) domain to `http://localhost:3000`.
+3. Create a tunnel and route the domain to `http://localhost:3100`.
 4. Set `app` env to the public origin once the domain is live; cookies use `Secure` in production.
 
 ```bash
 cloudflared tunnel create vacti
 cloudflared tunnel route dns vacti vacti.example.com
-cloudflared tunnel run --url http://localhost:3000 vacti
+cloudflared tunnel run --url http://localhost:3100 vacti
 # …or run cloudflared as a compose sidecar with a TUNNEL_TOKEN
 ```
 
 > Cloudflare terminates TLS at the edge, so vacti itself needs no certificates — keeping the
 > footprint minimal (no Nginx/TLS layer), consistent with the lightweight goal.
+>
+> Bare-metal (host PATH tools + `scripts/run-*.sh` supervisors) is a documented **fallback** only
+> for hosts without a Docker engine — see [deploy.md](../how-to/deploy.md).
