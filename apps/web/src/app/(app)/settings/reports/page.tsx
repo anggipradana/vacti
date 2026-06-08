@@ -10,7 +10,12 @@ import { Badge } from '../../../../components/ui/badge';
 import { projects, reportSettings, reportSignatories } from '@vacti/db';
 import { getDb } from '../../../../lib/db';
 import { getCurrentUser } from '../../../../lib/session';
-import { saveReportSettingsAction, addSignatoryAction, deleteSignatoryAction } from '../../../../lib/report-actions';
+import {
+  saveReportSettingsAction,
+  addSignatoryAction,
+  editSignatoryAction,
+  deleteSignatoryAction,
+} from '../../../../lib/report-actions';
 import { generateExecSummaryAction } from '../../../../lib/ai-actions';
 
 export const dynamic = 'force-dynamic';
@@ -217,25 +222,44 @@ export default async function ReportSettingsPage({ searchParams }: { searchParam
               .sort((a, b) => a.sortOrder - b.sortOrder)
               .map((s) => (
                 <Card key={s.id}>
-                  <CardContent className="flex items-center justify-between py-3">
-                    <div className="flex items-center gap-3">
-                      {s.signatureImage ? (
-                        <img src={s.signatureImage} alt="" className="h-8 max-w-[80px] object-contain" />
-                      ) : null}
-                      <div>
-                        <span className="font-medium">{s.name}</span>{' '}
-                        <span className="text-fg-subtle">{s.position}</span>
+                  <CardContent className="py-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        {s.signatureImage ? (
+                          <img src={s.signatureImage} alt="" className="h-8 max-w-[80px] object-contain" />
+                        ) : null}
+                        <div>
+                          <span className="font-medium">{s.name}</span>{' '}
+                          <span className="text-fg-subtle">{s.position}</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="accent">{s.role}</Badge>
+                        <form action={deleteSignatoryAction}>
+                          <input type="hidden" name="id" value={s.id} />
+                          <Button type="submit" variant="ghost" size="sm" className="text-danger hover:bg-danger/10">
+                            Remove
+                          </Button>
+                        </form>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="accent">{s.role}</Badge>
-                      <form action={deleteSignatoryAction}>
+                    <details className="mt-2">
+                      <summary className="cursor-pointer text-xs text-fg-subtle hover:text-fg-muted">Edit</summary>
+                      <form action={editSignatoryAction} className="mt-2 space-y-2">
                         <input type="hidden" name="id" value={s.id} />
-                        <Button type="submit" variant="ghost" size="sm" className="text-danger hover:bg-danger/10">
-                          Remove
+                        <Select name="role" defaultValue={s.role} aria-label="Role">
+                          <option value="prepared">Prepared By</option>
+                          <option value="reviewed">Reviewed By</option>
+                          <option value="approved">Approved By</option>
+                        </Select>
+                        <Input name="name" defaultValue={s.name} placeholder="Name" required />
+                        <Input name="position" defaultValue={s.position} placeholder="Position" />
+                        <Input name="signatureImageFile" type="file" accept="image/*" className="h-9 py-1.5" />
+                        <Button type="submit" size="sm" variant="outline">
+                          Save
                         </Button>
                       </form>
-                    </div>
+                    </details>
                   </CardContent>
                 </Card>
               ))

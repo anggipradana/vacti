@@ -8,7 +8,7 @@ import { Role, Permission, isRoleName } from '@vacti/core';
 import { isSector } from '@vacti/threat-intel';
 import { users, projects, projectMembers, apiTokens } from '@vacti/db';
 import { getDb } from './db';
-import { createSession, destroySession, getCurrentUser, userCount } from './session';
+import { createSession, destroySession, destroyAllSessions, getCurrentUser, userCount } from './session';
 import { requirePermission } from './authz';
 import { recordAudit } from './audit';
 import { setActiveProjectCookie } from './active-project';
@@ -68,6 +68,32 @@ export async function changeOwnPasswordAction(formData: FormData) {
     .where(eq(users.id, user.id));
   await recordAudit({ actorId: user.id, action: 'user.password_change', resource: `user:${user.id}` });
   redirect('/settings/account?ok=1');
+}
+
+/** Self-service: the logged-in user changes their OWN email. Validated + deduped + audited. */
+export async function changeOwnEmailAction(formData: FormData) {
+  const user = await getCurrentUser();
+  if (!user) redirect('/login');
+  const email = String(formData.get('email') ?? '')
+    .trim()
+    .toLowerCase();
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) redirect('/settings/account?error=email');
+  if (email === user.email) redirect('/settings/account?ok=email');
+  const db = getDb();
+  const [existing] = await db.select().from(users).where(eq(users.email, email));
+  if (existing && existing.id !== user.id) redirect('/settings/account?error=emailtaken');
+  await db.update(users).set({ email, updatedAt: new Date() }).where(eq(users.id, user.id));
+  await recordAudit({ actorId: user.id, action: 'user.email_change', resource: `user:${user.id}` });
+  redirect('/settings/account?ok=email');
+}
+
+/** Self-service: revoke all of the user's sessions (sign out everywhere), then log out. */
+export async function signOutEverywhereAction() {
+  const user = await getCurrentUser();
+  if (!user) redirect('/login');
+  await destroyAllSessions(user.id);
+  await recordAudit({ actorId: user.id, action: 'user.sessions_revoked', resource: `user:${user.id}` });
+  redirect('/login');
 }
 
 export async function createProjectAction(formData: FormData) {

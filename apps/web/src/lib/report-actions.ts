@@ -67,6 +67,22 @@ export async function addSignatoryAction(formData: FormData) {
   revalidatePath('/settings/reports');
 }
 
+export async function editSignatoryAction(formData: FormData) {
+  await requirePermission(Permission.ModifyReport);
+  const id = String(formData.get('id') ?? '');
+  const role = String(formData.get('role') ?? 'prepared');
+  const name = String(formData.get('name') ?? '').trim();
+  const position = String(formData.get('position') ?? '').trim();
+  if (!id || !name || !['prepared', 'reviewed', 'approved'].includes(role)) return;
+  const order = role === 'prepared' ? 0 : role === 'reviewed' ? 1 : 2;
+  const values: Record<string, unknown> = { role, name, position, sortOrder: order };
+  // Only replace the signature image when a new one is uploaded; keep the existing otherwise.
+  const signatureImage = await imageToDataUrl(formData.get('signatureImageFile'));
+  if (signatureImage) values.signatureImage = signatureImage;
+  await getDb().update(reportSignatories).set(values).where(eq(reportSignatories.id, id));
+  revalidatePath('/settings/reports');
+}
+
 export async function deleteSignatoryAction(formData: FormData) {
   await requirePermission(Permission.ModifyReport);
   const id = String(formData.get('id') ?? '');

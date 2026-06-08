@@ -42,6 +42,12 @@ export async function destroySession(): Promise<void> {
   jar.delete(COOKIE);
 }
 
+/** Revoke every session for a user (sign out of all devices) and clear the current cookie. */
+export async function destroyAllSessions(userId: string): Promise<void> {
+  await getDb().delete(sessions).where(eq(sessions.userId, userId));
+  (await cookies()).delete(COOKIE);
+}
+
 export async function userCount(): Promise<number> {
   const rows = await getDb().select().from(users);
   return rows.length;

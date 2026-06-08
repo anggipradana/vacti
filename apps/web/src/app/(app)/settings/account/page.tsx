@@ -4,9 +4,10 @@ import { Input } from '../../../../components/ui/input';
 import { Label } from '../../../../components/ui/label';
 import { Button } from '../../../../components/ui/button';
 import { Badge } from '../../../../components/ui/badge';
+import { ConfirmButton } from '../../../../components/ui/confirm-button';
 import { roleFromUser } from '@vacti/core';
 import { getCurrentUser } from '../../../../lib/session';
-import { changeOwnPasswordAction } from '../../../../lib/actions';
+import { changeOwnPasswordAction, changeOwnEmailAction, signOutEverywhereAction } from '../../../../lib/actions';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,6 +15,12 @@ const ERRORS: Record<string, string> = {
   current: 'Current password is incorrect.',
   weak: 'New password must be at least 8 characters.',
   mismatch: 'New password and confirmation do not match.',
+  email: 'Enter a valid email.',
+  emailtaken: 'That email is already in use.',
+};
+
+const OK_MESSAGES: Record<string, string> = {
+  email: 'Email updated.',
 };
 
 export default async function AccountPage({
@@ -24,7 +31,13 @@ export default async function AccountPage({
   const user = await getCurrentUser();
   if (!user) redirect('/login');
   const sp = await searchParams;
-  const error = sp.error ? (ERRORS[sp.error] ?? 'Could not update password.') : null;
+  // Email card owns email errors/ok; password card owns the rest. Keep banners on the right card.
+  const isEmailScope = sp.error === 'email' || sp.error === 'emailtaken' || sp.ok === 'email';
+  const emailError = sp.error && isEmailScope ? (ERRORS[sp.error] ?? 'Could not update email.') : null;
+  const passwordError = sp.error && !isEmailScope ? (ERRORS[sp.error] ?? 'Could not update password.') : null;
+  const emailOk = sp.ok === 'email' ? OK_MESSAGES.email : null;
+  // Password success historically lands as ?ok=1 (any non-email ok value).
+  const passwordOk = sp.ok && sp.ok !== 'email' ? 'Password updated.' : null;
 
   return (
     <div className="grid max-w-xl gap-6">
@@ -46,17 +59,42 @@ export default async function AccountPage({
 
       <Card>
         <CardHeader>
+          <CardTitle>Email</CardTitle>
+        </CardHeader>
+        <CardContent className="pt-0">
+          {emailOk ? (
+            <p className="mb-3 rounded-md border border-success/30 bg-success/10 px-3 py-2 text-sm text-success">
+              {emailOk}
+            </p>
+          ) : null}
+          {emailError ? (
+            <p className="mb-3 rounded-md border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger">
+              {emailError}
+            </p>
+          ) : null}
+          <form action={changeOwnEmailAction} className="space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="email">Email address</Label>
+              <Input id="email" name="email" type="email" autoComplete="email" defaultValue={user.email} required />
+            </div>
+            <Button type="submit">Save</Button>
+          </form>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
           <CardTitle>Change password</CardTitle>
         </CardHeader>
         <CardContent className="pt-0">
-          {sp.ok ? (
+          {passwordOk ? (
             <p className="mb-3 rounded-md border border-success/30 bg-success/10 px-3 py-2 text-sm text-success">
-              Password updated.
+              {passwordOk}
             </p>
           ) : null}
-          {error ? (
+          {passwordError ? (
             <p className="mb-3 rounded-md border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger">
-              {error}
+              {passwordError}
             </p>
           ) : null}
           <form action={changeOwnPasswordAction} className="space-y-4">
@@ -73,6 +111,22 @@ export default async function AccountPage({
               <Input id="confirm" name="confirm" type="password" autoComplete="new-password" minLength={8} required />
             </div>
             <Button type="submit">Update password</Button>
+          </form>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Sessions</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3 pt-0">
+          <p className="text-sm text-fg-muted">
+            Revoke every active session across all devices. You will be signed out here too.
+          </p>
+          <form action={signOutEverywhereAction}>
+            <ConfirmButton variant="destructive" confirm="Sign out of all sessions, including this one?">
+              Sign out of all devices
+            </ConfirmButton>
           </form>
         </CardContent>
       </Card>
