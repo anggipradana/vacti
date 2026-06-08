@@ -12,14 +12,22 @@ containers — nothing vacti-specific needs to be installed on the host:
 The only thing kept off-Docker is the optional public-access proxy (`cloudflared`) — it is not part of
 the app, it just forwards to `http://localhost:3100`.
 
+## Prerequisites
+
+- A host (any OS with a Linux container runtime) with **Docker Engine 24+** and the **Docker Compose
+  v2** plugin (`docker compose`).
+- Outbound network access to scan targets and external OSINT/AI APIs.
+- ~3 GB free disk for the worker image (recon binaries + nuclei-templates + Chromium).
+- Secrets ready: a 32-byte base64 `ENCRYPTION_KEY` and a `SESSION_SECRET` (`openssl rand -base64 32`).
+- (Optional) `cloudflared` if you want public access without opening inbound ports.
+
 ## Deploy
 
-1. Install Docker + Docker Compose on the host (network egress to scan targets + external APIs).
-2. Create `.env` (see `.env.example`); generate secrets with `openssl rand -base64 32`
+1. Create `.env` (see `.env.example`); generate secrets with `openssl rand -base64 32`
    (`ENCRYPTION_KEY` must be 32 bytes base64). Optional: `ADMIN_EMAIL`/`ADMIN_PASSWORD`,
    `OTX_API_KEY`, `LEAKCHECK_API_KEY`, `VT_API_KEY`, AI keys, `NEWS_RETENTION_DAYS`.
-3. `docker compose up --build -d` (first build is heavy — it downloads the recon binaries + Chromium).
-4. Migrations run on worker boot; open `http://localhost:3100` and create the first admin
+2. `docker compose up --build -d` (first build is heavy — it downloads the recon binaries + Chromium).
+3. Migrations run on worker boot; open `http://localhost:3100` and create the first admin
    (or seed via `ADMIN_*`).
 
 Upgrading after a code change: `docker compose up --build -d` rebuilds and recreates the changed
@@ -40,10 +48,10 @@ cloudflared tunnel run --url http://localhost:3100 vacti
 Or run `cloudflared` as a compose sidecar using a `TUNNEL_TOKEN`. Cloudflare terminates TLS at the
 edge, so vacti ships no certificates. See [API & deploy notes](../planning/03-API-AND-DEPLOY.md).
 
-## Bare-metal / WSL (fallback — only when Docker is unavailable)
+## Bare-metal (fallback — only when Docker is unavailable)
 
-Docker Compose (above) is canonical and keeps vacti off the host. Use bare-metal **only** where the
-Docker engine isn't available (e.g. a WSL box without Docker). It requires the recon tools to be
+Docker Compose (above) is canonical and keeps vacti off the host. Use bare-metal **only** where a
+Docker runtime isn't available. It requires the recon tools to be
 installed on the host PATH (`subfinder`/`httpx`/`naabu`/`nuclei`) + Chromium for reports — exactly
 what the worker image bundles for you. Run the committed supervisors so both self-heal with capped
 backoff:

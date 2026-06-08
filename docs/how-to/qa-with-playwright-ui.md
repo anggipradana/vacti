@@ -1,13 +1,14 @@
-# How to QA with the Playwright UI (headed, on this WSL2 host)
+# How to QA with the Playwright UI (headed)
 
-This host runs under **WSLg**, so GUI apps render on the Windows desktop. The Playwright UI/headed
-runner works once `DISPLAY` is set (added to `~/.bashrc`: `DISPLAY=:0`).
+Playwright's UI/headed runner needs a graphical display. On any host with a desktop (or with an
+X/Wayland display forwarded), set `DISPLAY` (e.g. `DISPLAY=:0`) and the runner opens in a desktop
+window. CI always runs headless and needs no display.
 
-## One-time setup (already done)
+## One-time setup
 
-- `DISPLAY=:0` + `WAYLAND_DISPLAY=wayland-0` exported in `~/.bashrc`.
-- Playwright headed system libs installed: `sudo npx playwright install-deps chromium`.
-- Browser: `@playwright/test` pinned `1.48.2`; launches use `PLAYWRIGHT_HOST_PLATFORM_OVERRIDE=ubuntu24.04`.
+- Export a display for headed runs, e.g. `DISPLAY=:0` (and `WAYLAND_DISPLAY=wayland-0` if applicable).
+- Install the headed browser system libs: `sudo npx playwright install-deps chromium`.
+- Browser: `@playwright/test` pinned `1.48.2`.
 
 ## Run modes
 
@@ -18,12 +19,12 @@ export ENCRYPTION_KEY="dGVzdC1lbmNyeXB0aW9uLWtleS0zMmJ5dGVzLXRlc3Q="
 export SESSION_SECRET="test-session-secret-0000000000000000"
 
 npm run e2e          # headless (CI parity) — all specs
-npm run e2e:ui       # Playwright UI mode — interactive, watch/replay each step (WSLg window)
+npm run e2e:ui       # Playwright UI mode — interactive, watch/replay each step (desktop window)
 npm run e2e:headed   # headed run — see the browser drive each flow
 ```
 
-- **UI mode** (`e2e:ui`) opens the Playwright test explorer on the Windows desktop: pick a spec, watch it
-  run step-by-step, inspect the DOM/network/console at each action, and re-run on change. Best for human QA.
+- **UI mode** (`e2e:ui`) opens the Playwright test explorer on the desktop: pick a spec, watch it run
+  step-by-step, inspect the DOM/network/console at each action, and re-run on change. Best for human QA.
 - **Headed** (`e2e:headed`) just shows the browser executing the suite end-to-end.
 - CI always runs **headless** — the same specs, no display.
 
@@ -33,7 +34,7 @@ npm run e2e:headed   # headed run — see the browser drive each flow
 
 ```bash
 npx playwright test -c apps/web/playwright.config.ts --trace on --reporter=line
-npx playwright show-trace   # opens the trace viewer (WSLg window)
+npx playwright show-trace   # opens the trace viewer (desktop window)
 ```
 
 Specs live in `apps/web/e2e/*.e2e.ts`. See the QA coverage matrix in
