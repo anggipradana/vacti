@@ -55,9 +55,15 @@ test.describe.serial('core journey', () => {
     await expect(page.getByTestId('scan-list')).toBeVisible();
   });
 
-  test('docs page renders for a signed-in user', async ({ page }) => {
+  test('docs page renders the markdown docs module', async ({ page }) => {
     await page.goto('/docs');
     await expect(page.getByRole('heading', { name: 'Documentation' })).toBeVisible();
     await expect(page.getByRole('link', { name: /API reference/ }).first()).toBeVisible();
+    // The docs module actually loaded the markdown: sidebar of guides + rendered content.
+    await expect(page.getByText('Guides', { exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Getting started' })).toBeVisible();
+    // Switch to another guide and see its content render.
+    await page.getByRole('button', { name: 'Architecture' }).click();
+    await expect(page.getByRole('article')).toBeVisible();
   });
 });
