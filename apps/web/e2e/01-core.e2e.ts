@@ -65,5 +65,10 @@ test.describe.serial('core journey', () => {
     // Switch to another guide and see its content render.
     await page.getByRole('button', { name: 'Architecture' }).click();
     await expect(page.getByRole('article')).toBeVisible();
+    // Relative .md links resolve to the file on GitHub (not a 404 / dead link).
+    await page.getByRole('button', { name: 'QA (Playwright UI)' }).click();
+    await expect(page.locator('article a[href*="github.com"][href$="07-QA-AND-POLISH-PLAN.md"]').first()).toHaveCount(
+      1,
+    );
   });
 });
