@@ -28,6 +28,7 @@ const nav = [
   { label: 'Search', href: '/search' },
   { label: 'Projects', href: '/projects' },
   { label: 'Settings', href: '/settings/tokens' },
+  { label: 'Docs', href: '/docs' },
 ];
 
 function isActive(pathname: string, href: string): boolean {
