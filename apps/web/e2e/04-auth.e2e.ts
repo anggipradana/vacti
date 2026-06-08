@@ -30,3 +30,11 @@ test('wrong password is rejected', async ({ page }) => {
   await page.getByTestId('submit').click();
   await expect(page).toHaveURL(/\/login\?error=invalid/);
 });
+
+test('docs endpoints require a session', async ({ page, request }) => {
+  // OpenAPI spec: 401 without a session.
+  expect((await request.get('/api/openapi.json')).status()).toBe(401);
+  // /docs page: redirected to login.
+  await page.goto('/docs');
+  await expect(page).toHaveURL(/\/login/);
+});

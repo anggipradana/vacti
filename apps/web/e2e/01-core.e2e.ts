@@ -54,4 +54,10 @@ test.describe.serial('core journey', () => {
     await page.goto('/scans');
     await expect(page.getByTestId('scan-list')).toBeVisible();
   });
+
+  test('docs page renders for a signed-in user', async ({ page }) => {
+    await page.goto('/docs');
+    await expect(page.getByRole('heading', { name: 'Documentation' })).toBeVisible();
+    await expect(page.getByRole('link', { name: /API reference/ }).first()).toBeVisible();
+  });
 });
