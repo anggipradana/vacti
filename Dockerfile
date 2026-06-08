@@ -29,10 +29,10 @@ RUN apt-get update \
   && rm -rf /var/lib/apt/lists/*
 # Pinned active-scan toolset (prebuilt release zips — keeps the image free of the Go toolchain).
 # Bump these to upgrade tools; the set is frozen by governance (subfinder/httpx/naabu/nuclei).
-ARG SUBFINDER_VERSION=2.6.6
-ARG HTTPX_VERSION=1.6.10
-ARG NAABU_VERSION=2.3.3
-ARG NUCLEI_VERSION=3.3.9
+ARG SUBFINDER_VERSION=2.14.0
+ARG HTTPX_VERSION=1.9.0
+ARG NAABU_VERSION=2.6.1
+ARG NUCLEI_VERSION=3.8.0
 RUN set -eux; cd /tmp; \
   for spec in \
     "subfinder:${SUBFINDER_VERSION}" \
