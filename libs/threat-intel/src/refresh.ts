@@ -26,7 +26,7 @@ export interface RefreshDeps {
   onProgress?: (progress: number, message: string) => void;
 }
 
-/** Statuses an analyst has explicitly flagged to keep — never auto-pruned regardless of age. */
+/** Statuses an analyst has explicitly flagged to keep - never auto-pruned regardless of age. */
 const KEEP_STATUSES = ['relevant', 'actioned'];
 
 /**
@@ -58,7 +58,7 @@ export async function pruneOldNews(db: Database, days: number, scope: { sector: 
         );
     }
   } catch {
-    // Retention is housekeeping — never let it break a refresh.
+    // Retention is housekeeping - never let it break a refresh.
   }
 }
 
@@ -99,7 +99,7 @@ export async function capNews(
       }
     }
   } catch {
-    // Cap is housekeeping — never let it break a refresh.
+    // Cap is housekeeping - never let it break a refresh.
   }
 }
 
@@ -179,7 +179,7 @@ export async function refreshThreatIntel(deps: RefreshDeps): Promise<void> {
       await setStatus('running', Math.round((i / Math.max(1, lookups.length)) * 90), `processed ${domain}`);
     }
 
-    // Sector security news (RSS) — refresh the shared per-sector cache for the project's sector.
+    // Sector security news (RSS) - refresh the shared per-sector cache for the project's sector.
     await setStatus('running', 92, 'fetching sector news');
     const [proj] = await db.select().from(projects).where(eq(projects.id, projectId));
     const sector = proj?.sector ?? 'banking';
@@ -212,13 +212,13 @@ export async function refreshThreatIntel(deps: RefreshDeps): Promise<void> {
           });
       }
     } catch {
-      // News is best-effort — a feed outage must not fail the TI refresh.
+      // News is best-effort - a feed outage must not fail the TI refresh.
     }
     // Retention: drop stale sector headlines (keeps analyst-flagged ones) so the table stays light.
     await pruneOldNews(db, retentionDays, { sector });
     await capNews(db, NEWS_CAP, { sector });
 
-    // Brand monitoring — public news mentioning the project's brand/domain (per project, triageable).
+    // Brand monitoring - public news mentioning the project's brand/domain (per project, triageable).
     await setStatus('running', 96, 'fetching brand news');
     const brand = (proj?.name ?? '').trim() || tgts[0]?.domain || '';
     if (brand) {
@@ -260,7 +260,7 @@ export async function refreshThreatIntel(deps: RefreshDeps): Promise<void> {
             });
         }
       } catch {
-        // Best-effort — a feed outage must not fail the TI refresh.
+        // Best-effort - a feed outage must not fail the TI refresh.
       }
       // Retention: drop stale brand headlines (keeps analyst-flagged ones).
       await pruneOldNews(db, retentionDays, { projectId });

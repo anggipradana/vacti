@@ -3,7 +3,7 @@ import type { z } from 'zod';
 
 export const PGBOSS_SCHEMA = 'pgboss';
 
-/** Validate a job payload against its Zod schema (pure — unit-testable without a DB). */
+/** Validate a job payload against its Zod schema (pure - unit-testable without a DB). */
 export function validatePayload<T>(schema: z.ZodType<T>, data: unknown): T {
   const parsed = schema.safeParse(data);
   if (!parsed.success) {
@@ -32,7 +32,7 @@ export function createQueue(connectionString: string): Queue {
     try {
       await boss.createQueue(name);
     } catch {
-      // Queue already exists — safe to ignore.
+      // Queue already exists - safe to ignore.
     }
     ensured.add(name);
   };

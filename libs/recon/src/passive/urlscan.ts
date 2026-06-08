@@ -1,5 +1,5 @@
 /**
- * URLScan.io client — third passive source. The search API returns scanned pages for a domain
+ * URLScan.io client - third passive source. The search API returns scanned pages for a domain
  * (URLs + resolved IPs). Works key-less (rate-limited); an API key raises limits. Best-effort:
  * degrades to empty on error/rate-limit.
  */

@@ -1,5 +1,5 @@
 /**
- * Content analysis — categorise a discovered URL by its pathname file extension. Helps surface
+ * Content analysis - categorise a discovered URL by its pathname file extension. Helps surface
  * sensitive files (backups, configs, keys, documents) in the attack surface. Default categories
  * below are seeded into the DB and editable by analysts (extension_categories / suffix rules).
  */
@@ -26,7 +26,7 @@ export interface CategorySeed {
   suffixes: string[];
 }
 
-/** Default categories — security-relevant file buckets (backups/configs/keys ranked first). */
+/** Default categories - security-relevant file buckets (backups/configs/keys ranked first). */
 export const DEFAULT_CATEGORIES: CategorySeed[] = [
   {
     slug: 'backups',

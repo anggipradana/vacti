@@ -5,11 +5,11 @@ traceability from purpose to executable workflow. Each layer is governed by the 
 
 ```
 Layer 0  Vision        WHY WE EXIST        repo-governance/vision/
-Layer 1  Principles    WHY — values        repo-governance/principles/
-Layer 2  Conventions   WHAT — doc/style    repo-governance/conventions/
-Layer 3  Development   HOW — practices     repo-governance/development/
-Layer 4  Agents        WHO — executors     repo-governance/agents/ + .claude/
-Layer 5  Workflows     WHEN — processes    repo-governance/workflows/
+Layer 1  Principles    WHY - values        repo-governance/principles/
+Layer 2  Conventions   WHAT - doc/style    repo-governance/conventions/
+Layer 3  Development   HOW - practices     repo-governance/development/
+Layer 4  Agents        WHO - executors     repo-governance/agents/ + .claude/
+Layer 5  Workflows     WHEN - processes    repo-governance/workflows/
 ```
 
 ## Layer responsibilities

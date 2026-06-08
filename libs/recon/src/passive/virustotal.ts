@@ -1,5 +1,5 @@
 /**
- * VirusTotal v2 domain-report client — passive DNS source. Harvests subdomains, domain siblings,
+ * VirusTotal v2 domain-report client - passive DNS source. Harvests subdomains, domain siblings,
  * undetected URLs (with archive dates), and passive-DNS IP resolutions (hostname↔IP history, used
  * to surface origin infrastructure behind a WAF). HTTP-API only; key supplied by the caller.
  */

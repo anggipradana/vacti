@@ -23,7 +23,7 @@ export interface ScanProfileConfig {
   /** Override the default "interesting endpoint" keyword list (admin/login/.env/…). */
   interestingKeywords?: string[];
   extraArgs?: { nuclei?: string[]; httpx?: string[]; subfinder?: string[]; naabu?: string[] };
-  /** Per-tool overrides — take precedence over the shared flat fields above (backward compatible). */
+  /** Per-tool overrides - take precedence over the shared flat fields above (backward compatible). */
   httpx?: { userAgent?: string; rateLimit?: number; concurrency?: number };
   nuclei?: {
     userAgent?: string;
@@ -134,7 +134,7 @@ export async function runScanPipeline(input: ScanInput, deps: PipelineDeps): Pro
       .set({ status: 'running', stage: 'start', startedAt: new Date() })
       .where(eq(scans.id, input.scanId));
 
-    // Stage 1 — subdomains (skipped when predefined list provided).
+    // Stage 1 - subdomains (skipped when predefined list provided).
     let hosts: string[] = [];
     if (input.predefinedSubdomains?.length) {
       hosts = input.predefinedSubdomains;
@@ -156,7 +156,7 @@ export async function runScanPipeline(input: ScanInput, deps: PipelineDeps): Pro
     if (excluded.size) hosts = hosts.filter((h) => !excluded.has(h.toLowerCase()));
     if (!hosts.length) hosts = [input.domain];
 
-    // Stage 2 — httpx probe + WordPress detection.
+    // Stage 2 - httpx probe + WordPress detection.
     checkAbort();
     const live: { url: string; host: string; isWp: boolean }[] = [];
     if (input.profile.tools.httpx !== false) {
@@ -196,7 +196,7 @@ export async function runScanPipeline(input: ScanInput, deps: PipelineDeps): Pro
       await activity('httpx', 'completed', `${results.length} live endpoints`);
     }
 
-    // Stage 3 — naabu port scan.
+    // Stage 3 - naabu port scan.
     checkAbort();
     if (input.profile.tools.naabu !== false) {
       await activity('naabu', 'running');
@@ -224,7 +224,7 @@ export async function runScanPipeline(input: ScanInput, deps: PipelineDeps): Pro
       await activity('naabu', 'completed', `${counts.ports} open ports`);
     }
 
-    // Stage 4 — nuclei.
+    // Stage 4 - nuclei.
     checkAbort();
     if (input.profile.tools.nuclei !== false && live.length) {
       await activity('nuclei', 'running');
@@ -252,7 +252,7 @@ export async function runScanPipeline(input: ScanInput, deps: PipelineDeps): Pro
       await activity('nuclei', 'completed', `${counts.vulnerabilities} findings`);
     }
 
-    // Stage 4b — wordfence: WordPress-focused nuclei templates on detected WP hosts. Runs
+    // Stage 4b - wordfence: WordPress-focused nuclei templates on detected WP hosts. Runs
     // independently of the main nuclei toggle, so a profile can run wordfence with nuclei off.
     checkAbort();
     const wpUrls = live.filter((e) => e.isWp).map((e) => e.url);

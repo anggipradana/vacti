@@ -1,8 +1,8 @@
-# vacti — Design System & UI Redesign Plan
+# vacti - Design System & UI Redesign Plan
 
 > A deliberate, **professional** design system for a security platform. **Light and dark modes are
-> both first-class** (each fully specified below — not one derived from the other). The aesthetic is
-> calm, precise, enterprise-grade (think Linear / Vercel / Stripe dashboards) — never "hacker" themed.
+> both first-class** (each fully specified below - not one derived from the other). The aesthetic is
+> calm, precise, enterprise-grade (think Linear / Vercel / Stripe dashboards) - never "hacker" themed.
 > This supersedes the v0 functional UI.
 
 ## 0. Goals & non-goals
@@ -19,7 +19,7 @@
    default, with an explicit, persisted toggle and **no flash** on load.
 3. **Dense, but breathing.** Lots of recon data, shown with rhythm, grouping, and whitespace.
 4. **Always stateful.** Every surface defines loading (skeleton), empty, error, and live states.
-5. **Restrained motion.** Fast (120–200ms), purposeful; fully disabled under `prefers-reduced-motion`.
+5. **Restrained motion.** Fast (120-200ms), purposeful; fully disabled under `prefers-reduced-motion`.
 6. **Keyboard-first.** Command palette (⌘K), visible focus rings, complete keyboard nav.
 7. **Accessible by default.** WCAG 2.1 AA minimum; color is never the only signal.
 
@@ -34,7 +34,7 @@
   the App Router. Choice persisted (localStorage + cookie for SSR-correct first paint).
 - Toggle offers **System / Light / Dark**.
 
-## 3. Color — neutrals (both modes)
+## 3. Color - neutrals (both modes)
 
 Cool neutral ramp (slate family). Semantic role tokens:
 
@@ -52,18 +52,18 @@ Cool neutral ramp (slate family). Semantic role tokens:
 
 All `fg*`/`bg*` pairs verified ≥ 4.5:1 (body) or ≥ 3:1 (large/secondary).
 
-## 4. Color — accent (choose one; all professional, light+dark)
+## 4. Color - accent (choose one; all professional, light+dark)
 
 | Direction                   | Light accent / hover  | Dark accent / hover   | Tint (subtle bg)                       |
 | --------------------------- | --------------------- | --------------------- | -------------------------------------- |
-| **A — Azure** (recommended) | `#2563EB` / `#1D4ED8` | `#3B82F6` / `#60A5FA` | L `#EFF4FF` · D `rgba(59,130,246,.14)` |
-| **B — Indigo**              | `#4F46E5` / `#4338CA` | `#6366F1` / `#818CF8` | L `#EEF0FF` · D `rgba(99,102,241,.14)` |
-| **C — Teal**                | `#0D9488` / `#0F766E` | `#2DD4BF` / `#5EEAD4` | L `#E6FAF7` · D `rgba(45,212,191,.14)` |
+| **A - Azure** (recommended) | `#2563EB` / `#1D4ED8` | `#3B82F6` / `#60A5FA` | L `#EFF4FF` · D `rgba(59,130,246,.14)` |
+| **B - Indigo**              | `#4F46E5` / `#4338CA` | `#6366F1` / `#818CF8` | L `#EEF0FF` · D `rgba(99,102,241,.14)` |
+| **C - Teal**                | `#0D9488` / `#0F766E` | `#2DD4BF` / `#5EEAD4` | L `#E6FAF7` · D `rgba(45,212,191,.14)` |
 
 `accent-fg` = white on A/B, near-black on C-dark for contrast. `ring` = accent. Links, primary
 buttons, active nav, focus rings, selection, and "running" status use the accent.
 
-## 5. Color — semantic severity / risk / status (both modes)
+## 5. Color - semantic severity / risk / status (both modes)
 
 Single source in `@vacti/ui`; identical in tables, charts, and reports. Lightness shifts per mode so
 text/badges stay legible on each background.
@@ -75,9 +75,9 @@ text/badges stay legible on each background.
 | `sev-medium`         | `#B45309` / `#FFF7E6` | `#FBBF24` / `rgba(251,191,36,.14)`  |
 | `sev-low`            | `#A16207` / `#FEFAE6` | `#FACC15` / `rgba(250,204,21,.14)`  |
 | `sev-info`           | `#0284C7` / `#E8F6FE` | `#38BDF8` / `rgba(56,189,248,.14)`  |
-| `risk-green` (0–30)  | `#059669`             | `#34D399`                           |
-| `risk-amber` (31–70) | `#D97706`             | `#FBBF24`                           |
-| `risk-red` (71–100)  | `#DC2626`             | `#F87171`                           |
+| `risk-green` (0-30)  | `#059669`             | `#34D399`                           |
+| `risk-amber` (31-70) | `#D97706`             | `#FBBF24`                           |
+| `risk-red` (71-100)  | `#DC2626`             | `#F87171`                           |
 
 Status pills: `running` = accent + pulsing dot, `completed` = green, `failed` = red, `queued` =
 neutral, `cancelled` = neutral-dim. Badges always pair color **with text/icon** (never color alone).
@@ -103,7 +103,7 @@ neutral, `cancelled` = neutral-dim. Badges always pair color **with text/icon** 
 - Spacing scale (px): 2, 4, 6, 8, 12, 16, 20, 24, 32, 40, 48, 64.
 - Radius: control 8, card 12, popover 12, pill 9999. Inputs/buttons 8.
 - Borders: 1px hairline (`border`), 1px `border-strong` for inputs/focus context.
-- Elevation: **light** uses soft shadows — `e1` `0 1px 2px rgba(16,24,40,.06)`, `e2`
+- Elevation: **light** uses soft shadows - `e1` `0 1px 2px rgba(16,24,40,.06)`, `e2`
   `0 4px 12px -2px rgba(16,24,40,.10)`, `e3` `0 12px 28px -8px rgba(16,24,40,.16)`. **dark** relies on
   borders + a faint top inset highlight; shadows near-invisible (use `surface-2/3` for separation).
 
@@ -123,7 +123,7 @@ Primitives: Button (`primary`/`secondary`/`outline`/`ghost`/`destructive`, sizes
   Popover, Breadcrumb, Pagination, Toast (**sonner**).
 
 vacti composites: `PageHeader`, `StatCard` (label, value, delta, sparkline), `StatusPill` (live
-pulse), `SeverityBadge`, `RiskGauge` (arc, mode-aware), `DataTable` (TanStack Table — server-side
+pulse), `SeverityBadge`, `RiskGauge` (arc, mode-aware), `DataTable` (TanStack Table - server-side
 sort/filter/paginate, column visibility, sticky header, row hover, empty/loading), `Timeline` (scan
 activity), `StageStepper` (pipeline stages), `CodeBlock` (mono, copy, wrap toggle), `EmptyState`,
 `CommandPalette` (**cmdk**, ⌘K), `ThemeToggle` (System/Light/Dark), `ProjectSwitcher`.
@@ -157,7 +157,7 @@ Breakpoints: sm 640, md 768, lg 1024, xl 1280, 2xl 1536.
 └──────────┴─────────────────────────────────────────────────┘
 ```
 
-- Sidebar 248px ≥ lg; icon-rail (64px) toggle md–lg; **Sheet drawer** < md.
+- Sidebar 248px ≥ lg; icon-rail (64px) toggle md-lg; **Sheet drawer** < md.
 - Topbar: project switcher, ⌘K search, ThemeToggle, user menu. RBAC hides nav the role can't use.
 - Content max-width 1200px; comfortable padding; 12-col responsive grid for cards.
 
@@ -179,7 +179,7 @@ Breakpoints: sm 640, md 768, lg 1024, xl 1280, 2xl 1536.
 
 ## 13. Accessibility
 
-- Contrast: body ≥ 4.5:1, large/secondary ≥ 3:1, UI borders ≥ 3:1 — in both modes.
+- Contrast: body ≥ 4.5:1, large/secondary ≥ 3:1, UI borders ≥ 3:1 - in both modes.
 - Visible `focus-visible` ring (2px accent + offset) on every interactive element; logical tab order.
 - Full keyboard operation incl. ⌘K palette, dialogs (focus trap + Esc), menus (arrow keys).
 - Screen-reader labels, `aria-live` for scan progress, semantic landmarks (`nav`/`main`).
@@ -206,7 +206,7 @@ New deps: `tailwindcss` + `@tailwindcss/postcss`, `tailwindcss-animate`, `class-
 ## 16. Visual direction options
 
 All three are professional and ship **both light and dark**; they differ only in accent (see §4):
-**A — Azure** (recommended) · **B — Indigo** (enterprise) · **C — Teal** (fresh). Pick one; neutrals,
+**A - Azure** (recommended) · **B - Indigo** (enterprise) · **C - Teal** (fresh). Pick one; neutrals,
 components, and both themes are identical across them.
 
 ## 17. Definition of done (design)

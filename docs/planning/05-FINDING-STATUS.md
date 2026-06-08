@@ -1,12 +1,12 @@
-# vacti — Finding Status & Triage Lifecycle
+# vacti - Finding Status & Triage Lifecycle
 
 > Planning spec. Every VA finding (vulnerability) carries a triage **status** through its lifecycle.
-> In Threat Intelligence, a per-finding status applies **only to LeakCheck data-leak findings** —
+> In Threat Intelligence, a per-finding status applies **only to LeakCheck data-leak findings** -
 > OTX pulses / malware / passive-DNS / URLs are enrichment context and are NOT individually triaged.
 
 ## 1. VA finding status (vulnerabilities)
 
-`vulnerabilities.status` — enum, default `open`. Status drives whether a finding is **active risk**
+`vulnerabilities.status` - enum, default `open`. Status drives whether a finding is **active risk**
 (feeds the unified risk score) or **closed/mitigated** (excluded or down-weighted).
 
 | Status           | Label          | Meaning                                                    | Active risk?                |
@@ -47,12 +47,12 @@ resolved ──▶ reopened ──▶ open
 - **UI:** status shown as a pill on each vuln row + bulk/inline status change; filterable in the
   vulnerabilities table; dashboard severity/risk reflects only active findings.
 
-## 2. Threat Intel — status applies to LeakCheck findings only
+## 2. Threat Intel - status applies to LeakCheck findings only
 
 Per requirement, a per-finding status exists **only for leaked-credential findings** (`leakcheck_data`).
 It replaces/extends the current `checked` boolean. OTX and other TI data have **no** per-item status.
 
-`leakcheck_data.status` — enum, default `new`:
+`leakcheck_data.status` - enum, default `new`:
 
 | Status           | Label          | Meaning                              | Drives exposure? |
 | ---------------- | -------------- | ------------------------------------ | ---------------- |
@@ -67,8 +67,8 @@ It replaces/extends the current `checked` boolean. OTX and other TI data have **
 
 - **Risk score:** credential-exposure component counts only **unresolved** leak statuses
   (`new`, `investigating`, `confirmed`). Triaging to `remediated`/`false_positive`/`ignored` lowers
-  the score — preserving the original "unchecked drives the score; reviewing reduces it" incentive.
-- **Migration note:** the existing `checked` boolean maps to status — `checked=false → new`,
+  the score - preserving the original "unchecked drives the score; reviewing reduces it" incentive.
+- **Migration note:** the existing `checked` boolean maps to status - `checked=false → new`,
   `checked=true → confirmed` (analyst can refine afterwards). `checked` is removed once status lands.
 - **UI:** leak rows show a status pill + a triage control (dropdown of the statuses above) instead of
   the current two-state toggle; filterable.
@@ -86,8 +86,8 @@ It replaces/extends the current `checked` boolean. OTX and other TI data have **
 
 ## 4. One-click review toggle (2026-06-05)
 
-Every finding that carries a triage status — VA vulns, leaked credentials, and sector security-news
-headlines — gets a one-click **review toggle** beside its full status dropdown, so an analyst can mark
+Every finding that carries a triage status - VA vulns, leaked credentials, and sector security-news
+headlines - gets a one-click **review toggle** beside its full status dropdown, so an analyst can mark
 something triaged without the two-step dropdown+Set flow. The toggle is a two-state switch between the
 finding's untouched `base` status and its first analyst-triage `reviewed` status (clicking again
 reverts); the dropdown still covers every other status.

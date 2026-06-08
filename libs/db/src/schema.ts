@@ -66,7 +66,7 @@ export const threatNews = pgTable(
     source: text('source').notNull(),
     summary: text('summary'),
     publishedAt: timestamp('published_at', { withTimezone: true }),
-    // Triage status (NewsStatus from @vacti/core) — preserved across feed refreshes.
+    // Triage status (NewsStatus from @vacti/core) - preserved across feed refreshes.
     status: text('status').notNull().default('new'),
     fetchedAt: createdAt(),
   },
@@ -91,7 +91,7 @@ export const brandNews = pgTable(
     publishedAt: timestamp('published_at', { withTimezone: true }),
     // Whether the headline came from the security-biased query (vs a general brand mention).
     security: boolean('security').notNull().default(false),
-    // Triage status (NewsStatus from @vacti/core) — preserved across feed refreshes.
+    // Triage status (NewsStatus from @vacti/core) - preserved across feed refreshes.
     status: text('status').notNull().default('new'),
     fetchedAt: createdAt(),
   },

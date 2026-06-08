@@ -9,7 +9,7 @@ import { naabuArgs, parseNaabuLine } from './adapters/naabu';
 const has = (bin: string): boolean => spawnSync('which', [bin]).status === 0;
 const haveTools = has('httpx') && has('naabu');
 
-// Localhost-only — authorized self-scan. Skips automatically when the binaries are absent (e.g. CI).
+// Localhost-only - authorized self-scan. Skips automatically when the binaries are absent (e.g. CI).
 describe.skipIf(!haveTools)('recon tools against localhost', () => {
   let server: Server;
   let port = 0;

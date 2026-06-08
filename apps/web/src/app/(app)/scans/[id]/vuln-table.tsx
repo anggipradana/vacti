@@ -11,7 +11,7 @@ import { SeverityBadge } from '../../../../components/ui/severity-badge';
 import { VulnStatusBadge } from '../../../../components/ui/finding-status';
 import { AutoSubmitSelect } from '../../../../components/ui/auto-submit-select';
 import { ConfirmButton } from '../../../../components/ui/confirm-button';
-// (Badge intentionally not imported — read-only status uses VulnStatusBadge.)
+// (Badge intentionally not imported - read-only status uses VulnStatusBadge.)
 import {
   setVulnStatusAction,
   setVulnNoteAction,
@@ -45,7 +45,7 @@ const STATUS_OPTIONS = Object.entries(VULN_STATUS_LABEL);
 
 /**
  * Findings table with a text search, status filter, and checkbox multi-select for bulk status
- * changes — plus per-row instant status change (AutoSubmitSelect), AI enrich and delete.
+ * changes - plus per-row instant status change (AutoSubmitSelect), AI enrich and delete.
  */
 export function VulnTable({ vulns, scanId, canTriage }: { vulns: VulnRow[]; scanId: string; canTriage: boolean }) {
   const [query, setQuery] = React.useState('');
@@ -120,7 +120,7 @@ export function VulnTable({ vulns, scanId, canTriage }: { vulns: VulnRow[]; scan
         </span>
       </div>
 
-      {/* Bulk action bar — appears when rows are selected. */}
+      {/* Bulk action bar - appears when rows are selected. */}
       {canTriage && selected.size > 0 ? (
         <form
           action={bulkSetVulnStatusByIdsAction}
@@ -274,7 +274,7 @@ export function VulnTable({ vulns, scanId, canTriage }: { vulns: VulnRow[]; scan
                       ) : null}
                     </details>
                   ) : null}
-                  {/* Analyst note — visible to all; editable by triagers. */}
+                  {/* Analyst note - visible to all; editable by triagers. */}
                   {v.analystNote ? (
                     <p className="mt-1 max-w-md rounded-md border border-border bg-surface-2 p-1.5 text-xs">
                       <strong>Note:</strong> {v.analystNote}

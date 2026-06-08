@@ -60,7 +60,7 @@ export default async function SurfacePage({
     q ? ilike(discoveredUrls.urlText, `%${q}%`) : undefined,
     diffScanId ? eq(discoveredUrls.firstScanId, diffScanId) : undefined,
   );
-  // Exposure findings are filtered/paginated client-side (ExposureTable) — scope only by project +
+  // Exposure findings are filtered/paginated client-side (ExposureTable) - scope only by project +
   // optional scan-diff here, then hand the full set (capped) to the client for search/filter.
   const findWhere = and(
     eq(exposureFindings.projectId, projectId),
@@ -115,7 +115,7 @@ export default async function SurfacePage({
     db.select({ n: count() }).from(ipResolutions).where(eq(ipResolutions.projectId, projectId)),
   ]);
 
-  // Endpoint / parameter discovery — derived from discovered URLs for the project. The result is a
+  // Endpoint / parameter discovery - derived from discovered URLs for the project. The result is a
   // top-N summary (params/auth), so a 2000-URL sample is plenty; the previous 5000 cap re-ran a large
   // scan + analysis on every render with no visible benefit. Bound the work to keep the page fast.
   const allUrlRows = await db
@@ -245,7 +245,7 @@ export default async function SurfacePage({
         </CardHeader>
         <CardContent className="pt-0">
           {finds.length === 0 ? (
-            <p className="py-3 text-sm text-fg-muted">No exposure findings match — run a passive or full scan.</p>
+            <p className="py-3 text-sm text-fg-muted">No exposure findings match - run a passive or full scan.</p>
           ) : (
             <ExposureTable findings={finds} canTriage={canTriage} />
           )}
@@ -307,7 +307,7 @@ export default async function SurfacePage({
                         {u.categorySlug ? (
                           <Badge variant="neutral">{u.categorySlug}</Badge>
                         ) : (
-                          <span className="text-fg-subtle">—</span>
+                          <span className="text-fg-subtle">-</span>
                         )}
                       </TD>
                       <TD className="text-xs text-fg-subtle">{(u.sources ?? []).join(', ')}</TD>
@@ -391,7 +391,7 @@ export default async function SurfacePage({
         <CardContent className="pt-0">
           {ips.length === 0 ? (
             <p className="py-3 text-sm text-fg-muted">
-              No IP resolutions yet — requires a VirusTotal API key (passive DNS).
+              No IP resolutions yet - requires a VirusTotal API key (passive DNS).
             </p>
           ) : (
             <Table>
@@ -406,9 +406,9 @@ export default async function SurfacePage({
                 {ips.map((r) => (
                   <TR key={r.ip}>
                     <TD className="font-mono text-sm">{r.ip}</TD>
-                    <TD className="text-xs text-fg-muted">{r.hosts ?? '—'}</TD>
+                    <TD className="text-xs text-fg-muted">{r.hosts ?? '-'}</TD>
                     <TD className="text-xs text-fg-subtle">
-                      {r.latest ? new Date(r.latest).toISOString().slice(0, 10) : '—'}
+                      {r.latest ? new Date(r.latest).toISOString().slice(0, 10) : '-'}
                     </TD>
                   </TR>
                 ))}

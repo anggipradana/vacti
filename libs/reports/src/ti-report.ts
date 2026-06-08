@@ -180,7 +180,7 @@ export function renderTiReport(d: TiReportData): string {
     </ul>`,
   );
 
-  // 05 Sector security news (optional — only when populated)
+  // 05 Sector security news (optional - only when populated)
   if (d.news?.length) {
     const newsTitle = p2('Berita Keamanan Sektor', 'Sector Security News');
     const sectorLabel = d.sector ? ` · ${escapeHtml(d.sector)}` : '';

@@ -1,8 +1,8 @@
 /**
- * Exposure / secret detection — regex ruleset run over discovered URL strings and (optionally)
+ * Exposure / secret detection - regex ruleset run over discovered URL strings and (optionally)
  * fetched response bodies. Ported & adapted from the SCOPTIX methodology (Apache-2.0): keyword
  * prefilter for speed, priority ordering so specific rules claim overlaps before generic ones.
- * Pure function, no I/O — safe to run over large URL batches.
+ * Pure function, no I/O - safe to run over large URL batches.
  */
 
 export type ExposureHit = { type: string; snippet: string };

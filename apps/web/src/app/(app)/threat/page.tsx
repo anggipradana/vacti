@@ -149,7 +149,7 @@ export default async function ThreatPage({
         )}
         {!otx.length && leakTotal === 0 ? (
           <span className="text-xs text-fg-subtle">
-            Set OTX_API_KEY / LEAKCHECK_API_KEY to populate live data — features degrade gracefully.
+            Set OTX_API_KEY / LEAKCHECK_API_KEY to populate live data - features degrade gracefully.
           </span>
         ) : null}
       </div>
@@ -200,7 +200,7 @@ export default async function ThreatPage({
         </CardHeader>
         <CardContent className="pt-0 text-sm leading-relaxed text-fg-muted">
           {status?.aiNarrative ? (
-            status.aiNarrative.replace(/[—–]/g, '-')
+            status.aiNarrative.replace(/[--]/g, '-')
           ) : (
             <span className="text-fg-subtle">Not generated yet.</span>
           )}
@@ -261,7 +261,7 @@ export default async function ThreatPage({
         <CardContent className="pt-0">
           {news.length === 0 ? (
             <p className="py-2 text-sm text-fg-muted">
-              No news yet — pick a sector and refresh to pull the latest security headlines.
+              No news yet - pick a sector and refresh to pull the latest security headlines.
             </p>
           ) : (
             <SectorNewsList
@@ -279,7 +279,7 @@ export default async function ThreatPage({
         </CardContent>
       </Card>
 
-      {/* Passive exposure (from Attack Surface) — credential-class types overlap leaked credentials. */}
+      {/* Passive exposure (from Attack Surface) - credential-class types overlap leaked credentials. */}
       <Card className="mt-4">
         <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3">
           <CardTitle className="flex items-center gap-2">
@@ -292,7 +292,7 @@ export default async function ThreatPage({
         <CardContent className="pt-0">
           {exposureTotal === 0 ? (
             <p className="py-1 text-sm text-fg-muted">
-              No passive exposure findings yet — run a passive or full scan from Scans.
+              No passive exposure findings yet - run a passive or full scan from Scans.
             </p>
           ) : (
             <div className="space-y-2">
@@ -311,7 +311,7 @@ export default async function ThreatPage({
               </div>
               {exposureCredTotal > 0 ? (
                 <p className="text-xs text-fg-muted">
-                  {exposureCredTotal} credential-class finding(s) overlap leaked credentials below — feeds the Exposure
+                  {exposureCredTotal} credential-class finding(s) overlap leaked credentials below - feeds the Exposure
                   component of the risk score.
                 </p>
               ) : null}

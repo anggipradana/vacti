@@ -1,5 +1,5 @@
 /**
- * Endpoint / parameter discovery — derive query parameters and security-relevant (auth) endpoints
+ * Endpoint / parameter discovery - derive query parameters and security-relevant (auth) endpoints
  * from discovered URLs. Pure function over URL strings; helps target parameter analysis and spot
  * auth/admin surfaces in the passive attack surface.
  */

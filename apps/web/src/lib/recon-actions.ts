@@ -38,7 +38,7 @@ export async function saveProfileAction(formData: FormData) {
   const sev = formData.getAll('severities').map(String).filter(Boolean);
   const config: Record<string, unknown> = {};
 
-  // httpx — its own probe options.
+  // httpx - its own probe options.
   const httpx: Record<string, unknown> = {};
   const hua = String(formData.get('httpxUserAgent') ?? '').trim();
   if (hua) httpx.userAgent = hua;
@@ -48,7 +48,7 @@ export async function saveProfileAction(formData: FormData) {
   if (hconc) httpx.concurrency = hconc;
   if (Object.keys(httpx).length) config.httpx = httpx;
 
-  // nuclei — its own scan options.
+  // nuclei - its own scan options.
   const nuclei: Record<string, unknown> = {};
   const nua = String(formData.get('nucleiUserAgent') ?? '').trim();
   if (nua) nuclei.userAgent = nua;
@@ -88,7 +88,7 @@ export async function saveProfileAction(formData: FormData) {
   revalidatePath('/settings/profiles');
 }
 
-/** Update a scan profile — mirrors saveProfileAction's field set (modify_scan_config). */
+/** Update a scan profile - mirrors saveProfileAction's field set (modify_scan_config). */
 export async function editProfileAction(formData: FormData) {
   const actor = await requirePermission(Permission.ModifyScanConfig);
   const id = String(formData.get('id') ?? '');
@@ -99,7 +99,7 @@ export async function editProfileAction(formData: FormData) {
   const sev = formData.getAll('severities').map(String).filter(Boolean);
   const config: Record<string, unknown> = {};
 
-  // httpx — its own probe options.
+  // httpx - its own probe options.
   const httpx: Record<string, unknown> = {};
   const hua = String(formData.get('httpxUserAgent') ?? '').trim();
   if (hua) httpx.userAgent = hua;
@@ -109,7 +109,7 @@ export async function editProfileAction(formData: FormData) {
   if (hconc) httpx.concurrency = hconc;
   if (Object.keys(httpx).length) config.httpx = httpx;
 
-  // nuclei — its own scan options.
+  // nuclei - its own scan options.
   const nuclei: Record<string, unknown> = {};
   const nua = String(formData.get('nucleiUserAgent') ?? '').trim();
   if (nua) nuclei.userAgent = nua;

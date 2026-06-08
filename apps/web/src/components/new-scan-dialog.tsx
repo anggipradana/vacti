@@ -45,13 +45,13 @@ export function NewScanDialog({
             <Label htmlFor="mode">Mode</Label>
             <Select id="mode" name="mode" data-testid="scan-mode" defaultValue="active">
               <option value="active">Active (binary recon pipeline)</option>
-              <option value="passive">Passive (OSINT only — no traffic to target)</option>
+              <option value="passive">Passive (OSINT only - no traffic to target)</option>
               <option value="full">Full (passive discovery → active)</option>
             </Select>
           </div>
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" name="deepScan" value="1" data-testid="scan-deep" />
-            Deep-fetch discovered URLs (passive/full) — fetches bodies (SSRF-guarded) to scan for secrets
+            Deep-fetch discovered URLs (passive/full) - fetches bodies (SSRF-guarded) to scan for secrets
           </label>
           {profiles.length ? (
             <div className="space-y-1.5">

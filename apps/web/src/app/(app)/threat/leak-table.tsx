@@ -28,7 +28,7 @@ const STATUS_OPTIONS = Object.entries(LEAK_STATUS_LABEL);
 
 /**
  * Leaked-credentials table with text search, status filter, and checkbox multi-select for bulk
- * status changes — plus per-row instant status change (AutoSubmitSelect) and delete. Passwords stay
+ * status changes - plus per-row instant status change (AutoSubmitSelect) and delete. Passwords stay
  * masked behind the click-to-reveal `Reveal` cell exactly as before.
  */
 export function LeakTable({ leaks, canTriage }: { leaks: LeakRow[]; canTriage: boolean }) {
@@ -103,7 +103,7 @@ export function LeakTable({ leaks, canTriage }: { leaks: LeakRow[]; canTriage: b
         </span>
       </div>
 
-      {/* Bulk action bar — appears when rows are selected. */}
+      {/* Bulk action bar - appears when rows are selected. */}
       {canTriage && selected.size > 0 ? (
         <form
           action={bulkSetLeakStatusByIdsAction}

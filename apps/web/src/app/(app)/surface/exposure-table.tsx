@@ -20,7 +20,7 @@ import {
 } from '../../../lib/surface-actions';
 
 /**
- * Serializable exposure-finding row. `snippet` stays CONFIDENTIAL — it is rendered ONLY through
+ * Serializable exposure-finding row. `snippet` stays CONFIDENTIAL - it is rendered ONLY through
  * <Reveal> (click-to-reveal mask), exactly as the server-rendered table did, and is never used as
  * search-filter input (we filter only over the plain-text fields already shown: type + url).
  */
@@ -38,7 +38,7 @@ const STATUS_OPTIONS = Object.entries(LEAK_STATUS_LABEL);
 
 /**
  * Exposure findings table with text search, type/status filters, and checkbox multi-select for
- * bulk status changes — plus per-row instant status change (AutoSubmitSelect) and delete.
+ * bulk status changes - plus per-row instant status change (AutoSubmitSelect) and delete.
  * Snippet masking and per-row RBAC (canTriage) controls are preserved exactly as before.
  */
 export function ExposureTable({ findings, canTriage }: { findings: ExposureRow[]; canTriage: boolean }) {
@@ -48,7 +48,7 @@ export function ExposureTable({ findings, canTriage }: { findings: ExposureRow[]
   const [selected, setSelected] = React.useState<Set<string>>(new Set());
   const [page, setPage] = React.useState(1);
 
-  // Type options with per-type counts, e.g. "aws-key (3)" — the count keeps the option label distinct
+  // Type options with per-type counts, e.g. "aws-key (3)" - the count keeps the option label distinct
   // from the in-row finding-type badge text.
   const types = React.useMemo(() => {
     const counts = new Map<string, number>();
@@ -62,7 +62,7 @@ export function ExposureTable({ findings, canTriage }: { findings: ExposureRow[]
       if (statusFilter !== 'all' && f.status !== statusFilter) return false;
       if (typeFilter !== 'all' && f.findingType !== typeFilter) return false;
       if (!qy) return true;
-      // Search only over plain-text fields already shown — NOT the masked snippet (confidential PII).
+      // Search only over plain-text fields already shown - NOT the masked snippet (confidential PII).
       return `${f.findingType} ${f.urlText ?? ''}`.toLowerCase().includes(qy);
     });
   }, [findings, query, statusFilter, typeFilter]);
@@ -140,7 +140,7 @@ export function ExposureTable({ findings, canTriage }: { findings: ExposureRow[]
         </span>
       </div>
 
-      {/* Bulk action bar — appears when rows are selected. */}
+      {/* Bulk action bar - appears when rows are selected. */}
       {canTriage && selected.size > 0 ? (
         <form
           action={bulkSetExposureStatusByIdsAction}

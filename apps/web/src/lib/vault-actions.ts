@@ -15,7 +15,7 @@ export async function saveProjectKeyAction(formData: FormData) {
   const value = String(formData.get('value') ?? '').trim();
   if (!projectId || !(SECRET_NAMES as readonly string[]).includes(name) || !value) return;
   await setProjectSecret(getDb(), projectId, name, value, env().ENCRYPTION_KEY);
-  // Audit the fact a key was set — never the value.
+  // Audit the fact a key was set - never the value.
   await recordAudit({
     actorId: actor.id,
     action: 'vault.key_set',

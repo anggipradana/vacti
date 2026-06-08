@@ -49,7 +49,7 @@ export default async function TargetDetail({ params }: { params: Promise<{ id: s
               {target.predefinedSubdomains.length ? (
                 <div className="mt-1 font-mono text-xs">{target.predefinedSubdomains.join(', ')}</div>
               ) : (
-                <div className="text-fg-muted">— discovery on</div>
+                <div className="text-fg-muted">- discovery on</div>
               )}
             </div>
             <div>
@@ -63,7 +63,7 @@ export default async function TargetDetail({ params }: { params: Promise<{ id: s
                   ))}
                 </div>
               ) : (
-                <div className="text-fg-muted">— none</div>
+                <div className="text-fg-muted">- none</div>
               )}
             </div>
           </CardContent>

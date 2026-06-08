@@ -15,7 +15,7 @@ export const envSchema = z.object({
   SESSION_SECRET: z.string().min(16),
   ADMIN_EMAIL: z.string().email().optional(),
   ADMIN_PASSWORD: z.string().min(8).optional(),
-  // Optional external integrations — features degrade gracefully when absent.
+  // Optional external integrations - features degrade gracefully when absent.
   OTX_API_KEY: z.string().optional(),
   LEAKCHECK_API_KEY: z.string().optional(),
   VT_API_KEY: z.string().optional(),
@@ -33,7 +33,7 @@ export const envSchema = z.object({
 export type Env = z.infer<typeof envSchema>;
 
 export function loadEnv(source: NodeJS.ProcessEnv = process.env): Env {
-  // Treat empty-string vars as unset — container orchestrators commonly pass optional vars as
+  // Treat empty-string vars as unset - container orchestrators commonly pass optional vars as
   // `KEY=` (e.g. compose `${VAR:-}`), which would otherwise fail `.email()`/`.url()`/`.min()`.
   const cleaned: Record<string, string | undefined> = {};
   for (const [k, v] of Object.entries(source)) if (v !== '') cleaned[k] = v;

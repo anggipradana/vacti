@@ -1,6 +1,6 @@
 /** Report design ported verbatim from the BPRS-Hijra reference HTML (teal + navy, Space Grotesk
- * display, IBM Plex Sans/Mono). The component CSS — cover, sections, stat cards, severity bar +
- * legend, tables, finding cards, approval cards, note — uses the reference's exact values. Only the
+ * display, IBM Plex Sans/Mono). The component CSS - cover, sections, stat cards, severity bar +
+ * legend, tables, finding cards, approval cards, note - uses the reference's exact values. Only the
  * page scaffolding differs: the reference lays content onto fixed-size on-screen `.sheet` boxes
  * (it has known, hand-placed content); our reports are data-driven and must auto-paginate, so we use
  * CSS `@page` print rules + running header/footer instead. Sizes are in px to match the reference 1:1

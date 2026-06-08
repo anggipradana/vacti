@@ -239,7 +239,7 @@ export function openApiSpec(): Record<string, unknown> {
           type: 'object',
           description: 'Returned ONCE on creation; the plaintext token is never stored or shown again.',
           properties: {
-            token: { type: 'string', description: 'Plaintext API token (vct_…) — copy it now.' },
+            token: { type: 'string', description: 'Plaintext API token (vct_…) - copy it now.' },
             id: { type: 'string', format: 'uuid' },
             label: { type: 'string' },
           },
@@ -291,7 +291,7 @@ export function openApiSpec(): Record<string, unknown> {
             scanId: { type: 'string', format: 'uuid', nullable: true },
             source: { type: 'string', enum: ['url', 'body'] },
             findingType: { type: 'string' },
-            snippet: { type: 'string', nullable: true, description: 'CONFIDENTIAL — masked in UI' },
+            snippet: { type: 'string', nullable: true, description: 'CONFIDENTIAL - masked in UI' },
             urlText: { type: 'string', nullable: true },
             status: { type: 'string' },
             analystNote: { type: 'string', nullable: true },

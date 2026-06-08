@@ -10,7 +10,7 @@ const scrypt = promisify(scryptCb) as (pw: string | Buffer, salt: Buffer, keylen
  * upgraded on next login via {@link needsRehash}.
  */
 export async function hashPassword(password: string): Promise<string> {
-  // @node-rs/argon2 defaults to Argon2id — the OWASP-recommended variant.
+  // @node-rs/argon2 defaults to Argon2id - the OWASP-recommended variant.
   return argonHash(password);
 }
 

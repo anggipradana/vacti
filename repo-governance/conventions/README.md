@@ -1,10 +1,10 @@
-# Layer 2 — Conventions
+# Layer 2 - Conventions
 
 Documentation and style rules. See individual files:
 
-- [diataxis-framework.md](diataxis-framework.md) — how docs are organized
-- [file-naming.md](file-naming.md) — naming rules
-- [commit-conventions.md](commit-conventions.md) — Conventional Commits + scopes
+- [diataxis-framework.md](diataxis-framework.md) - how docs are organized
+- [file-naming.md](file-naming.md) - naming rules
+- [commit-conventions.md](commit-conventions.md) - Conventional Commits + scopes
 
 ## At a glance
 

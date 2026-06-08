@@ -459,7 +459,7 @@ export function buildApi(deps: ApiDeps): Hono<{ Variables: Vars }> {
       .insert(apiTokens)
       .values({ userId: c.get('userId'), label, tokenHash: hash })
       .returning();
-    // Plaintext is returned ONCE here and never stored — only the hash persists.
+    // Plaintext is returned ONCE here and never stored - only the hash persists.
     return c.json({ token: plaintext, id: row!.id, label: row!.label }, 201);
   });
   app.delete('/tokens/:id', async (c) => {
@@ -467,7 +467,7 @@ export function buildApi(deps: ApiDeps): Hono<{ Variables: Vars }> {
     return c.json({ ok: true });
   });
 
-  // Attack-surface (passive recon) read endpoints — scoped to a project.
+  // Attack-surface (passive recon) read endpoints - scoped to a project.
   app.get('/surface/urls', async (c) => {
     const projectId = c.req.query('projectId');
     if (!projectId) return c.json({ error: 'projectId required' }, 400);
@@ -552,7 +552,7 @@ export function buildApi(deps: ApiDeps): Hono<{ Variables: Vars }> {
     return c.json({ ips: rows });
   });
 
-  // SSE progress — streams scan activity, polling the DB.
+  // SSE progress - streams scan activity, polling the DB.
   app.get('/scans/:id/events', (c) => {
     const id = c.req.param('id');
     const encoder = new TextEncoder();
