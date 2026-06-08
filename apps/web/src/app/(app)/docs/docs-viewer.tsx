@@ -9,11 +9,27 @@ import { cn } from '../../../lib/cn';
 export interface Doc {
   slug: string;
   title: string;
+  /** Repo-relative source path, e.g. `docs/how-to/deploy.md` — used to resolve relative links. */
+  path: string;
   markdown: string;
 }
 
-// Tailwind-styled renderers for each markdown element (no typography plugin needed).
-const components = {
+/** Resolve a repo-relative markdown link (e.g. `../planning/x.md`) against the current doc's dir. */
+function resolveRepoPath(currentPath: string, href: string): string {
+  const target = href.split(/[#?]/)[0]!; // drop any #anchor / ?query
+  const base = href.startsWith('/') ? [] : currentPath.split('/').slice(0, -1); // current doc's directory
+  const parts = href.startsWith('/') ? target.replace(/^\/+/, '').split('/') : [...base, ...target.split('/')];
+  const out: string[] = [];
+  for (const seg of parts) {
+    if (seg === '' || seg === '.') continue;
+    if (seg === '..') out.pop();
+    else out.push(seg);
+  }
+  return out.join('/');
+}
+
+// Tailwind-styled renderers, parameterised by the current doc (to resolve relative links to GitHub).
+const makeComponents = (docPath: string, repoBase: string) => ({
   h1: (p: React.HTMLAttributes<HTMLHeadingElement>) => (
     <h1 {...p} className="mb-3 mt-2 scroll-mt-20 font-display text-2xl font-bold tracking-tight" />
   ),
@@ -30,22 +46,29 @@ const components = {
     <p {...p} className="my-2.5 text-sm leading-relaxed text-fg-muted" />
   ),
   a: ({ href, children, ...p }: React.AnchorHTMLAttributes<HTMLAnchorElement>) => {
-    // Only external (http) links and in-page heading anchors (#…) navigate. Repo-relative links
-    // (e.g. ../planning/foo.md) are not web routes, so render them as plain text to avoid 404s.
-    if (href && (href.startsWith('http') || href.startsWith('#'))) {
-      return (
-        <a
-          {...p}
-          href={href}
-          target={href.startsWith('http') ? '_blank' : undefined}
-          rel="noopener noreferrer"
-          className="text-accent hover:underline"
-        >
-          {children}
-        </a>
-      );
+    // External (http) links and in-page heading anchors (#…) navigate as-is. Repo-relative links
+    // (e.g. ../planning/foo.md) are not web routes, so point them at the file on GitHub instead.
+    let resolved = href;
+    let external = false;
+    if (!href || href.startsWith('#')) {
+      resolved = href;
+    } else if (href.startsWith('http')) {
+      external = true;
+    } else {
+      resolved = `${repoBase}/${resolveRepoPath(docPath, href)}`;
+      external = true;
     }
-    return <span className="text-fg">{children}</span>;
+    return (
+      <a
+        {...p}
+        href={resolved}
+        target={external ? '_blank' : undefined}
+        rel="noopener noreferrer"
+        className="text-accent hover:underline"
+      >
+        {children}
+      </a>
+    );
   },
   ul: (p: React.HTMLAttributes<HTMLUListElement>) => (
     <ul {...p} className="my-2.5 ml-5 list-disc space-y-1 text-sm text-fg-muted" />
@@ -82,12 +105,13 @@ const components = {
     <td {...p} className="border border-border px-2 py-1 align-top" />
   ),
   hr: () => <hr className="my-5 border-border" />,
-};
+});
 
 /** Documentation reader: a sidebar of doc pages + a styled markdown content pane. */
-export function DocsViewer({ docs }: { docs: Doc[] }) {
+export function DocsViewer({ docs, repoBase }: { docs: Doc[]; repoBase: string }) {
   const [active, setActive] = React.useState(docs[0]?.slug ?? '');
   const current = docs.find((d) => d.slug === active) ?? docs[0];
+  const components = React.useMemo(() => makeComponents(current?.path ?? '', repoBase), [current?.path, repoBase]);
 
   return (
     <div className="grid gap-6 lg:grid-cols-[200px_1fr]">

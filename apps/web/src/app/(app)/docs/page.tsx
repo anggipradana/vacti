@@ -19,13 +19,16 @@ const PAGES: { slug: string; title: string; path: string }[] = [
   { slug: 'qa', title: 'QA (Playwright UI)', path: 'docs/how-to/qa-with-playwright-ui.md' },
 ];
 
+// Repo base for resolving relative markdown links to the file on GitHub (overridable via env).
+const REPO_BLOB = process.env.DOCS_REPO_URL ?? 'https://github.com/anggipradana/vacti/blob/main';
+
 async function loadDocs(): Promise<Doc[]> {
   const root = process.cwd();
   const out: Doc[] = [];
   for (const p of PAGES) {
     try {
       const markdown = await readFile(join(root, p.path), 'utf8');
-      out.push({ slug: p.slug, title: p.title, markdown });
+      out.push({ slug: p.slug, title: p.title, path: p.path, markdown });
     } catch {
       // Skip a doc that isn't present in this build.
     }
@@ -52,7 +55,7 @@ export default async function DocsPage() {
         }
       />
       {docs.length ? (
-        <DocsViewer docs={docs} />
+        <DocsViewer docs={docs} repoBase={REPO_BLOB} />
       ) : (
         <EmptyState
           icon={<BookOpen />}
