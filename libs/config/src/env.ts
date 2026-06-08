@@ -33,7 +33,11 @@ export const envSchema = z.object({
 export type Env = z.infer<typeof envSchema>;
 
 export function loadEnv(source: NodeJS.ProcessEnv = process.env): Env {
-  const parsed = envSchema.safeParse(source);
+  // Treat empty-string vars as unset — container orchestrators commonly pass optional vars as
+  // `KEY=` (e.g. compose `${VAR:-}`), which would otherwise fail `.email()`/`.url()`/`.min()`.
+  const cleaned: Record<string, string | undefined> = {};
+  for (const [k, v] of Object.entries(source)) if (v !== '') cleaned[k] = v;
+  const parsed = envSchema.safeParse(cleaned);
   if (!parsed.success) {
     const issues = parsed.error.issues.map((i) => `  - ${i.path.join('.') || '(root)'}: ${i.message}`).join('\n');
     throw new Error(`Invalid environment configuration:\n${issues}`);
