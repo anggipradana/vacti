@@ -16,13 +16,13 @@ services:
     ports:
       - '5432:5432'
 
-  # The worker runs DB migrations on boot, then consumes the pg-boss queue.
+  # Recon worker: self-contained image (pinned subfinder/httpx/naabu/nuclei + nuclei-templates +
+  # Chromium). Runs DB migrations on boot, then consumes the pg-boss queue (scans / TI / schedules /
+  # daily news). Auto-restart pairs with the worker's startup reaper + live watchdog.
   worker:
     build:
       context: .
-      target: runtime
-    # Auto-restart on crash so a dead worker never leaves scans orphaned (pairs with the worker's
-    # startup reaper + live watchdog). This is the canonical supervision for the documented stack.
+      target: worker
     restart: unless-stopped
     command: ['npx', 'tsx', 'apps/worker/src/main.ts']
     environment:
@@ -30,6 +30,16 @@ services:
       ENCRYPTION_KEY: ${ENCRYPTION_KEY}
       SESSION_SECRET: ${SESSION_SECRET}
       NODE_ENV: production
+      # Optional integrations (features degrade gracefully when unset).
+      OTX_API_KEY: ${OTX_API_KEY:-}
+      LEAKCHECK_API_KEY: ${LEAKCHECK_API_KEY:-}
+      VT_API_KEY: ${VT_API_KEY:-}
+      URLSCAN_API_KEY: ${URLSCAN_API_KEY:-}
+      PROXY_URL: ${PROXY_URL:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-}
+      NEWS_RETENTION_DAYS: ${NEWS_RETENTION_DAYS:-90}
     depends_on:
       db:
         condition: service_healthy
@@ -45,13 +55,22 @@ services:
       ENCRYPTION_KEY: ${ENCRYPTION_KEY}
       SESSION_SECRET: ${SESSION_SECRET}
       NODE_ENV: production
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      OTX_API_KEY: ${OTX_API_KEY:-}
+      LEAKCHECK_API_KEY: ${LEAKCHECK_API_KEY:-}
+      VT_API_KEY: ${VT_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-}
     depends_on:
       db:
         condition: service_healthy
       worker:
         condition: service_started
+    # Host :3100 → container :3000 so an external proxy (e.g. cloudflared) keeps pointing at :3100.
     ports:
-      - '3000:3000'
+      - '3100:3000'
 
 volumes:
   vacti-pg: {}
