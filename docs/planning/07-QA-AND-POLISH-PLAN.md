@@ -6,12 +6,12 @@
 > `repo-governance/development/`. All work lands on `main` only behind a green gate
 > (typecheck + lint + unit + integration + e2e).
 
-## A. Display / GUI for Playwright (this WSL2 host)
+## A. Display / GUI for Playwright
 
-- WSLg is present (`/mnt/wslg`, `/tmp/.X11-unix/X0`); `DISPLAY` was just unset → export `DISPLAY=:0` +
-  `WAYLAND_DISPLAY=wayland-0` to render GUI on the Windows desktop. No full desktop install required.
+- Headed + UI mode need a graphical display: export `DISPLAY` (e.g. `DISPLAY=:0`, plus
+  `WAYLAND_DISPLAY` if applicable) so the runner opens in a desktop window. No full desktop install required.
 - Install Playwright's headed system libs (`npx playwright install-deps chromium`) so headed + UI mode work.
-- `npm run e2e:ui` → `playwright test --ui` (headed, on the Windows desktop via WSLg) for human QA.
+- `npm run e2e:ui` → `playwright test --ui` (headed) for human QA.
 - CI stays **headless** (no display) — the same specs run both ways.
 
 ## B. UI polish pass (real defects first — not subjective tweaks)

@@ -335,7 +335,7 @@ Three tiers plus end-to-end (see [`docs/how-to/run-tests.md`](docs/how-to/run-te
 npm run test:quick        # unit (Vitest)
 npm run test:integration  # integration (needs Postgres)
 npm run e2e               # Playwright e2e (headless)
-npm run e2e:ui            # Playwright UI mode (interactive, WSLg/desktop)
+npm run e2e:ui            # Playwright UI mode (interactive, headed/desktop)
 ```
 
 CI runs typecheck + lint + all three tiers behind a quality gate.
