@@ -33,6 +33,35 @@ the app, it just forwards to `http://localhost:3100`.
 Upgrading after a code change: `docker compose up --build -d` rebuilds and recreates the changed
 services. Bump the `*_VERSION` build args in the `worker` stage of the `Dockerfile` to upgrade tools.
 
+## Start on boot
+
+- **Docker engine:** `sudo systemctl enable --now docker`. Because every service uses
+  `restart: unless-stopped`, the containers come back automatically after a reboot once the engine
+  starts — no extra unit needed for vacti itself.
+- **cloudflared** (if used for public access): run it as a service so it restarts on boot too — e.g.
+  `cloudflared service install <TUNNEL_TOKEN>`, or a small systemd unit:
+
+  ```ini
+  # /etc/systemd/system/cloudflared-vacti.service
+  [Unit]
+  After=network-online.target docker.service
+  Wants=network-online.target
+  [Service]
+  ExecStart=/usr/local/bin/cloudflared tunnel run --url http://localhost:3100 vacti
+  Restart=on-failure
+  [Install]
+  WantedBy=multi-user.target
+  ```
+
+  then `sudo systemctl enable --now cloudflared-vacti`.
+
+## Documentation & API reference (auth-gated)
+
+- In-app usage docs live at **`/docs`** (signed-in users).
+- The interactive REST API reference is at **`/api/docs`** (Redoc) with the spec at
+  **`/api/openapi.json`**. Both require a signed-in session; `/api/health` and the token-authenticated
+  endpoints are reachable without one.
+
 ## Public access via Cloudflare Tunnel (host-side, not a vacti service)
 
 vacti needs no inbound ports or public IP — expose it with `cloudflared`, pointed at the app's
