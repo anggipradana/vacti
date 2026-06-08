@@ -10,6 +10,7 @@ import { RiskGauge } from '../../../components/ui/risk-gauge';
 import { Button } from '../../../components/ui/button';
 import { SubmitButton } from '../../../components/ui/submit-button';
 import { Textarea } from '../../../components/ui/textarea';
+import { Input } from '../../../components/ui/input';
 import { Label } from '../../../components/ui/label';
 import { Select } from '../../../components/ui/select';
 import { Badge } from '../../../components/ui/badge';
@@ -31,6 +32,7 @@ import { getCurrentUser } from '../../../lib/session';
 import {
   refreshTiAction,
   addIndicatorAction,
+  editIndicatorAction,
   deleteIndicatorAction,
   setSectorAction,
   bulkReviewNewsAction,
@@ -399,24 +401,44 @@ export default async function ThreatPage({
           ) : (
             indicators.map((ind) => (
               <Card key={ind.id}>
-                <CardContent className="flex items-center justify-between py-3">
-                  <span className="font-mono text-sm">{ind.value}</span>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="accent">{ind.type}</Badge>
-                    {canTriage ? (
-                      <form action={deleteIndicatorAction}>
-                        <input type="hidden" name="id" value={ind.id} />
-                        <ConfirmButton
-                          size="sm"
-                          variant="ghost"
-                          className="text-danger hover:bg-danger/10"
-                          confirm="Delete this indicator?"
-                        >
-                          Delete
-                        </ConfirmButton>
-                      </form>
-                    ) : null}
+                <CardContent className="py-3">
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono text-sm">{ind.value}</span>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="accent">{ind.type}</Badge>
+                      {canTriage ? (
+                        <form action={deleteIndicatorAction}>
+                          <input type="hidden" name="id" value={ind.id} />
+                          <ConfirmButton
+                            size="sm"
+                            variant="ghost"
+                            className="text-danger hover:bg-danger/10"
+                            confirm="Delete this indicator?"
+                          >
+                            Delete
+                          </ConfirmButton>
+                        </form>
+                      ) : null}
+                    </div>
                   </div>
+                  {canTriage ? (
+                    <details className="mt-2">
+                      <summary className="cursor-pointer text-xs text-fg-subtle hover:text-fg-muted">Edit</summary>
+                      <form action={editIndicatorAction} className="mt-2 space-y-2">
+                        <input type="hidden" name="id" value={ind.id} />
+                        <Select name="type" defaultValue={ind.type} aria-label="Type">
+                          <option value="domain">domain</option>
+                          <option value="subdomain">subdomain</option>
+                          <option value="ip">ip</option>
+                        </Select>
+                        <Input name="value" defaultValue={ind.value} placeholder="Value" required />
+                        <Input name="note" defaultValue={ind.note ?? ''} placeholder="Note (optional)" />
+                        <Button type="submit" size="sm" variant="outline">
+                          Save
+                        </Button>
+                      </form>
+                    </details>
+                  ) : null}
                 </CardContent>
               </Card>
             ))

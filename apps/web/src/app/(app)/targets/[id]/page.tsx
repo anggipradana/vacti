@@ -10,7 +10,7 @@ import { userCan, Permission } from '@vacti/core';
 import { targets, reconNotes } from '@vacti/db';
 import { getDb } from '../../../../lib/db';
 import { getCurrentUser } from '../../../../lib/session';
-import { addNoteAction, toggleNoteAction, deleteNoteAction } from '../../../../lib/recon-actions';
+import { addNoteAction, editNoteAction, toggleNoteAction, deleteNoteAction } from '../../../../lib/recon-actions';
 
 export const dynamic = 'force-dynamic';
 
@@ -88,39 +88,51 @@ export default async function TargetDetail({ params }: { params: Promise<{ id: s
             ) : (
               <ul className="space-y-1">
                 {notes.map((n) => (
-                  <li
-                    key={n.id}
-                    className="flex items-center justify-between gap-2 border-b border-border py-2 last:border-0"
-                  >
-                    <span className={n.done ? 'text-sm text-fg-subtle line-through' : 'text-sm'}>{n.body}</span>
-                    <div className="flex items-center gap-1">
-                      {n.done ? <Badge variant="success">done</Badge> : null}
-                      {canEdit ? (
-                        <>
-                          <form action={toggleNoteAction}>
-                            <input type="hidden" name="id" value={n.id} />
-                            <input type="hidden" name="targetId" value={target.id} />
-                            <Button type="submit" variant="ghost" size="sm">
-                              {n.done ? 'Reopen' : 'Done'}
-                            </Button>
-                          </form>
-                          <form action={deleteNoteAction}>
-                            <input type="hidden" name="id" value={n.id} />
-                            <input type="hidden" name="targetId" value={target.id} />
-                            <Button
-                              type="submit"
-                              variant="ghost"
-                              size="sm"
-                              className="text-danger hover:bg-danger/10"
-                              aria-label="Delete note"
-                              title="Delete note"
-                            >
-                              <Trash2 className="size-4" />
-                            </Button>
-                          </form>
-                        </>
-                      ) : null}
+                  <li key={n.id} className="border-b border-border py-2 last:border-0">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className={n.done ? 'text-sm text-fg-subtle line-through' : 'text-sm'}>{n.body}</span>
+                      <div className="flex items-center gap-1">
+                        {n.done ? <Badge variant="success">done</Badge> : null}
+                        {canEdit ? (
+                          <>
+                            <form action={toggleNoteAction}>
+                              <input type="hidden" name="id" value={n.id} />
+                              <input type="hidden" name="targetId" value={target.id} />
+                              <Button type="submit" variant="ghost" size="sm">
+                                {n.done ? 'Reopen' : 'Done'}
+                              </Button>
+                            </form>
+                            <form action={deleteNoteAction}>
+                              <input type="hidden" name="id" value={n.id} />
+                              <input type="hidden" name="targetId" value={target.id} />
+                              <Button
+                                type="submit"
+                                variant="ghost"
+                                size="sm"
+                                className="text-danger hover:bg-danger/10"
+                                aria-label="Delete note"
+                                title="Delete note"
+                              >
+                                <Trash2 className="size-4" />
+                              </Button>
+                            </form>
+                          </>
+                        ) : null}
+                      </div>
                     </div>
+                    {canEdit ? (
+                      <details className="mt-1">
+                        <summary className="cursor-pointer text-xs text-fg-muted hover:text-fg">Edit</summary>
+                        <form action={editNoteAction} className="mt-2 flex items-center gap-2">
+                          <input type="hidden" name="id" value={n.id} />
+                          <input type="hidden" name="targetId" value={target.id} />
+                          <Input name="body" defaultValue={n.body} required />
+                          <Button type="submit" size="sm">
+                            Save
+                          </Button>
+                        </form>
+                      </details>
+                    ) : null}
                   </li>
                 ))}
               </ul>

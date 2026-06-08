@@ -243,6 +243,19 @@ export async function addIndicatorAction(formData: FormData) {
   revalidatePath('/threat');
 }
 
+/** Edit a manual indicator. ModifyScanResults + audit. */
+export async function editIndicatorAction(formData: FormData) {
+  const actor = await requirePermission(Permission.ModifyScanResults);
+  const id = String(formData.get('id') ?? '');
+  const type = String(formData.get('type') ?? 'domain');
+  const value = String(formData.get('value') ?? '').trim();
+  const note = String(formData.get('note') ?? '').trim() || null;
+  if (!id || !value || !['domain', 'subdomain', 'ip'].includes(type)) return;
+  await getDb().update(manualIndicators).set({ type, value, note }).where(eq(manualIndicators.id, id));
+  await recordAudit({ actorId: actor.id, action: 'indicator.update', resource: `indicator:${id}` });
+  revalidatePath('/threat');
+}
+
 export async function toggleLeakAction(formData: FormData) {
   await requirePermission(Permission.ModifyScanResults);
   const id = String(formData.get('id') ?? '');

@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { desc, eq } from 'drizzle-orm';
+import { count, desc, eq } from 'drizzle-orm';
 import { Crosshair } from 'lucide-react';
 import { PageHeader } from '../../../components/ui/page-header';
 import { Card, CardContent } from '../../../components/ui/card';
@@ -12,6 +12,7 @@ import { Select } from '../../../components/ui/select';
 import { Badge } from '../../../components/ui/badge';
 import { ConfirmButton } from '../../../components/ui/confirm-button';
 import { EmptyState } from '../../../components/ui/empty-state';
+import { Pagination } from '../../../components/ui/pagination';
 import { userCan, Permission } from '@vacti/core';
 import { projects, targets } from '@vacti/db';
 import { getDb } from '../../../lib/db';
@@ -22,16 +23,35 @@ import { getActiveProjectId } from '../../../lib/active-project';
 
 export const dynamic = 'force-dynamic';
 
-export default async function TargetsPage({ searchParams }: { searchParams: Promise<{ project?: string }> }) {
+const PAGE = 20;
+
+export default async function TargetsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ project?: string; tpage?: string }>;
+}) {
   const user = await getCurrentUser();
   if (!user) redirect('/login');
   const db = getDb();
+  const sp = await searchParams;
+  const page = Math.max(1, Number(sp.tpage ?? 1) || 1);
   const projectRows = await db.select().from(projects).orderBy(desc(projects.createdAt));
-  const projectId = await getActiveProjectId((await searchParams).project, projectRows);
+  const projectId = await getActiveProjectId(sp.project, projectRows);
   // Scope targets to the active project (multi-project workspaces, like the Threat page).
-  const targetRows = projectId
-    ? await db.select().from(targets).where(eq(targets.projectId, projectId)).orderBy(desc(targets.createdAt))
-    : [];
+  const [targetRows, countRows] = projectId
+    ? await Promise.all([
+        db
+          .select()
+          .from(targets)
+          .where(eq(targets.projectId, projectId))
+          .orderBy(desc(targets.createdAt))
+          .limit(PAGE)
+          .offset((page - 1) * PAGE),
+        db.select({ n: count() }).from(targets).where(eq(targets.projectId, projectId)),
+      ])
+    : [[], [{ n: 0 }]];
+  const total = Number(countRows[0]?.n ?? 0);
+  const totalPages = Math.max(1, Math.ceil(total / PAGE));
   return (
     <>
       <PageHeader
@@ -158,6 +178,13 @@ export default async function TargetsPage({ searchParams }: { searchParams: Prom
               </Card>
             ))
           )}
+          <Pagination
+            page={page}
+            totalPages={totalPages}
+            total={total}
+            label="targets"
+            makeHref={(p) => '/targets?project=' + projectId + '&tpage=' + p}
+          />
         </div>
       </div>
     </>

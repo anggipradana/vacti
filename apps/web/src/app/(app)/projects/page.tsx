@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
-import { desc } from 'drizzle-orm';
+import { count, desc } from 'drizzle-orm';
 import { FolderKanban } from 'lucide-react';
 import { PageHeader } from '../../../components/ui/page-header';
 import { Card, CardContent } from '../../../components/ui/card';
@@ -9,6 +9,7 @@ import { Button } from '../../../components/ui/button';
 import { ConfirmButton } from '../../../components/ui/confirm-button';
 import { Badge } from '../../../components/ui/badge';
 import { EmptyState } from '../../../components/ui/empty-state';
+import { Pagination } from '../../../components/ui/pagination';
 import { Select } from '../../../components/ui/select';
 import { userCan, Permission } from '@vacti/core';
 import { SECTORS } from '@vacti/threat-intel';
@@ -24,11 +25,25 @@ import {
 
 export const dynamic = 'force-dynamic';
 
-export default async function ProjectsPage() {
+const PAGE = 20;
+
+export default async function ProjectsPage({ searchParams }: { searchParams: Promise<{ ppage?: string }> }) {
   const user = await getCurrentUser();
   if (!user) redirect('/login');
   const canManage = userCan(user, Permission.ModifyTargets);
-  const rows = await getDb().select().from(projects).orderBy(desc(projects.createdAt));
+  const page = Math.max(1, Number((await searchParams).ppage ?? 1) || 1);
+  const db = getDb();
+  const [rows, countRows] = await Promise.all([
+    db
+      .select()
+      .from(projects)
+      .orderBy(desc(projects.createdAt))
+      .limit(PAGE)
+      .offset((page - 1) * PAGE),
+    db.select({ n: count() }).from(projects),
+  ]);
+  const total = Number(countRows[0]?.n ?? 0);
+  const totalPages = Math.max(1, Math.ceil(total / PAGE));
   return (
     <>
       <PageHeader title="Projects" description="Workspaces that scope your targets, scans, and findings." />
@@ -130,6 +145,13 @@ export default async function ProjectsPage() {
               </Card>
             ))
           )}
+          <Pagination
+            page={page}
+            totalPages={totalPages}
+            total={total}
+            label="projects"
+            makeHref={(p) => '/projects?ppage=' + p}
+          />
         </div>
       </div>
     </>

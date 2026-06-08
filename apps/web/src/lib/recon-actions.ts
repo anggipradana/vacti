@@ -352,6 +352,16 @@ export async function addNoteAction(formData: FormData) {
   revalidatePath(`/targets/${targetId}`);
 }
 
+export async function editNoteAction(formData: FormData) {
+  await requirePermission(Permission.ModifyTargets);
+  const id = String(formData.get('id') ?? '');
+  const targetId = String(formData.get('targetId') ?? '');
+  const body = String(formData.get('body') ?? '').trim();
+  if (!id || !body) return;
+  await getDb().update(reconNotes).set({ body }).where(eq(reconNotes.id, id));
+  if (targetId) revalidatePath(`/targets/${targetId}`);
+}
+
 export async function toggleNoteAction(formData: FormData) {
   await requirePermission(Permission.ModifyTargets);
   const id = String(formData.get('id') ?? '');
