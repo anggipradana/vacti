@@ -324,6 +324,7 @@ export default async function ScanDetail({
                 aiRemediation: v.aiRemediation,
                 request: v.request,
                 response: v.response,
+                analystNote: v.analystNote,
               }))}
             />
           ) : (

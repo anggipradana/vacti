@@ -93,6 +93,7 @@ export default async function SurfacePage({
         snippet: exposureFindings.snippet,
         urlText: exposureFindings.urlText,
         status: exposureFindings.status,
+        analystNote: exposureFindings.analystNote,
       })
       .from(exposureFindings)
       .where(findWhere)

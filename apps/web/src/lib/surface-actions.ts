@@ -18,6 +18,17 @@ export async function setExposureStatusAction(formData: FormData) {
   revalidatePath('/surface');
 }
 
+/** Set/clear an analyst note on an exposure finding. ModifyScanResults + audit. */
+export async function setExposureNoteAction(formData: FormData) {
+  const actor = await requirePermission(Permission.ModifyScanResults);
+  const id = String(formData.get('id') ?? '');
+  const note = String(formData.get('note') ?? '').trim() || null;
+  if (!id) return;
+  await getDb().update(exposureFindings).set({ analystNote: note }).where(eq(exposureFindings.id, id));
+  await recordAudit({ actorId: actor.id, action: 'exposure.note', resource: `exposure:${id}` });
+  revalidatePath('/surface');
+}
+
 /** Delete a single exposure finding. ModifyScanResults + audit. */
 export async function deleteExposureAction(formData: FormData) {
   const actor = await requirePermission(Permission.ModifyScanResults);

@@ -195,6 +195,8 @@ export const vulnerabilities = pgTable(
     // Triage status (see docs/planning/05-FINDING-STATUS.md). Only active statuses feed the risk score.
     status: text('status').notNull().default('open'),
     statusNote: text('status_note'),
+    // Free-form analyst note (investigation context, false-positive reason, etc.).
+    analystNote: text('analyst_note'),
     statusChangedAt: timestamp('status_changed_at', { withTimezone: true }),
     // AI enrichment (api-and-integrations). Populated on demand; cached in ai_cache.
     aiDescription: text('ai_description'),

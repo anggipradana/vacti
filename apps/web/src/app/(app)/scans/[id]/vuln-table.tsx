@@ -5,13 +5,19 @@ import { VULN_STATUS_LABEL, type SeverityValue } from '@vacti/core';
 import { Table, THead, TBody, TR, TH, TD } from '../../../../components/ui/table';
 import { Button } from '../../../../components/ui/button';
 import { Input } from '../../../../components/ui/input';
+import { Textarea } from '../../../../components/ui/textarea';
 import { Select } from '../../../../components/ui/select';
 import { SeverityBadge } from '../../../../components/ui/severity-badge';
 import { VulnStatusBadge } from '../../../../components/ui/finding-status';
 import { AutoSubmitSelect } from '../../../../components/ui/auto-submit-select';
 import { ConfirmButton } from '../../../../components/ui/confirm-button';
 // (Badge intentionally not imported — read-only status uses VulnStatusBadge.)
-import { setVulnStatusAction, bulkSetVulnStatusByIdsAction, deleteVulnAction } from '../../../../lib/status-actions';
+import {
+  setVulnStatusAction,
+  setVulnNoteAction,
+  bulkSetVulnStatusByIdsAction,
+  deleteVulnAction,
+} from '../../../../lib/status-actions';
 import { enrichVulnAction } from '../../../../lib/ai-actions';
 
 export interface VulnRow {
@@ -31,6 +37,7 @@ export interface VulnRow {
   aiRemediation: string | null;
   request: string | null;
   response: string | null;
+  analystNote: string | null;
 }
 
 const PAGE_SIZE = 50;
@@ -265,6 +272,33 @@ export function VulnTable({ vulns, scanId, canTriage }: { vulns: VulnRow[]; scan
                           </pre>
                         </div>
                       ) : null}
+                    </details>
+                  ) : null}
+                  {/* Analyst note — visible to all; editable by triagers. */}
+                  {v.analystNote ? (
+                    <p className="mt-1 max-w-md rounded-md border border-border bg-surface-2 p-1.5 text-xs">
+                      <strong>Note:</strong> {v.analystNote}
+                    </p>
+                  ) : null}
+                  {canTriage ? (
+                    <details className="mt-1 max-w-md text-xs text-fg-muted">
+                      <summary className="cursor-pointer text-accent">
+                        {v.analystNote ? 'Edit note' : 'Add note'}
+                      </summary>
+                      <form action={setVulnNoteAction} className="mt-1 space-y-1">
+                        <input type="hidden" name="id" value={v.id} />
+                        <input type="hidden" name="scanId" value={scanId} />
+                        <Textarea
+                          name="note"
+                          defaultValue={v.analystNote ?? ''}
+                          rows={2}
+                          placeholder="Investigation context, false-positive reason, …"
+                          className="text-xs"
+                        />
+                        <Button type="submit" size="sm" variant="outline">
+                          Save note
+                        </Button>
+                      </form>
                     </details>
                   ) : null}
                 </TD>
