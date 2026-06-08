@@ -1,10 +1,10 @@
-# vacti — Gap Analysis vs ReNgGinaNg (re-audit)
+# vacti - Gap Analysis vs ReNgGinaNg (re-audit)
 
 > Re-audit of ReNgGinaNg (integration, reports, and all in-scope areas) to catch features vacti
 > missed or under-specified. Legend: ✅ have · 🟡 partial · ❌ missing. Action: **ADD** (do soon) ·
 > _improve_ · later · skip (out of scope).
 
-**STATUS 2026-06-05** — The entire G1–G17 backlog is **COMPLETE and CI-green** (see §J). All
+**STATUS 2026-06-05** - The entire G1-G17 backlog is **COMPLETE and CI-green** (see §J). All
 priority items shipped: RBAC enforcement, scan cancel, scheduled scans, scan diff, sub-scan,
 key-vault UI, AI exec-summary + threat narrative, argon2id, audit log, server-side pagination,
 custom headers, universal search, recon notes, interesting keywords, seed/fixtures, onboarding.
@@ -15,15 +15,15 @@ multi-org, WHOIS, in-app feed) are deferred. Epic/task statuses in `.claude/epic
 
 | Feature                                                      | vacti                      | Action                                     |
 | ------------------------------------------------------------ | -------------------------- | ------------------------------------------ |
-| Severity scale -1..4                                         | ✅                         | —                                          |
+| Severity scale -1..4                                         | ✅                         | -                                          |
 | CVE / CWE / CVSS (score + metrics vector)                    | 🟡 (cve[]/cwe[]/cvss text) | _improve_: add `cvss_metrics`, keep arrays |
 | References list (nuclei `reference`)                         | ❌                         | **ADD** `references text[]`                |
 | `curl_command` (repro)                                       | ❌                         | **ADD** (nuclei `curl-command`)            |
 | `extracted_results` (nuclei matches)                         | ❌                         | **ADD** `extracted_results text[]`         |
 | `matcher_name`, template_url                                 | 🟡 (templateId only)       | **ADD** matcher_name + template_url        |
 | Triage status (open/closed + lifecycle)                      | 🟡 (planned 05)            | **ADD now** (this task)                    |
-| request / response capture                                   | ✅                         | —                                          |
-| Dedup                                                        | ✅                         | —                                          |
+| request / response capture                                   | ✅                         | -                                          |
+| Dedup                                                        | ✅                         | -                                          |
 | `is_ai_enriched` flag + AI desc/impact/remediation           | ❌                         | later (with AI integration)                |
 | Manual add/edit vuln, bulk status actions, per-finding notes | ❌                         | later                                      |
 
@@ -31,7 +31,7 @@ multi-org, WHOIS, in-app feed) are deferred. Epic/task statuses in `.claude/epic
 
 | Feature                                                                     | vacti              | Action                                     |
 | --------------------------------------------------------------------------- | ------------------ | ------------------------------------------ |
-| Endpoint: url/host/port/scheme/title/webserver/status/length/tech/WordPress | ✅                 | —                                          |
+| Endpoint: url/host/port/scheme/title/webserver/status/length/tech/WordPress | ✅                 | -                                          |
 | `is_important` flag (subdomain/endpoint)                                    | ❌                 | **ADD** small important/star flag          |
 | CNAME / is_cdn / cdn_name                                                   | 🟡 (httpx has cdn) | _improve_: persist cdn + cname on endpoint |
 | response_time, content_type                                                 | ❌                 | **ADD** (httpx provides)                   |
@@ -45,7 +45,7 @@ ReNgGinaNg YAML exposes far more knobs. vacti `scan_profiles` should grow (still
 
 | Option                                             | vacti                       | Action                                         |
 | -------------------------------------------------- | --------------------------- | ---------------------------------------------- |
-| tools on/off, ports, severities, rate, timeout     | ✅                          | —                                              |
+| tools on/off, ports, severities, rate, timeout     | ✅                          | -                                              |
 | threads, retries, concurrency                      | ❌                          | **ADD** to profile                             |
 | nuclei `tags` + `templates` + `custom_templates`   | 🟡 (severities only)        | **ADD** tags/templates to profile              |
 | follow_redirect, intensity                         | ❌                          | _improve_ (optional)                           |
@@ -57,8 +57,8 @@ ReNgGinaNg YAML exposes far more knobs. vacti `scan_profiles` should grow (still
 
 | Feature                                                      | vacti                    | Action                               |
 | ------------------------------------------------------------ | ------------------------ | ------------------------------------ |
-| status states (queued/running/completed/failed/cancelled)    | ✅                       | —                                    |
-| scan_activity timeline + commands (audit, exit code, output) | ✅                       | —                                    |
+| status states (queued/running/completed/failed/cancelled)    | ✅                       | -                                    |
+| scan_activity timeline + commands (audit, exit code, output) | ✅                       | -                                    |
 | subscan / rescan                                             | 🟡 (table + planned API) | implement (recon #007/#009)          |
 | scan diff / compare                                          | 🟡 (diffScans planned)   | implement + UI                       |
 | stop / cancel (AbortSignal)                                  | 🟡 (pipeline ready)      | wire cancel via queue + UI           |
@@ -69,8 +69,8 @@ ReNgGinaNg YAML exposes far more knobs. vacti `scan_profiles` should grow (still
 
 | Feature                                                     | vacti              | Action                                |
 | ----------------------------------------------------------- | ------------------ | ------------------------------------- |
-| project workspace + scoping                                 | ✅                 | —                                     |
-| target domain + predefined subs + custom headers            | ✅                 | —                                     |
+| project workspace + scoping                                 | ✅                 | -                                     |
+| target domain + predefined subs + custom headers            | ✅                 | -                                     |
 | target description / metadata                               | ❌                 | **ADD** description                   |
 | Organizations (group targets)                               | ❌                 | later (optional grouping)             |
 | target tags, ip_cidr scope                                  | ❌                 | later                                 |
@@ -81,7 +81,7 @@ ReNgGinaNg YAML exposes far more knobs. vacti `scan_profiles` should grow (still
 
 | Feature                                                        | vacti | Action                   |
 | -------------------------------------------------------------- | ----- | ------------------------ |
-| counts, severity breakdown, 7-day trend, modules, recent scans | ✅    | —                        |
+| counts, severity breakdown, 7-day trend, modules, recent scans | ✅    | -                        |
 | **Most vulnerable targets** widget                             | ❌    | **ADD** (easy, valuable) |
 | **Most common vulnerability** widget                           | ❌    | **ADD** (easy, valuable) |
 | Universal search (+ history)                                   | ❌    | later                    |
@@ -91,15 +91,15 @@ ReNgGinaNg YAML exposes far more knobs. vacti `scan_profiles` should grow (still
 
 | Feature                                        | vacti            | Action                                                                      |
 | ---------------------------------------------- | ---------------- | --------------------------------------------------------------------------- |
-| RBAC SysAdmin/PenTester/Auditor + matrix       | ✅               | —                                                                           |
+| RBAC SysAdmin/PenTester/Auditor + matrix       | ✅               | -                                                                           |
 | Users management UI (assign role)              | 🟡 (planned)     | **ADD** users+roles settings page                                           |
 | Scan-profile CRUD UI                           | 🟡 (API planned) | **ADD** profiles settings UI                                                |
 | API key vault (encrypted) + UI                 | 🟡 (table only)  | **ADD** vault UI (integrations)                                             |
-| Notification settings (per-event, per-project) | ❌               | **ADD** (integrations) — per-project (improves on reNgine global singleton) |
+| Notification settings (per-event, per-project) | ❌               | **ADD** (integrations) - per-project (improves on reNgine global singleton) |
 | Proxy settings                                 | ❌               | **ADD**                                                                     |
 | External tool version display                  | ❌               | later (small)                                                               |
 
-## H. Reports (build target — match reNgine component-for-component, then improve)
+## H. Reports (build target - match reNgine component-for-component, then improve)
 
 VA report sections (reNgine `default.html`/`modern.html`): cover · TOC · **approval/signatory sheet**
 (Prepared/Reviewed/Approved) · executive summary (placeholder vars + optional AI remediation) · quick
@@ -123,34 +123,34 @@ false-positive from counts), download + inline.
 
 ## I. Integrations (build target)
 
-- **Notifications** — channels: Discord (rich embeds, severity colors, rate-limit retry, file attach,
+- **Notifications** - channels: Discord (rich embeds, severity colors, rate-limit retry, file attach,
   embed field updates), Slack, Telegram (markdown), Google Chat, Lark. Per-event toggles: scan
   started/finished/failed, vuln found (by severity), interesting found, subdomain changes, TI
   refreshed, report ready, tracebacks. Message enrichment (scan id, status, engine, duration, host,
   link). **Improve**: per-project config (reNgine is a global singleton), retry/backoff, templates.
-- **AI** — vuln enrichment (description/impact/remediation/references), attack-suggestion, executive-
+- **AI** - vuln enrichment (description/impact/remediation/references), attack-suggestion, executive-
   summary remediation; bilingual (EN/ID); cache by content hash. **Improve**: Vercel AI SDK provider
   abstraction (Claude default / OpenAI / Ollama) vs reNgine's OpenAI/Ollama only.
-- **API key vault** — OTX, LeakCheck, AI provider keys; **encrypted at rest (AES-256-GCM)** — improves
+- **API key vault** - OTX, LeakCheck, AI provider keys; **encrypted at rest (AES-256-GCM)** - improves
   on reNgine plaintext. UI to set/rotate, masked display.
-- **Public REST + OpenAPI** — already have typed REST (Hono); **ADD** auto OpenAPI doc + Redoc/Swagger.
-- **Scheduled jobs** — TI refresh (cron) + nuclei-templates update (cron).
+- **Public REST + OpenAPI** - already have typed REST (Hono); **ADD** auto OpenAPI doc + Redoc/Swagger.
+- **Scheduled jobs** - TI refresh (cron) + nuclei-templates update (cron).
 - skip: HackerOne sync, in-app notification center (later).
 
-## J. Priority — status & remaining backlog (updated 2026-06-04)
+## J. Priority - status & remaining backlog (updated 2026-06-04)
 
 **Shipped:**
 
-1. ✅ **Finding status** (A triage) — VA + leak status, risk-score-aware.
-2. ✅ **Reports** — VA + TI (Playwright), all sections + settings + signatories + parity additions
+1. ✅ **Finding status** (A triage) - VA + leak status, risk-score-aware.
+2. ✅ **Reports** - VA + TI (Playwright), all sections + settings + signatories + parity additions
    (logo, signature images, CVSS/CVE/references, custom exec summary, TOC, donut/bars,
-   subdomain-inventory + status pills, vuln-summary). See reports epic 001–007.
-3. ✅ **Integrations** — 5-channel webhooks (per-project, per-event), AI enrichment + cache, AI provider
+   subdomain-inventory + status pills, vuln-summary). See reports epic 001-007.
+3. ✅ **Integrations** - 5-channel webhooks (per-project, per-event), AI enrichment + cache, AI provider
    abstraction (Anthropic/OpenAI/Ollama), REST + OpenAPI/Redoc.
 4. ✅ **Folded quick-adds done**: vuln `references`/CVSS/CVE; dashboard "most common vuln" +
    "top targets by active findings".
 
-**Backlog (G1–G17) — ALL COMPLETE (2026-06-05):**
+**Backlog (G1-G17) - ALL COMPLETE (2026-06-05):**
 
 | Gap | Item                                   | Task                                          | Done |
 | --- | -------------------------------------- | --------------------------------------------- | ---- |

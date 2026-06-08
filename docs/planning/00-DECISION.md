@@ -1,9 +1,9 @@
-# vacti — Keputusan Teknologi (FINAL)
+# vacti - Keputusan Teknologi (FINAL)
 
 > Opsi 2 (Go + Next.js) & semua varian berat lama sudah ditolak/dihapus. Dokumen ini hanya
 > mencatat jalur yang dipilih. Cakupan fitur detail ada di [01-FEATURE-SCOPE.md](01-FEATURE-SCOPE.md).
 
-## Stack terpilih — Full-stack TypeScript (ringan · modern · reliable)
+## Stack terpilih - Full-stack TypeScript (ringan · modern · reliable)
 
 | Lapisan         | Pilihan                                                                                                                          |
 | --------------- | -------------------------------------------------------------------------------------------------------------------------------- |
@@ -12,7 +12,7 @@
 | DB/ORM          | **PostgreSQL** + **Drizzle ORM** (+ drizzle-kit migrasi)                                                                         |
 | Background jobs | **pg-boss** (antrian di Postgres, TANPA Redis) + worker proses terpisah                                                          |
 | Recon engine    | exec **4 binary Go**: subfinder · httpx · naabu · nuclei (WordPress = nuclei + template wordfence, kondisional). **Tanpa Ruby.** |
-| AI              | **Vercel AI SDK** — provider abstraction: Claude (default) + OpenAI + Ollama                                                     |
+| AI              | **Vercel AI SDK** - provider abstraction: Claude (default) + OpenAI + Ollama                                                     |
 | Reports         | route HTML/CSS (desain baru) → **Playwright** render PDF; alternatif **Typst**                                                   |
 | Charts          | Recharts / Visx                                                                                                                  |
 | Realtime        | SSE (progres scan)                                                                                                               |
@@ -37,6 +37,6 @@ ada di image worker. Tidak ada Celery, Redis, Ollama-wajib, Nginx berat.
 
 ## Alternatif yang ditolak (catatan singkat)
 
-- Go + Next.js (Opsi 2) — engine compiled super-andal tapi backend 2 bahasa; keunggulan konkurensi
+- Go + Next.js (Opsi 2) - engine compiled super-andal tapi backend 2 bahasa; keunggulan konkurensi
   belum terpakai untuk scope yang sudah diramping.
-- Mempertahankan stack ReNgGinaNg (Django/Celery/Redis/WeasyPrint/30+ tool) — terlalu berat.
+- Mempertahankan stack ReNgGinaNg (Django/Celery/Redis/WeasyPrint/30+ tool) - terlalu berat.

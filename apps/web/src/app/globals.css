@@ -117,7 +117,7 @@
 }
 
 /* Loading skeleton that only becomes visible if navigation takes >200ms, so fast page loads
-   (the common case) never flash an empty skeleton — feedback for slow loads only. */
+   (the common case) never flash an empty skeleton - feedback for slow loads only. */
 @keyframes vactiDelayedAppear {
   to {
     opacity: 1;

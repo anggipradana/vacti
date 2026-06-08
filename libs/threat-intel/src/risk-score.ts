@@ -1,13 +1,13 @@
 /**
- * Unified Risk Score — vacti implementation of the ReNgGinaNg `calculate_risk_score` model.
+ * Unified Risk Score - vacti implementation of the ReNgGinaNg `calculate_risk_score` model.
  *
  * Component weights (sum = 100):
  *   With VA:    VA 40 · Credential Exposure 30 · Threat Exposure 12 · Reputation 10 · Malware 8
  *   Without VA: Leak 45 · Exposure 25 · Reputation 20 · Malware 10  (VA weight redistributed)
  *
  * VA sub-score = 70% weighted-density + 30% severity² emphasis (critical findings dominate).
- * Unchecked leaks drive the credential component — reviewing (checking) them lowers the score,
- * which incentivises triage. Colour bands: 0–30 green, 31–70 yellow, 71–100 red.
+ * Unchecked leaks drive the credential component - reviewing (checking) them lowers the score,
+ * which incentivises triage. Colour bands: 0-30 green, 31-70 yellow, 71-100 red.
  *
  * NOTE: exact numeric parity with reNgine's reference vectors is finalised in threat-intel task 002
  * acceptance; this engine is deterministic, bounded [0,100], and monotonic per component.

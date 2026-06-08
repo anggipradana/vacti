@@ -6,7 +6,7 @@ import { decryptSecret } from '@vacti/auth';
  * Postgres-backed API-key rotation/quota/backoff for rate-limited OSINT providers (e.g. VirusTotal).
  * Multiple keys per provider are stored under names `provider`, `provider-2`, `provider-3`, … The
  * rotator picks the least-recently-used eligible key (not in backoff, under the daily cap), bumps
- * its usage, and returns the decrypted secret. No Redis — all state lives on api_keys columns.
+ * its usage, and returns the decrypted secret. No Redis - all state lives on api_keys columns.
  */
 export interface RotatingKey {
   id: string;

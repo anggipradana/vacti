@@ -37,7 +37,7 @@ Three services (app, worker, Postgres). No Redis, no Celery, no Ruby. End-to-end
 - **Recon / VA**: one straight pipeline, `subfinder (optional) -> httpx -> naabu -> nuclei`, plus
   conditional **nuclei wordfence** templates for hosts detected as WordPress. All-Go tools.
   Per-finding CVSS / CVE / references, AI enrichment, and a triage status workflow.
-- **Passive recon & exposure (Attack Surface)**: key-less OSINT discovery — **VirusTotal** (passive
+- **Passive recon & exposure (Attack Surface)**: key-less OSINT discovery - **VirusTotal** (passive
   DNS: subdomains, undetected URLs, IP resolutions / origin-behind-WAF) + **Wayback Machine** (archived
   URLs). Discovered URLs are categorised by file type (backups / configs / keys / db-dumps / …) and
   scanned by a 23-rule **exposure detector** (AWS / GCP / GitHub / Slack / Stripe keys, JWTs, private

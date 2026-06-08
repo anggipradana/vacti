@@ -24,7 +24,7 @@ const STATUS_OPTIONS = Object.entries(NEWS_STATUS_LABEL);
 
 /**
  * Sector security-news list with text search, status filter, and checkbox multi-select for bulk
- * status changes — plus per-row instant status change (AutoSubmitSelect).
+ * status changes - plus per-row instant status change (AutoSubmitSelect).
  */
 export function SectorNewsList({ items, canTriage }: { items: SectorNewsItem[]; canTriage: boolean }) {
   const [query, setQuery] = React.useState('');
@@ -101,7 +101,7 @@ export function SectorNewsList({ items, canTriage }: { items: SectorNewsItem[]; 
         </span>
       </div>
 
-      {/* Bulk action bar — appears when rows are selected. */}
+      {/* Bulk action bar - appears when rows are selected. */}
       {canTriage && selected.size > 0 ? (
         <form
           action={bulkSetNewsStatusByIdsAction}

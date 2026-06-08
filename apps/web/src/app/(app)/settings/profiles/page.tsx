@@ -43,7 +43,7 @@ export default async function ProfilesPage() {
                   Each tool runs in order and has its own options below. Untick a tool to skip its stage.
                 </p>
 
-                {/* subfinder — subdomain discovery */}
+                {/* subfinder - subdomain discovery */}
                 <fieldset className="space-y-2 rounded-md border border-border p-3">
                   <legend className="flex items-center gap-2 px-1 text-sm font-medium">
                     <input type="checkbox" name="tools" value="subfinder" defaultChecked /> subfinder
@@ -53,7 +53,7 @@ export default async function ProfilesPage() {
                   </p>
                 </fieldset>
 
-                {/* httpx — HTTP probe */}
+                {/* httpx - HTTP probe */}
                 <fieldset className="space-y-2 rounded-md border border-border p-3">
                   <legend className="flex items-center gap-2 px-1 text-sm font-medium">
                     <input type="checkbox" name="tools" value="httpx" defaultChecked /> httpx
@@ -74,7 +74,7 @@ export default async function ProfilesPage() {
                   </div>
                 </fieldset>
 
-                {/* naabu — port scan */}
+                {/* naabu - port scan */}
                 <fieldset className="space-y-2 rounded-md border border-border p-3">
                   <legend className="flex items-center gap-2 px-1 text-sm font-medium">
                     <input type="checkbox" name="tools" value="naabu" defaultChecked /> naabu
@@ -85,7 +85,7 @@ export default async function ProfilesPage() {
                   </div>
                 </fieldset>
 
-                {/* nuclei — vulnerability templates */}
+                {/* nuclei - vulnerability templates */}
                 <fieldset className="space-y-2 rounded-md border border-border p-3">
                   <legend className="flex items-center gap-2 px-1 text-sm font-medium">
                     <input type="checkbox" name="tools" value="nuclei" defaultChecked /> nuclei
@@ -139,7 +139,7 @@ export default async function ProfilesPage() {
                   </div>
                 </fieldset>
 
-                {/* wordfence — WordPress templates (auto-runs on detected WP hosts) */}
+                {/* wordfence - WordPress templates (auto-runs on detected WP hosts) */}
                 <fieldset className="space-y-2 rounded-md border border-border p-3">
                   <legend className="flex items-center gap-2 px-1 text-sm font-medium">
                     <input type="checkbox" name="tools" value="wordfence" /> wordfence
@@ -149,7 +149,7 @@ export default async function ProfilesPage() {
                   </p>
                 </fieldset>
 
-                {/* Scope — applies across tools */}
+                {/* Scope - applies across tools */}
                 <fieldset className="space-y-2 rounded-md border border-border p-3">
                   <legend className="px-1 text-sm font-medium">Scope</legend>
                   <div className="space-y-1.5">
@@ -206,7 +206,7 @@ export default async function ProfilesPage() {
                       </div>
                     </div>
                     <div className="mt-1 flex flex-wrap gap-1.5 text-xs text-fg-muted">
-                      <span>tools: {on.join(', ') || '—'}</span>
+                      <span>tools: {on.join(', ') || '-'}</span>
                       <span>· ports: {p.ports}</span>
                       <span>· sev: {p.severities.join('/')}</span>
                       {ua ? <span>· UA set</span> : null}

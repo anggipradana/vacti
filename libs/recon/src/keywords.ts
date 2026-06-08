@@ -1,4 +1,4 @@
-/** Default "interesting" keywords — endpoints whose host/url/title match are flagged for triage. */
+/** Default "interesting" keywords - endpoints whose host/url/title match are flagged for triage. */
 export const INTERESTING_KEYWORDS = [
   'admin',
   'login',

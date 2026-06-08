@@ -65,7 +65,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
     : [[], []];
   const scanIds = scanRows.map((s) => s.id);
   // Endpoints are only ever counted on this page; tally server-side instead of hauling every row.
-  // Vulnerabilities feed several top-N reductions, so we still pull rows — but only the columns those
+  // Vulnerabilities feed several top-N reductions, so we still pull rows - but only the columns those
   // reductions touch (name/severity/status/scanId/host/url/matchedAt), never the request/response/
   // description blobs that bloat the payload.
   const [endpointCountRows, vulnRows] = scanIds.length
@@ -153,7 +153,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
     });
   }
   // Gate the discovery card on "project has ever discovered a URL" (matches prior behavior), so a
-  // project with only stale (>14d) discoveries still shows its — necessarily flat — chart.
+  // project with only stale (>14d) discoveries still shows its - necessarily flat - chart.
   const discoveryEver = Number(discoveryEverCount[0]?.n ?? 0);
 
   const leakUnchecked = leakRows.filter((l) => !l.checked).length;
@@ -329,7 +329,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
         </Link>
       </div>
 
-      {/* Needs review — untriaged items across every module, all in one place */}
+      {/* Needs review - untriaged items across every module, all in one place */}
       <Card className="mt-4">
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="flex items-center gap-2">
@@ -339,7 +339,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
         </CardHeader>
         <CardContent>
           {reviewTotal === 0 ? (
-            <p className="py-1 text-sm text-fg-muted">Nothing pending — all findings, leaks and news are triaged. 🎉</p>
+            <p className="py-1 text-sm text-fg-muted">Nothing pending - all findings, leaks and news are triaged. 🎉</p>
           ) : (
             <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
               {[
@@ -387,7 +387,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
           hue="160 70% 42%"
           icon={<FileText />}
           title="Reports"
-          description="Bilingual VA & TI PDF reports — generate from any scan."
+          description="Bilingual VA & TI PDF reports - generate from any scan."
           href="/scans"
           status="live"
         />
@@ -432,7 +432,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
         </Card>
       ) : null}
 
-      {/* VA review status — triage breakdown of this project's findings. */}
+      {/* VA review status - triage breakdown of this project's findings. */}
       {vulnRows.length > 0 ? (
         <Card className="mt-6">
           <CardHeader>
@@ -461,7 +461,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
         </Card>
       ) : null}
 
-      {/* CTI overview — unified risk, leaked credentials & ransomware highlight for this project. */}
+      {/* CTI overview - unified risk, leaked credentials & ransomware highlight for this project. */}
       <div className="mb-3 mt-8 flex items-center justify-between">
         <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-fg-subtle">
           Threat intelligence
@@ -519,7 +519,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
           ) : null}
         </div>
       </div>
-      {/* Ransomware highlight does a (cached) network fetch — stream it so it never blocks the dashboard. */}
+      {/* Ransomware highlight does a (cached) network fetch - stream it so it never blocks the dashboard. */}
       <div className="mt-4">
         <Suspense fallback={<RansomwareHighlightFallback />}>
           <RansomwareHighlight />

@@ -22,7 +22,7 @@ export interface RunResult {
 
 /**
  * Run an external tool, streaming stdout line-by-line. The child is its own process group so a
- * timeout or AbortSignal kills the whole tree (tools that spawn helpers). Pure I/O — no parsing.
+ * timeout or AbortSignal kills the whole tree (tools that spawn helpers). Pure I/O - no parsing.
  */
 export function runTool(opts: RunToolOptions): Promise<RunResult> {
   return new Promise((resolve, reject) => {

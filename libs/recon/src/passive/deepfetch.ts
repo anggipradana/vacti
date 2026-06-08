@@ -14,7 +14,7 @@ const UA = 'vacti-deep-fetch/1.0';
 /**
  * Fetch a discovered URL's body for exposure analysis. MUST pass the SSRF guard first (blocks
  * localhost/metadata/private+reserved IPs). Body is size-capped; oversized responses are skipped by
- * Content-Length. Never throws — returns a structured result the caller records.
+ * Content-Length. Never throws - returns a structured result the caller records.
  */
 export async function deepFetch(
   url: string,

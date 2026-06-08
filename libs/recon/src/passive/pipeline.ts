@@ -22,7 +22,7 @@ export interface PassiveScanInput {
   projectId: string;
   targetId: string;
   domain: string;
-  /** VirusTotal API key (optional single key — Wayback works without it). */
+  /** VirusTotal API key (optional single key - Wayback works without it). */
   vtApiKey?: string | null;
   /** Rotating VT key provider (multi-key quota/backoff via Postgres). Takes precedence over vtApiKey. */
   vtKeyProvider?: {
@@ -31,7 +31,7 @@ export interface PassiveScanInput {
   };
   /** Max discovered subdomains to additionally query in VirusTotal (per-sub enrichment). */
   maxVtSubdomains?: number;
-  /** URLScan.io API key (optional — search works key-less but rate-limited). */
+  /** URLScan.io API key (optional - search works key-less but rate-limited). */
   urlscanApiKey?: string | null;
   /** Cap archived URLs pulled from Wayback (0 = unlimited). */
   waybackLimit?: number;
@@ -63,7 +63,7 @@ const hostOf = (u: string): string | null => {
  * Passive recon: pull VirusTotal (passive DNS) + Wayback (archived URLs), consolidate & store
  * discovered URLs (categorised), passive-DNS IP resolutions, and exposure findings (regex over URL
  * strings). Writes scan_activity, merges scans.counts, and returns the discovered host list (so
- * `full` mode can feed it into the active pipeline). Does NOT set terminal scan status — the caller
+ * `full` mode can feed it into the active pipeline). Does NOT set terminal scan status - the caller
  * (worker) owns that. Cancellable via signal.
  */
 export async function runPassiveScan(
@@ -107,7 +107,7 @@ export async function runPassiveScan(
         await vtProvider.report(k.id, r.status);
         continue; // try another key
       }
-      return r.data; // other status (e.g. 204) — nothing to retry
+      return r.data; // other status (e.g. 204) - nothing to retry
     }
     return null;
   };
@@ -134,7 +134,7 @@ export async function runPassiveScan(
       vtCalls += 1;
       harvestVt(apex, target);
     }
-    // Per-subdomain enrichment (capped) — each sub's VT report adds URLs/IPs (origin-behind-WAF).
+    // Per-subdomain enrichment (capped) - each sub's VT report adds URLs/IPs (origin-behind-WAF).
     const maxVtSubs = input.maxVtSubdomains ?? 25;
     const vtSubs = [...hostSet].filter((h) => h !== target).slice(0, maxVtSubs);
     for (const sub of vtSubs) {

@@ -101,7 +101,7 @@ export default async function ReportSettingsPage({ searchParams }: { searchParam
               <Input
                 id={`${kind}-classif`}
                 name="classification"
-                defaultValue={s?.classification ?? 'CONFIDENTIAL — FOR INTERNAL USE ONLY'}
+                defaultValue={s?.classification ?? 'CONFIDENTIAL - FOR INTERNAL USE ONLY'}
               />
             </div>
             <div className="space-y-1">

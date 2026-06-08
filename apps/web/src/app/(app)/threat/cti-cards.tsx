@@ -54,7 +54,7 @@ export async function CtiCards({ projectId }: { projectId: string }) {
   // Trim the victims payload sent to the client: RansomwareFeed only shows 8 after filtering, and the
   // country/sector dropdown counts come from separate `countries`/`sectors` props (not this array), so
   // capping here doesn't change the visible UI. victims is already sorted by `discovered` desc, so we
-  // keep the newest 100 — but retain *all* default-country (ID) victims so the default ID filter view
+  // keep the newest 100 - but retain *all* default-country (ID) victims so the default ID filter view
   // is never starved by the cap.
   const VICTIM_CAP = 100;
   const defaultCountry = ransomware.countries.some((c) => c.code === 'ID') ? 'ID' : null;

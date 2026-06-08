@@ -21,7 +21,7 @@ export async function renderPdf(html: string, opts: RenderOptions = {}): Promise
     await page.setContent(html, { waitUntil: 'load' });
     // preferCSSPageSize makes Chromium honour the stylesheet's `@page` size + margins (including
     // `@page :first { margin: 0 }`). Without it, Chromium imposes its own default margins, so the
-    // full-height (297mm) cover overflows onto a blank second page — the "page 1 pagination" bug.
+    // full-height (297mm) cover overflows onto a blank second page - the "page 1 pagination" bug.
     pdf = await page.pdf({ printBackground: true, preferCSSPageSize: true });
   } finally {
     await browser.close();
@@ -54,7 +54,7 @@ async function stampPageNumbers(pdf: Buffer, footer?: string): Promise<Buffer> {
     }
     return Buffer.from(await doc.save());
   } catch {
-    // Stamping must never break report generation — fall back to the unstamped PDF.
+    // Stamping must never break report generation - fall back to the unstamped PDF.
     return pdf;
   }
 }

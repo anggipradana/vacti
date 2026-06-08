@@ -5,7 +5,7 @@ import { useFormStatus } from 'react-dom';
 import { Select } from './select';
 
 /**
- * A status <Select> that submits its enclosing <form> immediately on change — no separate "Set"
+ * A status <Select> that submits its enclosing <form> immediately on change - no separate "Set"
  * button to forget (the #1 "changing status doesn't work" confusion). Use inside a
  * `<form action={serverAction}>`; shows a subtle busy state while the action runs.
  */

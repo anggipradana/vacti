@@ -1,4 +1,4 @@
-/** Pure scan-comparison helpers (no DB) — compare two scans' result key-sets. */
+/** Pure scan-comparison helpers (no DB) - compare two scans' result key-sets. */
 
 export interface ScanResultKeys {
   subdomains: string[];

@@ -1,11 +1,11 @@
-# vacti — Configurable Scan Tool Options (2026-06-05)
+# vacti - Configurable Scan Tool Options (2026-06-05)
 
 > Make the VA scan deeply configurable from the GUI: per-tool options (nuclei User-Agent, tags,
 > templates, rate; subfinder sources/extra; httpx/naabu options) and scan-scoping (skip a stage,
-> exclude subdomains/paths) — exposed on an editable **Scan Profile**. Governed by
+> exclude subdomains/paths) - exposed on an editable **Scan Profile**. Governed by
 > `repo-governance/development/`. Lands behind a green gate. Maps Feature-Parity 4.5 + Gap-Analysis §C.
 
-## A. Data model — `scan_profiles.config` (jsonb)
+## A. Data model - `scan_profiles.config` (jsonb)
 
 Extend the existing `scan_profiles` row (tools/ports/severities/rate/timeout) with a single nullable
 `config` jsonb holding the advanced knobs (one column → no migration churn as options grow):
@@ -35,11 +35,11 @@ dropped + logged) so the UI can't inject arbitrary shell. Destructive nuclei tag
   `concurrency`, `retries`, `excludeTags`, allow-listed `extraArgs`.
 - `httpxArgs(headers, opts)` → add `userAgent`, `rateLimit`, `threads`, allow-listed `extraArgs`.
 - `subfinderArgs` / `naabuArgs` → allow-listed `extraArgs` (subfinder provider-config/API keys are a
-  later, separate item — keys belong in the encrypted vault, not the profile json).
+  later, separate item - keys belong in the encrypted vault, not the profile json).
 - `pipeline.ts` → drop `config.excludeSubdomains` from the discovered/predefined host list before httpx;
   thread `config` into each stage. Skipping a stage already works via `tools.<name> = false`.
 
-## C. UI — editable Scan Profiles
+## C. UI - editable Scan Profiles
 
 - New **/settings/profiles** (or `/profiles`) page: list profiles, create/edit with: name, tool toggles,
   ports, severities, rate/concurrency/retries, User-Agent, nuclei tags/templates/exclude-tags, exclude
@@ -54,5 +54,5 @@ dropped + logged) so the UI can't inject arbitrary shell. Destructive nuclei tag
 
 ## E. Out of scope (now)
 
-subfinder provider API keys (needs a vault-backed provider-config file) — tracked separately; full
+subfinder provider API keys (needs a vault-backed provider-config file) - tracked separately; full
 nuclei flag matrix (only the curated set + allow-listed extras).

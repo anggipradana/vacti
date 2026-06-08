@@ -24,7 +24,7 @@ const STATUS_OPTIONS = Object.entries(NEWS_STATUS_LABEL);
 
 /**
  * Brand monitoring headline list with a text search, client status filter, and checkbox multi-select
- * for bulk status changes (canTriage only) — plus per-row instant status change (AutoSubmitSelect).
+ * for bulk status changes (canTriage only) - plus per-row instant status change (AutoSubmitSelect).
  * Header controls (server-side filter, Search now, bulk-by-filter, AI triage) live in the page.
  */
 export function BrandNewsList({ items, canTriage }: { items: BrandNewsItem[]; canTriage: boolean }) {
@@ -99,7 +99,7 @@ export function BrandNewsList({ items, canTriage }: { items: BrandNewsItem[]; ca
         </span>
       </div>
 
-      {/* Bulk action bar — appears when rows are selected. */}
+      {/* Bulk action bar - appears when rows are selected. */}
       {canTriage && selected.size > 0 ? (
         <form
           action={bulkSetBrandNewsStatusByIdsAction}

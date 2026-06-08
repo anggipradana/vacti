@@ -1,4 +1,4 @@
-# vacti — UI Polish & Comprehensive QA Plan (2026-06-05)
+# vacti - UI Polish & Comprehensive QA Plan (2026-06-05)
 
 > Goal: bring the UI to a consistent, accessible, pro-grade finish, then prove every function works via
 > a comprehensive Playwright e2e suite (runnable headless for CI and headed/UI for human review), fixing
@@ -12,27 +12,27 @@
   `WAYLAND_DISPLAY` if applicable) so the runner opens in a desktop window. No full desktop install required.
 - Install Playwright's headed system libs (`npx playwright install-deps chromium`) so headed + UI mode work.
 - `npm run e2e:ui` → `playwright test --ui` (headed) for human QA.
-- CI stays **headless** (no display) — the same specs run both ways.
+- CI stays **headless** (no display) - the same specs run both ways.
 
-## B. UI polish pass (real defects first — not subjective tweaks)
+## B. UI polish pass (real defects first - not subjective tweaks)
 
 Source: full read of every page/component (survey 2026-06-05). NOTE: web font is **Plus Jakarta Sans**
-(approved); the "use Space Grotesk" survey note is a false positive — Space Grotesk is the _report_ font.
+(approved); the "use Space Grotesk" survey note is a false positive - Space Grotesk is the _report_ font.
 
-1. **Enum strings shown raw** — `status-pill`, `timeline` render `in_progress` → "In_progress". Add a
+1. **Enum strings shown raw** - `status-pill`, `timeline` render `in_progress` → "In_progress". Add a
    shared `humanizeStatus()`/label map so scan + finding statuses read properly everywhere.
-2. **Broken class** — `settings/reports` signatory row uses `className="muted text-fg-subtle"` (`muted`
+2. **Broken class** - `settings/reports` signatory row uses `className="muted text-fg-subtle"` (`muted`
    is not a utility). Remove.
-3. **Form submit feedback** — key forms (login, create-token, new-scan, schedules, add-target) submit via
+3. **Form submit feedback** - key forms (login, create-token, new-scan, schedules, add-target) submit via
    server actions with no pending state → add a shared `SubmitButton` using `useFormStatus`.
-4. **Copy-to-clipboard** — the shown-once API token has a decorative copy icon with no behaviour → make it
+4. **Copy-to-clipboard** - the shown-once API token has a decorative copy icon with no behaviour → make it
    functional with a toast.
-5. **Consistent empty-states** — replace ad-hoc `<p>No …</p>` fallbacks (users, target notes) with the
+5. **Consistent empty-states** - replace ad-hoc `<p>No …</p>` fallbacks (users, target notes) with the
    `EmptyState` component.
-6. **Accessibility** — icon-only buttons (delete "✕", theme toggle, copy) get `aria-label`/`title`.
-7. **Status colour** — `queued` shares grey with `cancelled`; give `queued` its own tone.
-8. **Responsive** — tighten cramped form grids (`/schedules`, `/targets`, `/threat`) at the `md` breakpoint.
-9. **Destructive confirms** — delete actions (webhook, schedule, token, note, signatory) get a confirm step.
+6. **Accessibility** - icon-only buttons (delete "✕", theme toggle, copy) get `aria-label`/`title`.
+7. **Status colour** - `queued` shares grey with `cancelled`; give `queued` its own tone.
+8. **Responsive** - tighten cramped form grids (`/schedules`, `/targets`, `/threat`) at the `md` breakpoint.
+9. **Destructive confirms** - delete actions (webhook, schedule, token, note, signatory) get a confirm step.
 
 ## C. QA coverage matrix (every function → an e2e check)
 
@@ -51,7 +51,7 @@ Specs under `apps/web/e2e/`, split by area; each asserts the happy path + at lea
 | Search       | universal search returns categorised hits; empty query                                     |
 | Settings     | users/roles (SysAdmin), audit log viewer shows entries                                     |
 | Dashboard    | overview tiles, charts, onboarding checklist, recent scans                                 |
-| API          | (covered by integration suite) — bearer auth, RBAC 403s, pagination, search, cancel, diff  |
+| API          | (covered by integration suite) - bearer auth, RBAC 403s, pagination, search, cancel, diff  |
 
 ## D. Execution loop (don't stop until green)
 

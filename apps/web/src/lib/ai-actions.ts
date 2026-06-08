@@ -74,7 +74,7 @@ export async function enrichVulnAction(formData: FormData) {
     baseUrl: settings?.baseUrl ?? undefined,
   });
   if (!provider) {
-    // No AI key configured — degrade gracefully (no-op).
+    // No AI key configured - degrade gracefully (no-op).
     if (scanId) revalidatePath(`/scans/${scanId}`);
     return;
   }
@@ -119,7 +119,7 @@ export async function saveAiSettingsAction(formData: FormData) {
   revalidatePath('/settings/integrations');
 }
 
-/** G7 — generate the VA executive summary (EN+ID) from the project's latest scan, store on report settings. */
+/** G7 - generate the VA executive summary (EN+ID) from the project's latest scan, store on report settings. */
 export async function generateExecSummaryAction(formData: FormData) {
   await requirePermission(Permission.ModifyReport);
   const projectId = String(formData.get('projectId') ?? '');
@@ -166,7 +166,7 @@ export async function generateExecSummaryAction(formData: FormData) {
   revalidatePath('/settings/reports');
 }
 
-/** G8 — generate the threat-intelligence narrative for a project, store on the TI status row. */
+/** G8 - generate the threat-intelligence narrative for a project, store on the TI status row. */
 export async function generateThreatNarrativeAction(formData: FormData) {
   await requirePermission(Permission.ModifyScanResults);
   const projectId = String(formData.get('projectId') ?? '');

@@ -27,7 +27,7 @@ const INTERESTING_KEYWORDS = [
   'graphql',
 ];
 
-/** Default global scan profiles (projectId = null) — selectable presets in the UI/API. */
+/** Default global scan profiles (projectId = null) - selectable presets in the UI/API. */
 const DEFAULT_PROFILES = [
   {
     name: 'Quick',
@@ -72,7 +72,7 @@ export async function seed(connectionString: string): Promise<void> {
         `[seed] inserted ${toInsert.length} default scan profile(s): ${toInsert.map((p) => p.name).join(', ')}`,
       );
     }
-    // Backfill the interesting-keywords config onto presets that predate it — only when a preset
+    // Backfill the interesting-keywords config onto presets that predate it - only when a preset
     // has no config yet, so an operator's customisations are never clobbered.
     let backfilled = 0;
     for (const def of DEFAULT_PROFILES) {
@@ -83,7 +83,7 @@ export async function seed(connectionString: string): Promise<void> {
       }
     }
     if (backfilled) console.log(`[seed] backfilled config on ${backfilled} existing preset(s)`);
-    if (!toInsert.length && !backfilled) console.log('[seed] default scan profiles already present — nothing to do');
+    if (!toInsert.length && !backfilled) console.log('[seed] default scan profiles already present - nothing to do');
   } finally {
     await close();
   }

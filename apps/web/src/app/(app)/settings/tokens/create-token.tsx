@@ -23,7 +23,7 @@ export default function CreateToken() {
       toast.success('Token copied to clipboard');
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      toast.error('Copy failed — select and copy manually');
+      toast.error('Copy failed - select and copy manually');
     }
   };
 
@@ -41,7 +41,7 @@ export default function CreateToken() {
         </form>
         {state?.token ? (
           <div className="mt-4 rounded-md border border-accent/30 bg-accent/10 p-3">
-            <p className="mb-1 text-xs font-medium text-accent">Copy now — shown once</p>
+            <p className="mb-1 text-xs font-medium text-accent">Copy now - shown once</p>
             <div className="flex items-center gap-2">
               <code data-testid="new-token" className="flex-1 break-all font-mono text-xs">
                 {state.token}

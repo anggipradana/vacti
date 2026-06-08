@@ -5,7 +5,7 @@ import { targets, scans } from './recon-schema';
 const id = () => uuid('id').primaryKey().defaultRandom();
 const createdAt = () => timestamp('created_at', { withTimezone: true }).notNull().defaultNow();
 
-/** Editable file-category buckets (backups/configs/keys/…) — seeded from DEFAULT_CATEGORIES. */
+/** Editable file-category buckets (backups/configs/keys/…) - seeded from DEFAULT_CATEGORIES. */
 export const extensionCategories = pgTable('extension_categories', {
   id: serial('id').primaryKey(),
   slug: text('slug').notNull().unique(),
@@ -31,7 +31,7 @@ export const discoveredUrls = pgTable(
       .references(() => projects.id, { onDelete: 'cascade' }),
     targetId: uuid('target_id').references(() => targets.id, { onDelete: 'cascade' }),
     scanId: uuid('scan_id').references(() => scans.id, { onDelete: 'set null' }),
-    // The scan that FIRST discovered this URL (set on insert, never updated) — powers scan-diff.
+    // The scan that FIRST discovered this URL (set on insert, never updated) - powers scan-diff.
     firstScanId: uuid('first_scan_id').references(() => scans.id, { onDelete: 'set null' }),
     host: text('host'),
     urlText: text('url_text').notNull(),
@@ -54,7 +54,7 @@ export const discoveredUrls = pgTable(
   }),
 );
 
-/** Exposure finding — a secret/credential pattern matched in a discovered URL or fetched body. */
+/** Exposure finding - a secret/credential pattern matched in a discovered URL or fetched body. */
 export const exposureFindings = pgTable(
   'exposure_findings',
   {

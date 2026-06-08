@@ -12,8 +12,8 @@ vacti is a lightweight rewrite of ReNgGinaNg focused on VA + Threat Intelligence
 
 - **pg-boss over Celery/Redis:** one datastore, fewer moving parts, jobs survive restarts.
 - **All-Go recon tools** (subfinder/httpx/naabu/nuclei) + **nuclei wordfence** for WordPress instead
-  of Ruby WPScan — single engine, no Ruby runtime.
-- **Playwright for PDF** (same engine as e2e) — freedom to redesign reports; no WeasyPrint/Python.
+  of Ruby WPScan - single engine, no Ruby runtime.
+- **Playwright for PDF** (same engine as e2e) - freedom to redesign reports; no WeasyPrint/Python.
 - **Unified risk score** is a pure function reused by dashboard, TI page, and report → identical (±0).
 
 See [`docs/planning/`](../planning/) for the full decision record and feature parity checklist.

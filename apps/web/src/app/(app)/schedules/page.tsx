@@ -33,7 +33,7 @@ export default async function SchedulesPage({ searchParams }: { searchParams: Pr
   const projectRows = await db.select().from(projects).orderBy(desc(projects.createdAt));
   const projectId = await getActiveProjectId((await searchParams).project, projectRows);
   // Schedules have no projectId of their own, so scope them via the active project's targets with an
-  // inner join — only this project's schedules are fetched (no load-all + JS filter), and the join also
+  // inner join - only this project's schedules are fetched (no load-all + JS filter), and the join also
   // gives us each schedule's target domain for display.
   const [targetRows, profileRows, scheduleJoinRows] = await Promise.all([
     projectId

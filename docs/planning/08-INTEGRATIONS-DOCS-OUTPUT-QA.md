@@ -1,4 +1,4 @@
-# vacti — Integrations, Docs & Output-QA Plan (2026-06-05)
+# vacti - Integrations, Docs & Output-QA Plan (2026-06-05)
 
 > Five tracks requested: (1) strengthen Google Chat notifications, (2) complete the public API docs,
 > (3) a proper GitHub README, (4) a real end-to-end scan → report → **PDF pagination QA** against an
@@ -8,7 +8,7 @@
 
 ## A. Google Chat integration
 
-- Current: `format.ts` sends `{ text }` only — functional but plain.
+- Current: `format.ts` sends `{ text }` only - functional but plain.
 - Improve to a **cardsV2** message (header with severity colour dot, key/value fields, a "View" link),
   on par with the Discord rich embed. Keep a text fallback. Unit-test the formatter shape.
 
@@ -29,9 +29,9 @@
   (prereqs, env, `db:migrate`/`db:seed`, run app+worker), running a scan, **API usage** (token + curl),
   reports, testing (3-tier + e2e UI), deploy (Cloudflare Tunnel), project layout, security note, license.
 
-## D. Output QA — real scan → report → PDF pagination
+## D. Output QA - real scan → report → PDF pagination
 
-Target: **testfire.net** (IBM/HCL AltoroMutual — a deliberately vulnerable, publicly authorized test
+Target: **testfire.net** (IBM/HCL AltoroMutual - a deliberately vulnerable, publicly authorized test
 site). Steps:
 
 1. Seed admin/project/target; run the **real worker** to scan testfire.net end-to-end (subfinder →

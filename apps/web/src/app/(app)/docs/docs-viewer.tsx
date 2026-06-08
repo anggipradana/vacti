@@ -29,14 +29,24 @@ const components = {
   p: (p: React.HTMLAttributes<HTMLParagraphElement>) => (
     <p {...p} className="my-2.5 text-sm leading-relaxed text-fg-muted" />
   ),
-  a: (p: React.AnchorHTMLAttributes<HTMLAnchorElement>) => (
-    <a
-      {...p}
-      target={p.href?.startsWith('http') ? '_blank' : undefined}
-      rel="noopener noreferrer"
-      className="text-accent hover:underline"
-    />
-  ),
+  a: ({ href, children, ...p }: React.AnchorHTMLAttributes<HTMLAnchorElement>) => {
+    // Only external (http) links and in-page heading anchors (#…) navigate. Repo-relative links
+    // (e.g. ../planning/foo.md) are not web routes, so render them as plain text to avoid 404s.
+    if (href && (href.startsWith('http') || href.startsWith('#'))) {
+      return (
+        <a
+          {...p}
+          href={href}
+          target={href.startsWith('http') ? '_blank' : undefined}
+          rel="noopener noreferrer"
+          className="text-accent hover:underline"
+        >
+          {children}
+        </a>
+      );
+    }
+    return <span className="text-fg">{children}</span>;
+  },
   ul: (p: React.HTMLAttributes<HTMLUListElement>) => (
     <ul {...p} className="my-2.5 ml-5 list-disc space-y-1 text-sm text-fg-muted" />
   ),

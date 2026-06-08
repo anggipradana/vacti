@@ -1,5 +1,5 @@
 /**
- * Wayback Machine (Internet Archive) CDX client — passive archived-URL discovery for a domain.
+ * Wayback Machine (Internet Archive) CDX client - passive archived-URL discovery for a domain.
  * One HTTP call lists every archived URL under the domain (collapsed by urlkey). Passive only:
  * this lists the archive index, it does not crawl the live target.
  */
@@ -19,7 +19,7 @@ export interface WaybackOptions {
 /**
  * Fetch archived URLs for `domain` AND all of its subdomains from the Wayback CDX API.
  * `matchType=domain` makes the index return `domain` + `*.domain` (e.g. api.domain, www.domain),
- * not just the apex host's paths — so passive discovery covers the whole subdomain surface.
+ * not just the apex host's paths - so passive discovery covers the whole subdomain surface.
  */
 export async function fetchWaybackUrls(domain: string, opts: WaybackOptions = {}): Promise<string[]> {
   const { fetchImpl = fetch, timeoutMs = 120_000, retries = 3, limit = 0 } = opts;

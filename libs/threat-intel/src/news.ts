@@ -126,7 +126,7 @@ export const FEEDS: Feed[] = [
   { url: 'https://krebsonsecurity.com/feed/', source: 'KrebsOnSecurity', curated: true },
   { url: 'https://www.cisa.gov/cybersecurity-advisories/all.xml', source: 'CISA', curated: true },
   { url: 'https://www.securityweek.com/feed/', source: 'SecurityWeek', curated: true },
-  // General Indonesian coverage — sector keyword AND a security term must both match (cuts noise).
+  // General Indonesian coverage - sector keyword AND a security term must both match (cuts noise).
   {
     url: 'https://news.google.com/rss/search?q=keamanan+siber+OR+peretasan+OR+bocor+data&hl=id&gl=ID&ceid=ID:id',
     source: 'Google News (ID)',
@@ -137,7 +137,7 @@ export const FEEDS: Feed[] = [
 
 /**
  * Security/cyber terms (EN + ID). Used to keep only genuinely security-related items from general
- * (non-curated) feeds — without this, "bank opens new branch" leaks in via the sector keyword alone.
+ * (non-curated) feeds - without this, "bank opens new branch" leaks in via the sector keyword alone.
  */
 const SECURITY_TERMS = [
   'breach',
@@ -230,7 +230,7 @@ function tag(block: string, name: string): string {
   return m ? decode(m[1]!) : '';
 }
 
-/** Parse an RSS 2.0 (`<item>`) or Atom (`<entry>`) feed into items (pure — no network). */
+/** Parse an RSS 2.0 (`<item>`) or Atom (`<entry>`) feed into items (pure - no network). */
 export function parseFeed(xml: string, source: string): NewsItem[] {
   const isAtom = /<feed[\s>]/i.test(xml) && /<entry[\s>]/i.test(xml);
   const blocks = xml.match(isAtom ? /<entry[\s\S]*?<\/entry>/gi : /<item[\s\S]*?<\/item>/gi) ?? [];
@@ -271,7 +271,7 @@ export interface FetchNewsOptions {
 }
 
 /**
- * Aggregate the feeds (in PARALLEL — sequential fetching made the sector switch hang for seconds),
+ * Aggregate the feeds (in PARALLEL - sequential fetching made the sector switch hang for seconds),
  * filter by sector + security relevance, dedupe by link, newest first. Degrades per-feed on error.
  */
 export async function fetchSectorNews(sector: string, opts: FetchNewsOptions = {}): Promise<NewsItem[]> {
@@ -293,7 +293,7 @@ export async function fetchSectorNews(sector: string, opts: FetchNewsOptions = {
           (i) => matchesSector(i, sector) && (feed.curated || isSecurityRelated(i)),
         );
       } catch {
-        return []; // Skip an unreachable/slow feed — never throw.
+        return []; // Skip an unreachable/slow feed - never throw.
       }
     }),
   );

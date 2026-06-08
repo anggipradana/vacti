@@ -1,4 +1,4 @@
-# Getting Started — Using vacti
+# Getting Started - Using vacti
 
 A practical walkthrough of the main features. vacti is a Vulnerability Assessment + Cyber Threat
 Intelligence platform. For install/deploy see the [README](../../README.md) and
@@ -25,7 +25,7 @@ headers). Use **Edit** to change the domain/headers later, or delete it.
 ## 4. Scans
 
 From **Scans** (or a target) start a scan. Profiles (**Settings → Scan Profiles**) control the tool
-set (subfinder / httpx / naabu / nuclei + wordfence), ports, severities and per-tool options — create
+set (subfinder / httpx / naabu / nuclei + wordfence), ports, severities and per-tool options - create
 and **Edit** them. A scan detail page streams live progress; you can cancel, re-scan (sub-scans),
 compare against an earlier scan (diff), and delete it.
 
@@ -56,7 +56,7 @@ signatories are configured at **Settings → Reports**.
 
 ## 9. Integrations
 
-**Settings → Integrations**: webhooks (Discord/Slack/Telegram/Google Chat/generic — add, **Edit**,
+**Settings → Integrations**: webhooks (Discord/Slack/Telegram/Google Chat/generic - add, **Edit**,
 test, remove), the AI provider for enrichment (Anthropic / OpenAI / Ollama, with an optional **Base
 URL** for a compatible gateway), and the per-project encrypted **key vault** (OTX, LeakCheck,
 VirusTotal, AI keys).

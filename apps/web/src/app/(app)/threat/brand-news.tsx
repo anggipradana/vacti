@@ -35,7 +35,7 @@ export async function BrandNews({
 }) {
   const db = getDb();
 
-  // Render straight from the DB (fast + reliable — no external fetch on the render path). Brand news
+  // Render straight from the DB (fast + reliable - no external fetch on the render path). Brand news
   // is populated by the worker's ti-refresh job and the on-demand "Search now" button.
   const rows = await db
     .select()

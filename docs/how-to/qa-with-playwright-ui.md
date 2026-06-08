@@ -18,15 +18,15 @@ export DATABASE_URL="postgres://vacti:vacti@localhost:5432/vacti_e2e"
 export ENCRYPTION_KEY="dGVzdC1lbmNyeXB0aW9uLWtleS0zMmJ5dGVzLXRlc3Q="
 export SESSION_SECRET="test-session-secret-0000000000000000"
 
-npm run e2e          # headless (CI parity) — all specs
-npm run e2e:ui       # Playwright UI mode — interactive, watch/replay each step (desktop window)
-npm run e2e:headed   # headed run — see the browser drive each flow
+npm run e2e          # headless (CI parity) - all specs
+npm run e2e:ui       # Playwright UI mode - interactive, watch/replay each step (desktop window)
+npm run e2e:headed   # headed run - see the browser drive each flow
 ```
 
 - **UI mode** (`e2e:ui`) opens the Playwright test explorer on the desktop: pick a spec, watch it run
   step-by-step, inspect the DOM/network/console at each action, and re-run on change. Best for human QA.
 - **Headed** (`e2e:headed`) just shows the browser executing the suite end-to-end.
-- CI always runs **headless** — the same specs, no display.
+- CI always runs **headless** - the same specs, no display.
 
 ## Traces & screenshots (headless review)
 
