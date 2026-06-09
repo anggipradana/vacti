@@ -23,6 +23,8 @@ import { saveProjectKeyAction, clearProjectKeyAction } from '../../../../lib/vau
 const VAULT_KEYS: { name: string; label: string; hint: string }[] = [
   { name: 'otx', label: 'OTX (AlienVault)', hint: 'Threat-intel pulses' },
   { name: 'leakcheck', label: 'LeakCheck', hint: 'Leaked credentials' },
+  { name: 'virustotal', label: 'VirusTotal', hint: 'Passive DNS, subdomains & URLs' },
+  { name: 'urlscan', label: 'URLScan', hint: 'Passive URL / IoC lookups' },
   { name: 'anthropic', label: 'Anthropic (Claude)', hint: 'AI enrichment' },
   { name: 'openai', label: 'OpenAI', hint: 'AI enrichment' },
 ];
