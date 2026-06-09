@@ -31,11 +31,15 @@ test.describe.serial('settings', () => {
     await expect(page.getByLabel('Model')).toHaveValue('gpt-4o-mini');
   });
 
-  test('set and clear a vault API key (masked)', async ({ page }) => {
+  test('set, test and clear a vault API key (masked)', async ({ page }) => {
     await page.goto('/settings/integrations');
     await page.getByTestId('vault-input-otx').fill('secret-otx-key');
     await page.getByTestId('vault-save-otx').click();
     await expect(page.getByText('set', { exact: true }).first()).toBeVisible();
+    // Validity check: probe the (fake) key and surface a verdict badge (invalid / check failed).
+    // Allow for the provider probe's network timeout before the verdict redirects back.
+    await page.getByTestId('vault-test-otx').click();
+    await expect(page.getByTestId('vault-test-result-otx')).toBeVisible({ timeout: 20_000 });
     await page.getByTestId('vault-clear-otx').click();
     await expect(page.getByTestId('vault-input-otx')).toBeVisible();
   });
