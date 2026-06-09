@@ -114,12 +114,19 @@ export async function enrichVulnAction(formData: FormData) {
 export async function saveAiSettingsAction(formData: FormData) {
   await requirePermission(Permission.ModifySystemConfig);
   const projectId = String(formData.get('projectId') ?? '');
+  if (!projectId) return;
   const provider = String(formData.get('provider') ?? 'anthropic');
+  // Empty provider = "use system default": drop the per-project override so it follows ai_defaults.
+  if (provider === '') {
+    await getDb().delete(aiSettings).where(eq(aiSettings.projectId, projectId));
+    revalidatePath('/settings/integrations');
+    return;
+  }
   const model = resolveAiModel(provider, String(formData.get('model') ?? ''));
   const rawBaseUrl = String(formData.get('baseUrl') ?? '').trim();
   // Optional override endpoint; must be a valid http(s) URL when present, else store null (vendor default).
   const baseUrl = rawBaseUrl && /^https?:\/\//i.test(rawBaseUrl) ? rawBaseUrl : null;
-  if (!projectId || !AI_PROVIDERS.includes(provider as AiProviderName)) return;
+  if (!AI_PROVIDERS.includes(provider as AiProviderName)) return;
   await getDb()
     .insert(aiSettings)
     .values({ projectId, provider, model, baseUrl })
