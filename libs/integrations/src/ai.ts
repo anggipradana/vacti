@@ -24,7 +24,7 @@ export const DEFAULT_AI_MODELS: Record<string, string> = {
   anthropic: 'claude-sonnet-4-6',
   openai: 'gpt-4o-mini',
   deepseek: 'deepseek-chat',
-  kimi: 'kimi-for-coding',
+  kimi: 'kimi-latest',
   ollama: 'llama3',
 };
 
@@ -36,7 +36,9 @@ export const DEFAULT_AI_MODELS: Record<string, string> = {
  */
 export function resolveAiModel(provider: string, model?: string | null): string {
   const m = (model ?? '').trim();
-  if (provider === 'kimi') return 'kimi-for-coding';
+  // Kimi (Moonshot) general models: keep an explicit moonshot/kimi model, else default to kimi-latest
+  // (drop a leftover 'kimi-for-coding', which is the coding-agent-only model).
+  if (provider === 'kimi') return /^(kimi-latest|kimi-k2|moonshot-)/i.test(m) ? m : 'kimi-latest';
   if (provider === 'deepseek') return /deepseek/i.test(m) ? m : 'deepseek-chat';
   return m || DEFAULT_AI_MODELS[provider] || 'claude-sonnet-4-6';
 }
@@ -132,11 +134,13 @@ export async function makeProvider(cfg: AiConfig): Promise<AiProvider | null> {
     }
     if (cfg.provider === 'kimi') {
       if (!cfg.kimiKey) return null;
-      // Kimi Code API (kimi.com/code) is OpenAI-compatible; reuse the OpenAI SDK pointed at it.
+      // Kimi (Moonshot) general API - OpenAI-compatible, reuse the OpenAI SDK. NOTE: the Kimi Code API
+      // (kimi.com/code, kimi-for-coding) is restricted to coding-agent CLIs and refuses general
+      // chat/enrichment calls, so enrichment uses the Moonshot platform endpoint instead.
       const [{ generateText }, { createOpenAI }] = await Promise.all([import('ai'), import('@ai-sdk/openai')]);
       const kimi = createOpenAI({
         apiKey: cfg.kimiKey,
-        baseURL: baseURL ?? 'https://api.kimi.com/coding/v1',
+        baseURL: baseURL ?? 'https://api.moonshot.ai/v1',
         compatibility: 'compatible',
       });
       return {

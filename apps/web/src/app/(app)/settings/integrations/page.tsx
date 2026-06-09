@@ -28,7 +28,7 @@ const VAULT_KEYS: { name: string; label: string; hint: string }[] = [
   { name: 'anthropic', label: 'Anthropic (Claude)', hint: 'AI enrichment' },
   { name: 'openai', label: 'OpenAI', hint: 'AI enrichment' },
   { name: 'deepseek', label: 'DeepSeek', hint: 'AI enrichment' },
-  { name: 'kimi', label: 'Kimi (kimi.com/code)', hint: 'AI enrichment' },
+  { name: 'kimi', label: 'Kimi (Moonshot)', hint: 'AI enrichment' },
 ];
 
 // Provider options shared by the per-project and the system-default AI forms.
@@ -36,7 +36,7 @@ const AI_PROVIDER_OPTIONS: { value: string; label: string }[] = [
   { value: 'anthropic', label: 'Anthropic (Claude)' },
   { value: 'openai', label: 'OpenAI' },
   { value: 'deepseek', label: 'DeepSeek' },
-  { value: 'kimi', label: 'Kimi (kimi.com/code)' },
+  { value: 'kimi', label: 'Kimi (Moonshot)' },
   { value: 'ollama', label: 'Ollama' },
 ];
 
@@ -270,7 +270,7 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
                     id="default-model"
                     name="model"
                     defaultValue={aiDefault?.model ?? 'claude-sonnet-4-6'}
-                    placeholder="e.g. deepseek-chat, kimi-for-coding"
+                    placeholder="e.g. deepseek-chat, kimi-latest"
                   />
                 </div>
               </div>
@@ -321,7 +321,7 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
                       id="model"
                       name="model"
                       defaultValue={ai?.model ?? 'claude-sonnet-4-6'}
-                      placeholder="e.g. deepseek-chat, kimi-for-coding"
+                      placeholder="e.g. deepseek-chat, kimi-latest"
                     />
                   </div>
                 </div>
