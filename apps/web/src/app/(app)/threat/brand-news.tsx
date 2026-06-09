@@ -1,3 +1,4 @@
+import Form from 'next/form';
 import { Newspaper } from 'lucide-react';
 import { desc, eq } from 'drizzle-orm';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card';
@@ -52,7 +53,7 @@ export async function BrandNews({
           <Newspaper className="size-4 text-accent" /> Brand monitoring · {brand}
         </CardTitle>
         <div className="flex flex-wrap items-center gap-2">
-          <form method="get" className="flex items-center gap-1.5">
+          <Form action="/threat" className="flex items-center gap-1.5">
             <input type="hidden" name="project" value={projectId} />
             <input type="hidden" name="news" value={newsFilter} />
             <input type="hidden" name="leak" value={leakFilter} />
@@ -67,7 +68,7 @@ export async function BrandNews({
             <Button type="submit" variant="ghost" size="sm">
               Filter
             </Button>
-          </form>
+          </Form>
           {canTriage ? (
             <>
               <form action={refreshBrandNewsAction} className="flex items-center gap-1.5">
@@ -97,9 +98,9 @@ export async function BrandNews({
                     </option>
                   ))}
                 </Select>
-                <Button type="submit" variant="outline" size="sm">
+                <SubmitButton variant="outline" size="sm">
                   Apply
-                </Button>
+                </SubmitButton>
               </form>
               <form
                 action={aiTriageNewsAction}

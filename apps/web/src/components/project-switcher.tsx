@@ -1,5 +1,5 @@
 import { Select } from './ui/select';
-import { Button } from './ui/button';
+import { SubmitButton } from './ui/submit-button';
 import { selectProjectAction } from '../lib/active-project';
 
 /**
@@ -27,9 +27,9 @@ export function ProjectSwitcher({
           </option>
         ))}
       </Select>
-      <Button type="submit" variant="ghost" size="sm">
+      <SubmitButton variant="ghost" size="sm">
         Switch
-      </Button>
+      </SubmitButton>
     </form>
   );
 }

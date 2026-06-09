@@ -5,6 +5,7 @@ import { NEWS_STATUS_LABEL } from '@vacti/core';
 import { Input } from '../../../components/ui/input';
 import { Select } from '../../../components/ui/select';
 import { Button } from '../../../components/ui/button';
+import { SubmitButton } from '../../../components/ui/submit-button';
 import { Badge } from '../../../components/ui/badge';
 import { NewsStatusBadge } from '../../../components/ui/finding-status';
 import { AutoSubmitSelect } from '../../../components/ui/auto-submit-select';
@@ -116,9 +117,9 @@ export function BrandNewsList({ items, canTriage }: { items: BrandNewsItem[]; ca
               </option>
             ))}
           </Select>
-          <Button type="submit" size="sm" variant="primary">
+          <SubmitButton size="sm" variant="primary">
             Apply to selected
-          </Button>
+          </SubmitButton>
           <Button type="button" size="sm" variant="ghost" onClick={() => setSelected(new Set())}>
             Clear
           </Button>

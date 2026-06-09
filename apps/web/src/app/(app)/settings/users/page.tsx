@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation';
 import { desc } from 'drizzle-orm';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../components/ui/card';
 import { Select } from '../../../../components/ui/select';
-import { Button } from '../../../../components/ui/button';
+import { SubmitButton } from '../../../../components/ui/submit-button';
 import { ConfirmButton } from '../../../../components/ui/confirm-button';
 import { Input } from '../../../../components/ui/input';
 import { Label } from '../../../../components/ui/label';
@@ -58,7 +58,7 @@ export default async function UsersSettingsPage() {
                 <option value={Role.Auditor}>{ROLE_LABEL[Role.Auditor]}</option>
               </Select>
             </div>
-            <Button type="submit">Add user</Button>
+            <SubmitButton>Add user</SubmitButton>
           </form>
         </CardContent>
       </Card>
@@ -87,9 +87,9 @@ export default async function UsersSettingsPage() {
                     <option value={Role.PenetrationTester}>{ROLE_LABEL[Role.PenetrationTester]}</option>
                     <option value={Role.Auditor}>{ROLE_LABEL[Role.Auditor]}</option>
                   </Select>
-                  <Button type="submit" size="sm" variant="outline">
+                  <SubmitButton size="sm" variant="outline">
                     Save
-                  </Button>
+                  </SubmitButton>
                 </form>
                 <form action={resetUserPasswordAction} className="flex items-center gap-2">
                   <input type="hidden" name="id" value={u.id} />
@@ -101,9 +101,9 @@ export default async function UsersSettingsPage() {
                     minLength={8}
                     className="w-44"
                   />
-                  <Button type="submit" size="sm" variant="outline">
+                  <SubmitButton size="sm" variant="outline">
                     Reset password
-                  </Button>
+                  </SubmitButton>
                 </form>
                 {u.id !== me.id ? (
                   <form action={deleteUserAction}>

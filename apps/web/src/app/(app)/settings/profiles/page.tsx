@@ -4,7 +4,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../../../components
 import { Input } from '../../../../components/ui/input';
 import { Textarea } from '../../../../components/ui/textarea';
 import { Label } from '../../../../components/ui/label';
-import { Button } from '../../../../components/ui/button';
 import { SubmitButton } from '../../../../components/ui/submit-button';
 import { Badge } from '../../../../components/ui/badge';
 import { EmptyState } from '../../../../components/ui/empty-state';
@@ -198,9 +197,9 @@ export default async function ProfilesPage() {
                         {canEdit ? (
                           <form action={deleteProfileAction}>
                             <input type="hidden" name="id" value={p.id} />
-                            <Button type="submit" variant="ghost" size="sm" className="text-danger hover:bg-danger/10">
+                            <SubmitButton variant="ghost" size="sm" className="text-danger hover:bg-danger/10">
                               Delete
-                            </Button>
+                            </SubmitButton>
                           </form>
                         ) : null}
                       </div>

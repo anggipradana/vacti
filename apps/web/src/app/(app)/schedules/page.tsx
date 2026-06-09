@@ -5,7 +5,6 @@ import { PageHeader } from '../../../components/ui/page-header';
 import { Card, CardContent } from '../../../components/ui/card';
 import { Input } from '../../../components/ui/input';
 import { Label } from '../../../components/ui/label';
-import { Button } from '../../../components/ui/button';
 import { SubmitButton } from '../../../components/ui/submit-button';
 import { Select } from '../../../components/ui/select';
 import { Badge } from '../../../components/ui/badge';
@@ -151,15 +150,15 @@ export default async function SchedulesPage({ searchParams }: { searchParams: Pr
                       <>
                         <form action={toggleScheduleAction}>
                           <input type="hidden" name="id" value={s.id} />
-                          <Button type="submit" variant="outline" size="sm">
+                          <SubmitButton variant="outline" size="sm">
                             {s.enabled ? 'Pause' : 'Enable'}
-                          </Button>
+                          </SubmitButton>
                         </form>
                         <form action={deleteScheduleAction}>
                           <input type="hidden" name="id" value={s.id} />
-                          <Button type="submit" variant="ghost" size="sm" className="text-danger hover:bg-danger/10">
+                          <SubmitButton variant="ghost" size="sm" className="text-danger hover:bg-danger/10">
                             Delete
-                          </Button>
+                          </SubmitButton>
                         </form>
                       </>
                     ) : null}

@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Form from 'next/form';
 import { notFound, redirect } from 'next/navigation';
 import { desc, eq } from 'drizzle-orm';
 import { diffScans } from '@vacti/recon';
@@ -11,6 +12,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../../../components
 import { Table, THead, TBody, TR, TH, TD } from '../../../../components/ui/table';
 import { Badge } from '../../../../components/ui/badge';
 import { Button } from '../../../../components/ui/button';
+import { SubmitButton } from '../../../../components/ui/submit-button';
 import { Select } from '../../../../components/ui/select';
 import { userCan, Permission } from '@vacti/core';
 import { scans, targets, scanActivity, subdomains, endpoints, ports as portsTable, vulnerabilities } from '@vacti/db';
@@ -108,9 +110,14 @@ export default async function ScanDetail({
             {!terminal && userCan(user, Permission.InitiateScans) ? (
               <form action={cancelScanAction}>
                 <input type="hidden" name="id" value={scan.id} />
-                <Button type="submit" variant="outline" size="sm" className="text-danger hover:bg-danger/10">
+                <SubmitButton
+                  variant="outline"
+                  size="sm"
+                  className="text-danger hover:bg-danger/10"
+                  pendingText="Cancelling..."
+                >
                   Cancel scan
-                </Button>
+                </SubmitButton>
               </form>
             ) : null}
             <Button asChild variant="secondary" size="sm">
@@ -147,7 +154,7 @@ export default async function ScanDetail({
         <Card className="mb-6">
           <CardContent className="space-y-4 pt-5">
             {siblings.length > 0 ? (
-              <form method="get" className="flex flex-wrap items-end gap-2">
+              <Form action={`/scans/${id}`} className="flex flex-wrap items-end gap-2">
                 <div className="space-y-1">
                   <span className="text-xs font-medium text-fg-subtle">Compare with an earlier scan</span>
                   <div className="flex items-center gap-2">
@@ -164,7 +171,7 @@ export default async function ScanDetail({
                     </Button>
                   </div>
                 </div>
-              </form>
+              </Form>
             ) : null}
 
             {diff ? (
@@ -204,9 +211,9 @@ export default async function ScanDetail({
                     <input type="checkbox" name="tools" value={t} defaultChecked /> {t}
                   </label>
                 ))}
-                <Button type="submit" size="sm">
+                <SubmitButton size="sm" pendingText="Starting...">
                   Rescan
-                </Button>
+                </SubmitButton>
               </form>
             ) : null}
           </CardContent>

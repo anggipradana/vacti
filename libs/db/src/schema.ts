@@ -126,6 +126,10 @@ export const apiKeys = pgTable('api_keys', {
   usageDate: timestamp('usage_date', { withTimezone: true }),
   disabledUntil: timestamp('disabled_until', { withTimezone: true }),
   lastUsedAt: timestamp('last_used_at', { withTimezone: true }),
+  // Last validity-check verdict ('valid' | 'invalid' | 'error') + when it ran, so the UI can
+  // show a persistent status badge instead of a one-shot result after the Test click.
+  lastCheckStatus: text('last_check_status'),
+  lastCheckedAt: timestamp('last_checked_at', { withTimezone: true }),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 });

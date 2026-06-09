@@ -4,6 +4,7 @@ import * as React from 'react';
 import { VULN_STATUS_LABEL, type SeverityValue } from '@vacti/core';
 import { Table, THead, TBody, TR, TH, TD } from '../../../../components/ui/table';
 import { Button } from '../../../../components/ui/button';
+import { SubmitButton } from '../../../../components/ui/submit-button';
 import { Input } from '../../../../components/ui/input';
 import { Textarea } from '../../../../components/ui/textarea';
 import { Select } from '../../../../components/ui/select';
@@ -138,9 +139,9 @@ export function VulnTable({ vulns, scanId, canTriage }: { vulns: VulnRow[]; scan
               </option>
             ))}
           </Select>
-          <Button type="submit" size="sm" variant="primary">
+          <SubmitButton size="sm" variant="primary">
             Apply to selected
-          </Button>
+          </SubmitButton>
           <Button type="button" size="sm" variant="ghost" onClick={() => setSelected(new Set())}>
             Clear
           </Button>
@@ -295,9 +296,9 @@ export function VulnTable({ vulns, scanId, canTriage }: { vulns: VulnRow[]; scan
                           placeholder="Investigation context, false-positive reason, …"
                           className="text-xs"
                         />
-                        <Button type="submit" size="sm" variant="outline">
+                        <SubmitButton size="sm" variant="outline">
                           Save note
-                        </Button>
+                        </SubmitButton>
                       </form>
                     </details>
                   ) : null}
@@ -331,9 +332,9 @@ export function VulnTable({ vulns, scanId, canTriage }: { vulns: VulnRow[]; scan
                       <form action={enrichVulnAction}>
                         <input type="hidden" name="id" value={v.id} />
                         <input type="hidden" name="scanId" value={scanId} />
-                        <Button type="submit" size="sm" variant="outline">
+                        <SubmitButton size="sm" variant="outline">
                           AI
-                        </Button>
+                        </SubmitButton>
                       </form>
                       <form action={deleteVulnAction}>
                         <input type="hidden" name="id" value={v.id} />

@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Form from 'next/form';
 import { redirect } from 'next/navigation';
 import { Search } from 'lucide-react';
 import { PageHeader } from '../../../components/ui/page-header';
@@ -24,12 +25,12 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
       <PageHeader title="Search" description="Find projects, targets, scans, subdomains, endpoints and findings." />
       <Card className="mb-6">
         <CardContent className="pt-5">
-          <form method="get" className="flex items-center gap-2">
+          <Form action="/search" className="flex items-center gap-2">
             <Input name="q" defaultValue={q} placeholder="Search across everything…" autoFocus />
             <Button type="submit">
               <Search className="size-4" /> Search
             </Button>
-          </form>
+          </Form>
         </CardContent>
       </Card>
 
