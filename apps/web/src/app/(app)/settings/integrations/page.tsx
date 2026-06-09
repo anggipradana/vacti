@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../../../components
 import { Input } from '../../../../components/ui/input';
 import { Label } from '../../../../components/ui/label';
 import { Select } from '../../../../components/ui/select';
-import { SubmitButton } from '../../../../components/ui/submit-button';
+import { ActionForm, ActionSubmit } from '../../../../components/ui/action-form';
 import { Badge } from '../../../../components/ui/badge';
 import { EmptyState } from '../../../../components/ui/empty-state';
 import { ALL_EVENT_TYPES, listProjectSecretNames, listProjectSecretChecks } from '@vacti/integrations';
@@ -28,7 +28,7 @@ const VAULT_KEYS: { name: string; label: string; hint: string }[] = [
   { name: 'anthropic', label: 'Anthropic (Claude)', hint: 'AI enrichment' },
   { name: 'openai', label: 'OpenAI', hint: 'AI enrichment' },
   { name: 'deepseek', label: 'DeepSeek', hint: 'AI enrichment' },
-  { name: 'kimi', label: 'Kimi (Moonshot)', hint: 'AI enrichment' },
+  { name: 'kimi', label: 'Kimi (kimi.com/code)', hint: 'AI enrichment' },
 ];
 
 // Provider options shared by the per-project and the system-default AI forms.
@@ -36,7 +36,7 @@ const AI_PROVIDER_OPTIONS: { value: string; label: string }[] = [
   { value: 'anthropic', label: 'Anthropic (Claude)' },
   { value: 'openai', label: 'OpenAI' },
   { value: 'deepseek', label: 'DeepSeek' },
-  { value: 'kimi', label: 'Kimi (Moonshot)' },
+  { value: 'kimi', label: 'Kimi (kimi.com/code)' },
   { value: 'ollama', label: 'Ollama' },
 ];
 
@@ -79,7 +79,7 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
               <CardTitle>Add webhook</CardTitle>
             </CardHeader>
             <CardContent>
-              <form action={addWebhookAction} className="space-y-3">
+              <ActionForm action={addWebhookAction} className="space-y-3">
                 <input type="hidden" name="projectId" value={projectId} />
                 <div className="space-y-1">
                   <Label htmlFor="channel">Channel</Label>
@@ -119,10 +119,10 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
                     ))}
                   </div>
                 </div>
-                <SubmitButton className="w-full" data-testid="webhook-add">
+                <ActionSubmit className="w-full" data-testid="webhook-add">
                   Add webhook
-                </SubmitButton>
-              </form>
+                </ActionSubmit>
+              </ActionForm>
             </CardContent>
           </Card>
 
@@ -142,23 +142,27 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <form action={testWebhookAction}>
+                        <ActionForm action={testWebhookAction}>
                           <input type="hidden" name="id" value={w.id} />
-                          <SubmitButton variant="outline" size="sm">
+                          <ActionSubmit variant="outline" size="sm">
                             Test
-                          </SubmitButton>
-                        </form>
-                        <form action={deleteWebhookAction}>
+                          </ActionSubmit>
+                        </ActionForm>
+                        <ActionForm action={deleteWebhookAction}>
                           <input type="hidden" name="id" value={w.id} />
-                          <SubmitButton variant="ghost" size="sm" className="text-danger hover:bg-danger/10">
+                          <ActionSubmit variant="ghost" size="sm" className="text-danger hover:bg-danger/10">
                             Remove
-                          </SubmitButton>
-                        </form>
+                          </ActionSubmit>
+                        </ActionForm>
                       </div>
                     </div>
                     <details className="mt-2">
                       <summary className="cursor-pointer text-xs text-accent hover:underline">Edit</summary>
-                      <form action={editWebhookAction} className="mt-3 space-y-3" data-testid={`webhook-edit-${w.id}`}>
+                      <ActionForm
+                        action={editWebhookAction}
+                        className="mt-3 space-y-3"
+                        data-testid={`webhook-edit-${w.id}`}
+                      >
                         <input type="hidden" name="id" value={w.id} />
                         <div className="space-y-1">
                           <Label htmlFor={`channel-${w.id}`}>Channel</Label>
@@ -220,10 +224,10 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
                         <label className="flex items-center gap-2 text-sm">
                           <input type="checkbox" name="enabled" defaultChecked={w.enabled} /> Enabled
                         </label>
-                        <SubmitButton size="sm" data-testid={`webhook-edit-save-${w.id}`}>
+                        <ActionSubmit size="sm" data-testid={`webhook-edit-save-${w.id}`}>
                           Save changes
-                        </SubmitButton>
-                      </form>
+                        </ActionSubmit>
+                      </ActionForm>
                     </details>
                   </CardContent>
                 </Card>
@@ -243,7 +247,7 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
               The default provider used for AI enrichment when a project has not chosen its own below. Set the matching
               API key in the vault (or environment). Features degrade gracefully without a key.
             </p>
-            <form action={saveAiDefaultsAction} className="space-y-3">
+            <ActionForm action={saveAiDefaultsAction} className="space-y-3">
               <div className="flex items-end gap-3">
                 <div className="flex-1 space-y-1">
                   <Label htmlFor="default-provider">Provider</Label>
@@ -266,7 +270,7 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
                     id="default-model"
                     name="model"
                     defaultValue={aiDefault?.model ?? 'claude-sonnet-4-6'}
-                    placeholder="e.g. deepseek-chat, kimi-latest"
+                    placeholder="e.g. deepseek-chat, kimi-for-coding"
                   />
                 </div>
               </div>
@@ -280,8 +284,8 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
                   defaultValue={aiDefault?.baseUrl ?? ''}
                 />
               </div>
-              <SubmitButton data-testid="ai-default-save">Save default</SubmitButton>
-            </form>
+              <ActionSubmit data-testid="ai-default-save">Save default</ActionSubmit>
+            </ActionForm>
           </CardContent>
         </Card>
       </div>
@@ -298,7 +302,7 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
                 default unless this project needs a different model. Set the matching API key in the vault below (or
                 environment); features degrade gracefully without a key.
               </p>
-              <form action={saveAiSettingsAction} className="space-y-3">
+              <ActionForm action={saveAiSettingsAction} className="space-y-3">
                 <input type="hidden" name="projectId" value={projectId} />
                 <div className="flex items-end gap-3">
                   <div className="flex-1 space-y-1">
@@ -317,7 +321,7 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
                       id="model"
                       name="model"
                       defaultValue={ai?.model ?? 'claude-sonnet-4-6'}
-                      placeholder="e.g. deepseek-chat, kimi-latest"
+                      placeholder="e.g. deepseek-chat, kimi-for-coding"
                     />
                   </div>
                 </div>
@@ -336,8 +340,8 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
                     (Ollama uses OLLAMA_BASE_URL.)
                   </p>
                 </div>
-                <SubmitButton data-testid="ai-save">Save</SubmitButton>
-              </form>
+                <ActionSubmit data-testid="ai-save">Save</ActionSubmit>
+              </ActionForm>
             </CardContent>
           </Card>
         </div>
@@ -391,7 +395,7 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
                         </Badge>
                       ) : null}
                     </Label>
-                    <form action={saveProjectKeyAction} className="flex items-center gap-2" id={`form-${k.name}`}>
+                    <ActionForm action={saveProjectKeyAction} className="flex items-center gap-2" id={`form-${k.name}`}>
                       <input type="hidden" name="projectId" value={projectId} />
                       <input type="hidden" name="name" value={k.name} />
                       <Input
@@ -401,37 +405,37 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
                         data-testid={`vault-input-${k.name}`}
                         placeholder={setKeys.has(k.name) ? '•••••••• (replace)' : 'Paste key…'}
                       />
-                      <SubmitButton variant="outline" size="sm" data-testid={`vault-save-${k.name}`}>
+                      <ActionSubmit variant="outline" size="sm" data-testid={`vault-save-${k.name}`}>
                         Save
-                      </SubmitButton>
-                    </form>
+                      </ActionSubmit>
+                    </ActionForm>
                   </div>
                   {setKeys.has(k.name) ? (
                     <>
-                      <form action={testProjectKeyAction}>
+                      <ActionForm action={testProjectKeyAction}>
                         <input type="hidden" name="projectId" value={projectId} />
                         <input type="hidden" name="name" value={k.name} />
-                        <SubmitButton
+                        <ActionSubmit
                           variant="outline"
                           size="sm"
                           pendingText="Testing..."
                           data-testid={`vault-test-${k.name}`}
                         >
                           Test
-                        </SubmitButton>
-                      </form>
-                      <form action={clearProjectKeyAction}>
+                        </ActionSubmit>
+                      </ActionForm>
+                      <ActionForm action={clearProjectKeyAction}>
                         <input type="hidden" name="projectId" value={projectId} />
                         <input type="hidden" name="name" value={k.name} />
-                        <SubmitButton
+                        <ActionSubmit
                           variant="ghost"
                           size="sm"
                           className="text-danger hover:bg-danger/10"
                           data-testid={`vault-clear-${k.name}`}
                         >
                           Clear
-                        </SubmitButton>
-                      </form>
+                        </ActionSubmit>
+                      </ActionForm>
                     </>
                   ) : null}
                 </div>
