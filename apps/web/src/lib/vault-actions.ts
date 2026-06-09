@@ -1,7 +1,6 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { redirect } from 'next/navigation';
 import { Permission } from '@vacti/core';
 import {
   setProjectSecret,
@@ -34,7 +33,7 @@ export async function saveProjectKeyAction(formData: FormData) {
   revalidatePath('/settings/integrations');
 }
 
-/** Probe a stored API key against its provider and redirect back with the verdict. SysAdmin only. */
+/** Probe a stored API key against its provider and persist the verdict in place. SysAdmin only. */
 export async function testProjectKeyAction(formData: FormData) {
   const actor = await requirePermission(Permission.ModifySystemConfig);
   const projectId = String(formData.get('projectId') ?? '');
@@ -55,9 +54,9 @@ export async function testProjectKeyAction(formData: FormData) {
     projectId,
     metadata: { name, status: result.status },
   });
-  // The verdict is now persisted; revalidate so the sticky status badge re-renders.
+  // The verdict is persisted; refresh in place so the sticky status badge re-renders (no redirect,
+  // which can blank the page in production). Matches the save/clear actions.
   revalidatePath('/settings/integrations');
-  redirect(`/settings/integrations?project=${encodeURIComponent(projectId)}`);
 }
 
 export async function clearProjectKeyAction(formData: FormData) {
