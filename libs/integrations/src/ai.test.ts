@@ -8,9 +8,11 @@ import {
 } from './ai';
 
 describe('resolveAiModel', () => {
-  it('forces kimi-for-coding for Kimi regardless of stored model', () => {
-    expect(resolveAiModel('kimi', 'claude-sonnet-4-6')).toBe('kimi-for-coding');
-    expect(resolveAiModel('kimi', '')).toBe('kimi-for-coding');
+  it('defaults Kimi to kimi-latest (drops a coding-only / cross-provider model), keeps a Moonshot model', () => {
+    expect(resolveAiModel('kimi', 'kimi-for-coding')).toBe('kimi-latest');
+    expect(resolveAiModel('kimi', 'claude-sonnet-4-6')).toBe('kimi-latest');
+    expect(resolveAiModel('kimi', '')).toBe('kimi-latest');
+    expect(resolveAiModel('kimi', 'moonshot-v1-32k')).toBe('moonshot-v1-32k');
   });
   it('defaults DeepSeek to deepseek-chat unless a deepseek model is set', () => {
     expect(resolveAiModel('deepseek', 'claude-sonnet-4-6')).toBe('deepseek-chat');
