@@ -4,12 +4,12 @@ import * as React from 'react';
 import { Button, type ButtonProps } from './button';
 
 /**
- * A form that runs a server action and then reloads to show the result. On the heavy integrations
- * page the production client both (a) hangs useFormStatus forever (the action's response is dropped)
- * and (b) fails to re-apply the route flight via router.refresh() or a same-route client nav. So we
- * drive a local pending state, fire the (idempotent) action twice for reliability against the
- * keep-alive POST race, and do a single reload once it has persisted. This is the one page where a
- * reload is necessary; the lighter pages use the normal SubmitButton + revalidate flow.
+ * A form that runs a server action and then reloads to show the result. On the heavy pages the
+ * production client both (a) hangs useFormStatus forever (the action's response is dropped) and
+ * (b) fails to re-apply the route flight via router.refresh() or a same-route client nav. So we
+ * drive a local pending state, fire the action once (the request reaches the server and persists
+ * even when the client drops the response), then reload once it has persisted. Used by the heavy
+ * pages (integrations, threat, surface); the lighter pages use the normal SubmitButton + revalidate.
  */
 const PendingContext = React.createContext(false);
 
@@ -17,43 +17,46 @@ export function ActionForm({
   action,
   children,
   onSubmitted,
+  redirectTo,
+  confirm,
   ...props
 }: {
   action: (formData: FormData) => void | Promise<void>;
   onSubmitted?: () => void;
+  /** When set, navigate here after the action persists (full load) instead of reloading in place. */
+  redirectTo?: string;
+  /** When set, ask for confirmation (window.confirm) before running - for destructive actions. */
+  confirm?: string;
 } & Omit<React.FormHTMLAttributes<HTMLFormElement>, 'action'>) {
   const [pending, setPending] = React.useState(false);
 
-  // Why this isn't a plain <form action={...}> + useFormStatus: in the production build the action's
-  // POST can land on a keep-alive connection the server is closing. Browsers transparently retry a
-  // failed idempotent GET on a fresh connection, but never retry a POST, so the action silently never
-  // reaches the server (and useFormStatus would hang on the dropped response). So we call the action
-  // ourselves and retry once on failure (the retry opens a fresh connection), drive pending from
-  // local state, then soft-refresh (a GET, reliable) to render the persisted result. A second refresh
-  // catches actions that persist a little later server-side (e.g. a key validity probe).
+  // Why this isn't a plain <form action={...}> + useFormStatus: in the production build the heavy
+  // pages drop the action's (large) response, so useFormStatus hangs forever and router.refresh()
+  // will not re-apply the flight. We fire the action ONCE (safe for non-idempotent inserts) and
+  // AWAIT it (capped) before reloading - awaiting matters because reloading mid-upload would abort
+  // the POST before the server receives it. The server still processes the request and persists even
+  // when the client drops the response, so a reload then renders the result.
   return (
     <form
       {...props}
       onSubmit={(e) => {
         e.preventDefault();
+        if (confirm && !window.confirm(confirm)) return;
         const fd = new FormData(e.currentTarget);
         setPending(true);
-        // Run the action twice (immediately + once more shortly after). Its POST can land on a
-        // keep-alive connection the server is closing; browsers never retry a POST, so a single try
-        // can be silently dropped. A second try opens a fresh connection. All these actions are
-        // idempotent (upsert / delete / re-probe), so a duplicate run is harmless.
-        const fire = () =>
-          Promise.resolve()
-            .then(() => action(fd))
-            .catch(() => {});
-        fire();
-        window.setTimeout(fire, 600);
-        // Neither router.refresh() nor a same-route client nav reliably re-applies the flight on this
-        // heavy page in production, so reload once the mutation has persisted to show the result.
-        window.setTimeout(() => {
+        void (async () => {
+          await Promise.race([
+            Promise.resolve()
+              .then(() => action(fd))
+              .catch(() => {}),
+            new Promise((r) => setTimeout(r, 4000)),
+          ]);
+          // Grace for the server to finish persisting if the client dropped the response early.
+          await new Promise((r) => setTimeout(r, 400));
           onSubmitted?.();
-          window.location.reload();
-        }, 1600);
+          if (redirectTo) window.location.assign(redirectTo);
+          else window.location.reload();
+        })();
       }}
     >
       <PendingContext.Provider value={pending}>{children}</PendingContext.Provider>

@@ -4,14 +4,13 @@ import * as React from 'react';
 import { LEAK_STATUS_LABEL } from '@vacti/core';
 import { Table, THead, TBody, TR, TH, TD } from '../../../components/ui/table';
 import { Button } from '../../../components/ui/button';
-import { SubmitButton } from '../../../components/ui/submit-button';
+import { ActionForm, ActionSubmit } from '../../../components/ui/action-form';
 import { Input } from '../../../components/ui/input';
 import { Select } from '../../../components/ui/select';
 import { Badge } from '../../../components/ui/badge';
 import { Reveal } from '../../../components/ui/reveal';
 import { LeakStatusBadge } from '../../../components/ui/finding-status';
 import { AutoSubmitSelect } from '../../../components/ui/auto-submit-select';
-import { ConfirmButton } from '../../../components/ui/confirm-button';
 import { setLeakStatusAction, deleteLeakAction, bulkSetLeakStatusByIdsAction } from '../../../lib/status-actions';
 
 export interface LeakRow {
@@ -106,7 +105,7 @@ export function LeakTable({ leaks, canTriage }: { leaks: LeakRow[]; canTriage: b
 
       {/* Bulk action bar - appears when rows are selected. */}
       {canTriage && selected.size > 0 ? (
-        <form
+        <ActionForm
           action={bulkSetLeakStatusByIdsAction}
           className="flex flex-wrap items-center gap-2 rounded-md border border-accent/30 bg-accent/5 px-3 py-2"
         >
@@ -121,13 +120,13 @@ export function LeakTable({ leaks, canTriage }: { leaks: LeakRow[]; canTriage: b
               </option>
             ))}
           </Select>
-          <SubmitButton size="sm" variant="primary">
+          <ActionSubmit size="sm" variant="primary">
             Apply to selected
-          </SubmitButton>
+          </ActionSubmit>
           <Button type="button" size="sm" variant="ghost" onClick={() => setSelected(new Set())}>
             Clear
           </Button>
-        </form>
+        </ActionForm>
       ) : null}
 
       {filtered.length === 0 ? (
@@ -181,7 +180,7 @@ export function LeakTable({ leaks, canTriage }: { leaks: LeakRow[]; canTriage: b
                 <TD>
                   <div className="flex items-center justify-end gap-1.5">
                     <LeakStatusBadge status={l.status} />
-                    <form action={setLeakStatusAction} className="flex items-center gap-1.5">
+                    <ActionForm action={setLeakStatusAction} className="flex items-center gap-1.5">
                       <input type="hidden" name="id" value={l.id} />
                       <AutoSubmitSelect
                         key={l.status}
@@ -196,18 +195,13 @@ export function LeakTable({ leaks, canTriage }: { leaks: LeakRow[]; canTriage: b
                           </option>
                         ))}
                       </AutoSubmitSelect>
-                    </form>
-                    <form action={deleteLeakAction}>
+                    </ActionForm>
+                    <ActionForm action={deleteLeakAction} confirm="Delete this leaked-credential row?">
                       <input type="hidden" name="id" value={l.id} />
-                      <ConfirmButton
-                        size="sm"
-                        variant="ghost"
-                        className="text-danger hover:bg-danger/10"
-                        confirm="Delete this leaked-credential row?"
-                      >
+                      <ActionSubmit size="sm" variant="ghost" className="text-danger hover:bg-danger/10">
                         Delete
-                      </ConfirmButton>
-                    </form>
+                      </ActionSubmit>
+                    </ActionForm>
                   </div>
                 </TD>
               </TR>

@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui
 import { Table, THead, TBody, TR, TH, TD } from '../../../components/ui/table';
 import { Select } from '../../../components/ui/select';
 import { Button } from '../../../components/ui/button';
-import { SubmitButton } from '../../../components/ui/submit-button';
+import { ActionForm, ActionSubmit } from '../../../components/ui/action-form';
 import { Badge } from '../../../components/ui/badge';
 import { Input } from '../../../components/ui/input';
 import { EmptyState } from '../../../components/ui/empty-state';
@@ -20,6 +20,7 @@ import { getDb } from '../../../lib/db';
 import { getCurrentUser } from '../../../lib/session';
 import { getActiveProjectId } from '../../../lib/active-project';
 import { bulkReviewExposureAction } from '../../../lib/surface-actions';
+import { runPassiveReconAction } from '../../../lib/recon-actions';
 import { ExposureTable } from './exposure-table';
 
 export const dynamic = 'force-dynamic';
@@ -143,9 +144,15 @@ export default async function SurfacePage({
     <>
       <PageHeader
         title="Attack Surface"
-        description="Passive OSINT discovery (VirusTotal + Wayback): URLs, exposure findings, and IP resolutions. Run a passive/full scan from Scans to populate."
+        description="Passive OSINT discovery (VirusTotal + Wayback): URLs, exposure findings, and IP resolutions. Run passive recon to populate (uses your VirusTotal key)."
         actions={
           <div className="flex flex-wrap items-center gap-2">
+            <ActionForm action={runPassiveReconAction} redirectTo="/scans">
+              <input type="hidden" name="projectId" value={projectId} />
+              <ActionSubmit size="sm" data-testid="run-passive-recon">
+                Run passive recon
+              </ActionSubmit>
+            </ActionForm>
             <a href={`/surface/export?project=${projectId}&format=zip`}>
               <Button variant="secondary" size="sm">
                 Export ZIP
@@ -228,7 +235,7 @@ export default async function SurfacePage({
           {/* Bulk-by-filter: mark ALL of the project's findings (honours the active scan-diff). The
               per-selection checkbox bulk + search/type/status filters live inside ExposureTable. */}
           {canTriage && finds.length > 0 ? (
-            <form action={bulkReviewExposureAction} className="flex items-center gap-1.5">
+            <ActionForm action={bulkReviewExposureAction} className="flex items-center gap-1.5">
               <input type="hidden" name="projectId" value={projectId} />
               <input type="hidden" name="type" value="all" />
               <input type="hidden" name="filter" value="all" />
@@ -239,10 +246,10 @@ export default async function SurfacePage({
                   </option>
                 ))}
               </Select>
-              <SubmitButton variant="outline" size="sm">
+              <ActionSubmit variant="outline" size="sm">
                 Apply
-              </SubmitButton>
-            </form>
+              </ActionSubmit>
+            </ActionForm>
           ) : null}
         </CardHeader>
         <CardContent className="pt-0">

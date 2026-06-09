@@ -5,8 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui
 import { Select } from '../../../components/ui/select';
 import { Input } from '../../../components/ui/input';
 import { Button } from '../../../components/ui/button';
-import { SubmitButton } from '../../../components/ui/submit-button';
-import { ConfirmButton } from '../../../components/ui/confirm-button';
+import { ActionForm, ActionSubmit } from '../../../components/ui/action-form';
 import { NEWS_STATUS_LABEL } from '@vacti/core';
 import { brandNews } from '@vacti/db';
 import { getDb } from '../../../lib/db';
@@ -71,7 +70,11 @@ export async function BrandNews({
           </Form>
           {canTriage ? (
             <>
-              <form action={refreshBrandNewsAction} className="flex items-center gap-1.5">
+              <ActionForm
+                action={refreshBrandNewsAction}
+                className="flex items-center gap-1.5"
+                confirm="Searching for new news keeps only the newest 15 headlines and removes older stored ones. Continue?"
+              >
                 <input type="hidden" name="projectId" value={projectId} />
                 <Input
                   name="query"
@@ -80,15 +83,11 @@ export async function BrandNews({
                   className="h-8 w-44 text-xs"
                   aria-label="Brand search term"
                 />
-                <ConfirmButton
-                  variant="primary"
-                  size="sm"
-                  confirm="Searching for new news keeps only the newest 15 headlines and removes older stored ones. Continue?"
-                >
+                <ActionSubmit variant="primary" size="sm">
                   Search now
-                </ConfirmButton>
-              </form>
-              <form action={bulkReviewBrandNewsAction} className="flex items-center gap-1.5">
+                </ActionSubmit>
+              </ActionForm>
+              <ActionForm action={bulkReviewBrandNewsAction} className="flex items-center gap-1.5">
                 <input type="hidden" name="projectId" value={projectId} />
                 <input type="hidden" name="filter" value={filter} />
                 <Select name="status" defaultValue="reviewed" className="h-8 w-36 text-xs" aria-label="Bulk status">
@@ -98,20 +97,20 @@ export async function BrandNews({
                     </option>
                   ))}
                 </Select>
-                <SubmitButton variant="outline" size="sm">
+                <ActionSubmit variant="outline" size="sm">
                   Apply
-                </SubmitButton>
-              </form>
-              <form
+                </ActionSubmit>
+              </ActionForm>
+              <ActionForm
                 action={aiTriageNewsAction}
                 title="Auto-mark off-topic headlines as Irrelevant (learns from your past triage)"
               >
                 <input type="hidden" name="projectId" value={projectId} />
                 <input type="hidden" name="kind" value="brand" />
-                <SubmitButton variant="ghost" size="sm" pendingText="Analyzing…">
+                <ActionSubmit variant="ghost" size="sm" pendingText="Analyzing…">
                   AI: filter irrelevant
-                </SubmitButton>
-              </form>
+                </ActionSubmit>
+              </ActionForm>
             </>
           ) : (
             <span className="text-xs text-fg-subtle">public news</span>

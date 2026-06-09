@@ -19,6 +19,28 @@ export interface AiConfig {
   baseUrl?: string;
 }
 
+/** Sensible default model per provider, used when none is configured. */
+export const DEFAULT_AI_MODELS: Record<string, string> = {
+  anthropic: 'claude-sonnet-4-6',
+  openai: 'gpt-4o-mini',
+  deepseek: 'deepseek-chat',
+  kimi: 'kimi-for-coding',
+  ollama: 'llama3',
+};
+
+/**
+ * Pick a model that is actually valid for the provider. Guards against a model left over from a
+ * different provider (e.g. switching to Kimi/DeepSeek but keeping the Claude default) - that mismatch
+ * makes the provider reject the request, so the AI features silently degrade to no-ops. Kimi Code
+ * only accepts `kimi-for-coding`.
+ */
+export function resolveAiModel(provider: string, model?: string | null): string {
+  const m = (model ?? '').trim();
+  if (provider === 'kimi') return 'kimi-for-coding';
+  if (provider === 'deepseek') return /deepseek/i.test(m) ? m : 'deepseek-chat';
+  return m || DEFAULT_AI_MODELS[provider] || 'claude-sonnet-4-6';
+}
+
 export interface VulnEnrichmentInput {
   name: string;
   type?: string | null;
