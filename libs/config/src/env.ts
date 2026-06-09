@@ -24,6 +24,8 @@ export const envSchema = z.object({
   PROXY_URL: z.string().optional(),
   ANTHROPIC_API_KEY: z.string().optional(),
   OPENAI_API_KEY: z.string().optional(),
+  DEEPSEEK_API_KEY: z.string().optional(),
+  KIMI_API_KEY: z.string().optional(),
   OLLAMA_BASE_URL: z.string().url().optional(),
   // Threat/brand news retention: rows older than this many days are pruned on each TI refresh
   // (analyst-flagged "relevant"/"actioned" headlines are always kept). Keeps the DB light.

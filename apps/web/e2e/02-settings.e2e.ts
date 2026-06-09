@@ -23,12 +23,19 @@ test.describe.serial('settings', () => {
     await expect(page.getByText('QA hook')).toHaveCount(0);
   });
 
-  test('save AI provider settings', async ({ page }) => {
+  test('save system default + per-project AI provider settings', async ({ page }) => {
     await page.goto('/settings/integrations');
-    await page.getByLabel('Provider').selectOption('openai');
-    await page.getByLabel('Model').fill('gpt-4o-mini');
+    // System default AI (covers the new DeepSeek/Kimi providers).
+    await page.getByTestId('ai-default-provider').selectOption('deepseek');
+    await page.locator('#default-model').fill('deepseek-chat');
+    await page.getByTestId('ai-default-save').click();
+    await expect(page.getByTestId('ai-default-provider')).toHaveValue('deepseek');
+    await expect(page.locator('#default-model')).toHaveValue('deepseek-chat');
+    // Per-project override (scoped to its own #provider/#model to avoid the default form's labels).
+    await page.locator('#provider').selectOption('openai');
+    await page.locator('#model').fill('gpt-4o-mini');
     await page.getByTestId('ai-save').click();
-    await expect(page.getByLabel('Model')).toHaveValue('gpt-4o-mini');
+    await expect(page.locator('#model')).toHaveValue('gpt-4o-mini');
   });
 
   test('set, test and clear a vault API key (masked)', async ({ page }) => {

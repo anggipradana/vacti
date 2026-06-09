@@ -52,6 +52,16 @@ const CHECKS: Record<string, ProviderCheck> = {
     url: 'https://api.openai.com/v1/models',
     headers: (k) => ({ Authorization: `Bearer ${k}` }),
   },
+  deepseek: {
+    // DeepSeek is OpenAI-compatible: list models with the Bearer key (200 valid, 401 invalid).
+    url: 'https://api.deepseek.com/models',
+    headers: (k) => ({ Authorization: `Bearer ${k}` }),
+  },
+  kimi: {
+    // Kimi (Moonshot AI) is OpenAI-compatible: list models with the Bearer key.
+    url: 'https://api.moonshot.ai/v1/models',
+    headers: (k) => ({ Authorization: `Bearer ${k}` }),
+  },
 };
 
 const INVALID_STATUSES = new Set([401, 403]);

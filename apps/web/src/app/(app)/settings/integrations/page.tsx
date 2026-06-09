@@ -8,7 +8,7 @@ import { SubmitButton } from '../../../../components/ui/submit-button';
 import { Badge } from '../../../../components/ui/badge';
 import { EmptyState } from '../../../../components/ui/empty-state';
 import { ALL_EVENT_TYPES, listProjectSecretNames, listProjectSecretChecks } from '@vacti/integrations';
-import { projects, webhooks, aiSettings } from '@vacti/db';
+import { projects, webhooks, aiSettings, aiDefaults } from '@vacti/db';
 import { getDb } from '../../../../lib/db';
 import { getCurrentUser } from '../../../../lib/session';
 import {
@@ -17,7 +17,7 @@ import {
   editWebhookAction,
   testWebhookAction,
 } from '../../../../lib/integration-actions';
-import { saveAiSettingsAction } from '../../../../lib/ai-actions';
+import { saveAiSettingsAction, saveAiDefaultsAction } from '../../../../lib/ai-actions';
 import { saveProjectKeyAction, clearProjectKeyAction, testProjectKeyAction } from '../../../../lib/vault-actions';
 
 const VAULT_KEYS: { name: string; label: string; hint: string }[] = [
@@ -27,6 +27,17 @@ const VAULT_KEYS: { name: string; label: string; hint: string }[] = [
   { name: 'urlscan', label: 'URLScan', hint: 'Passive URL / IoC lookups' },
   { name: 'anthropic', label: 'Anthropic (Claude)', hint: 'AI enrichment' },
   { name: 'openai', label: 'OpenAI', hint: 'AI enrichment' },
+  { name: 'deepseek', label: 'DeepSeek', hint: 'AI enrichment' },
+  { name: 'kimi', label: 'Kimi (Moonshot)', hint: 'AI enrichment' },
+];
+
+// Provider options shared by the per-project and the system-default AI forms.
+const AI_PROVIDER_OPTIONS: { value: string; label: string }[] = [
+  { value: 'anthropic', label: 'Anthropic (Claude)' },
+  { value: 'openai', label: 'OpenAI' },
+  { value: 'deepseek', label: 'DeepSeek' },
+  { value: 'kimi', label: 'Kimi (Moonshot)' },
+  { value: 'ollama', label: 'Ollama' },
 ];
 
 export const dynamic = 'force-dynamic';
@@ -41,6 +52,7 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
 
   const hooks = projectId ? await db.select().from(webhooks).where(eq(webhooks.projectId, projectId)) : [];
   const [ai] = projectId ? await db.select().from(aiSettings).where(eq(aiSettings.projectId, projectId)) : [];
+  const [aiDefault] = await db.select().from(aiDefaults).where(eq(aiDefaults.id, 'default'));
   const setKeys = projectId ? new Set(await listProjectSecretNames(db, projectId)) : new Set<string>();
   // Persisted validity-check verdicts, keyed by secret name, so the status badge survives reloads.
   const keyChecks = new Map((projectId ? await listProjectSecretChecks(db, projectId) : []).map((c) => [c.name, c]));
@@ -221,16 +233,70 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
         </div>
       )}
 
+      <div className="mt-8">
+        <h2 className="mb-3 font-display text-sm font-semibold uppercase tracking-wider text-fg-subtle">
+          Default AI enrichment (system)
+        </h2>
+        <Card className="max-w-xl">
+          <CardContent className="pt-5">
+            <p className="mb-3 text-sm text-fg-muted">
+              The default provider used for AI enrichment when a project has not chosen its own below. Set the matching
+              API key in the vault (or environment). Features degrade gracefully without a key.
+            </p>
+            <form action={saveAiDefaultsAction} className="space-y-3">
+              <div className="flex items-end gap-3">
+                <div className="flex-1 space-y-1">
+                  <Label htmlFor="default-provider">Provider</Label>
+                  <Select
+                    id="default-provider"
+                    name="provider"
+                    defaultValue={aiDefault?.provider ?? 'anthropic'}
+                    data-testid="ai-default-provider"
+                  >
+                    {AI_PROVIDER_OPTIONS.map((o) => (
+                      <option key={o.value} value={o.value}>
+                        {o.label}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+                <div className="flex-1 space-y-1">
+                  <Label htmlFor="default-model">Model</Label>
+                  <Input
+                    id="default-model"
+                    name="model"
+                    defaultValue={aiDefault?.model ?? 'claude-sonnet-4-6'}
+                    placeholder="e.g. deepseek-chat, kimi-latest"
+                  />
+                </div>
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="default-baseUrl">Base URL (optional)</Label>
+                <Input
+                  id="default-baseUrl"
+                  name="baseUrl"
+                  type="url"
+                  placeholder="https://my-gateway.local/v1  (blank = vendor default)"
+                  defaultValue={aiDefault?.baseUrl ?? ''}
+                />
+              </div>
+              <SubmitButton data-testid="ai-default-save">Save default</SubmitButton>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
+
       {projectId ? (
         <div className="mt-8">
           <h2 className="mb-3 font-display text-sm font-semibold uppercase tracking-wider text-fg-subtle">
-            AI enrichment
+            AI enrichment (this project)
           </h2>
           <Card className="max-w-xl">
             <CardContent className="pt-5">
               <p className="mb-3 text-sm text-fg-muted">
-                Provider for vulnerability enrichment (description/impact/remediation). Set the matching API key in the
-                vault below (or environment); features degrade gracefully without a key.
+                Provider for vulnerability enrichment (description/impact/remediation) for this project. Leave on the
+                default unless this project needs a different model. Set the matching API key in the vault below (or
+                environment); features degrade gracefully without a key.
               </p>
               <form action={saveAiSettingsAction} className="space-y-3">
                 <input type="hidden" name="projectId" value={projectId} />
@@ -238,14 +304,21 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
                   <div className="flex-1 space-y-1">
                     <Label htmlFor="provider">Provider</Label>
                     <Select id="provider" name="provider" defaultValue={ai?.provider ?? 'anthropic'}>
-                      <option value="anthropic">Anthropic (Claude)</option>
-                      <option value="openai">OpenAI</option>
-                      <option value="ollama">Ollama</option>
+                      {AI_PROVIDER_OPTIONS.map((o) => (
+                        <option key={o.value} value={o.value}>
+                          {o.label}
+                        </option>
+                      ))}
                     </Select>
                   </div>
                   <div className="flex-1 space-y-1">
                     <Label htmlFor="model">Model</Label>
-                    <Input id="model" name="model" defaultValue={ai?.model ?? 'claude-sonnet-4-6'} />
+                    <Input
+                      id="model"
+                      name="model"
+                      defaultValue={ai?.model ?? 'claude-sonnet-4-6'}
+                      placeholder="e.g. deepseek-chat, kimi-latest"
+                    />
                   </div>
                 </div>
                 <div className="space-y-1">
@@ -258,8 +331,9 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
                     defaultValue={ai?.baseUrl ?? ''}
                   />
                   <p className="text-xs text-fg-subtle">
-                    Point Anthropic/OpenAI at a compatible endpoint (local proxy, LiteLLM, gateway). Leave blank to use
-                    the official cloud API. Does not change your API key. (Ollama uses OLLAMA_BASE_URL.)
+                    DeepSeek and Kimi are OpenAI-compatible (no base URL needed). Point Anthropic/OpenAI at a compatible
+                    endpoint (local proxy, LiteLLM, gateway) if you use one. Leave blank for the official cloud API.
+                    (Ollama uses OLLAMA_BASE_URL.)
                   </p>
                 </div>
                 <SubmitButton data-testid="ai-save">Save</SubmitButton>

@@ -41,4 +41,14 @@ export const aiCache = pgTable('ai_cache', {
   createdAt: createdAt(),
 });
 
-export const integrationsSchema = { webhooks, aiSettings, aiCache };
+// System-wide default AI enrichment config (singleton row id='default'). Used as the fallback for
+// projects that have not set their own ai_settings, instead of a hardcoded provider.
+export const aiDefaults = pgTable('ai_defaults', {
+  id: text('id').primaryKey().default('default'),
+  provider: text('provider').notNull().default('anthropic'), // anthropic | openai | deepseek | kimi | ollama
+  model: text('model').notNull().default('claude-sonnet-4-6'),
+  baseUrl: text('base_url'),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const integrationsSchema = { webhooks, aiSettings, aiCache, aiDefaults };
