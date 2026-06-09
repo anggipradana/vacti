@@ -54,6 +54,9 @@ export function ActionForm({
           // Grace for the server to finish persisting if the client dropped the response early.
           await new Promise((r) => setTimeout(r, 400));
           onSubmitted?.();
+          // NOTE: router.refresh()'s RSC fetch is itself dropped on these heavy pages (same connection
+          // quirk that drops the action response), so a soft refresh leaves stale UI. A full reload is
+          // currently the only reliable way to render the persisted result here.
           if (redirectTo) window.location.assign(redirectTo);
           else window.location.reload();
         })();

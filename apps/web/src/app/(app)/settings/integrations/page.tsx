@@ -298,16 +298,17 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
           <Card className="max-w-xl">
             <CardContent className="pt-5">
               <p className="mb-3 text-sm text-fg-muted">
-                Provider for vulnerability enrichment (description/impact/remediation) for this project. Leave on the
-                default unless this project needs a different model. Set the matching API key in the vault below (or
-                environment); features degrade gracefully without a key.
+                Provider for vulnerability enrichment (description/impact/remediation) for this project. This OVERRIDES
+                the system default above. Choose &quot;Use system default&quot; to follow it. Set the matching API key
+                in the vault below (or environment); features degrade gracefully without a key.
               </p>
               <ActionForm action={saveAiSettingsAction} className="space-y-3">
                 <input type="hidden" name="projectId" value={projectId} />
                 <div className="flex items-end gap-3">
                   <div className="flex-1 space-y-1">
                     <Label htmlFor="provider">Provider</Label>
-                    <Select id="provider" name="provider" defaultValue={ai?.provider ?? 'anthropic'}>
+                    <Select id="provider" name="provider" defaultValue={ai?.provider ?? ''}>
+                      <option value="">Use system default</option>
                       {AI_PROVIDER_OPTIONS.map((o) => (
                         <option key={o.value} value={o.value}>
                           {o.label}
