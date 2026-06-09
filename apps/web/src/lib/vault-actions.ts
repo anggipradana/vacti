@@ -2,6 +2,13 @@
 
 import { revalidatePath } from 'next/cache';
 import { Permission } from '@vacti/core';
+
+// These actions are invoked from <ActionForm> (a client transition that calls the action then
+// router.refresh()). They must NOT redirect (that would be swallowed by the form's catch); they just
+// mutate + revalidate so the follow-up refresh re-renders with the persisted state.
+function backToIntegrations(): void {
+  revalidatePath('/settings/integrations');
+}
 import {
   setProjectSecret,
   clearProjectSecret,
@@ -30,7 +37,7 @@ export async function saveProjectKeyAction(formData: FormData) {
     projectId,
     metadata: { name },
   });
-  revalidatePath('/settings/integrations');
+  backToIntegrations();
 }
 
 /** Probe a stored API key against its provider and persist the verdict in place. SysAdmin only. */
@@ -54,9 +61,8 @@ export async function testProjectKeyAction(formData: FormData) {
     projectId,
     metadata: { name, status: result.status },
   });
-  // The verdict is persisted; refresh in place so the sticky status badge re-renders (no redirect,
-  // which can blank the page in production). Matches the save/clear actions.
-  revalidatePath('/settings/integrations');
+  // The verdict is persisted; navigate back so the sticky status badge re-renders.
+  backToIntegrations();
 }
 
 export async function clearProjectKeyAction(formData: FormData) {
@@ -72,5 +78,5 @@ export async function clearProjectKeyAction(formData: FormData) {
     projectId,
     metadata: { name },
   });
-  revalidatePath('/settings/integrations');
+  backToIntegrations();
 }

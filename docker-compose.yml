@@ -49,7 +49,10 @@ services:
       context: .
       target: runtime
     restart: unless-stopped
-    command: ['npx', 'next', 'start', 'apps/web', '-p', '3000']
+    # keepAliveTimeout > client/proxy idle so the server never closes a connection the browser is about
+    # to reuse for a POST (server action). A reused-then-reset keep-alive connection fails a POST with
+    # net::ERR_ABORTED (browsers retry idempotent GETs but never POSTs), which hangs form spinners.
+    command: ['npx', 'next', 'start', 'apps/web', '-p', '3000', '--keepAliveTimeout', '70000']
     environment:
       DATABASE_URL: postgres://vacti:${POSTGRES_PASSWORD:-vacti}@db:5432/vacti
       ENCRYPTION_KEY: ${ENCRYPTION_KEY}

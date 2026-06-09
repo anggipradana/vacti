@@ -110,11 +110,11 @@ export async function makeProvider(cfg: AiConfig): Promise<AiProvider | null> {
     }
     if (cfg.provider === 'kimi') {
       if (!cfg.kimiKey) return null;
-      // Kimi (Moonshot AI) is OpenAI-compatible, so reuse the OpenAI SDK pointed at its endpoint.
+      // Kimi Code API (kimi.com/code) is OpenAI-compatible; reuse the OpenAI SDK pointed at it.
       const [{ generateText }, { createOpenAI }] = await Promise.all([import('ai'), import('@ai-sdk/openai')]);
       const kimi = createOpenAI({
         apiKey: cfg.kimiKey,
-        baseURL: baseURL ?? 'https://api.moonshot.ai/v1',
+        baseURL: baseURL ?? 'https://api.kimi.com/coding/v1',
         compatibility: 'compatible',
       });
       return {

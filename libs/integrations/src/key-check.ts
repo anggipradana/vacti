@@ -58,8 +58,8 @@ const CHECKS: Record<string, ProviderCheck> = {
     headers: (k) => ({ Authorization: `Bearer ${k}` }),
   },
   kimi: {
-    // Kimi (Moonshot AI) is OpenAI-compatible: list models with the Bearer key.
-    url: 'https://api.moonshot.ai/v1/models',
+    // Kimi Code API (kimi.com/code) is OpenAI-compatible: list models with the Bearer key.
+    url: 'https://api.kimi.com/coding/v1/models',
     headers: (k) => ({ Authorization: `Bearer ${k}` }),
   },
 };
