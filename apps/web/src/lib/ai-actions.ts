@@ -12,12 +12,14 @@ import {
   generateThreatNarrative,
   triageNewsRelevance,
   type AiProvider,
+  type AiConfig,
 } from '@vacti/integrations';
 import { computeProjectRisk } from '@vacti/threat-intel';
 import {
   vulnerabilities,
   scans,
   aiSettings,
+  aiDefaults,
   aiCache,
   targets,
   subdomains,
@@ -35,21 +37,36 @@ import { getDb, env } from './db';
 import { requirePermission } from './authz';
 import { recordAudit } from './audit';
 
+// Note: this is a 'use server' module, so it may only EXPORT async functions. Keep these local.
+type AiProviderName = 'anthropic' | 'openai' | 'deepseek' | 'kimi' | 'ollama';
+const AI_PROVIDERS: AiProviderName[] = ['anthropic', 'openai', 'deepseek', 'kimi', 'ollama'];
+
+/**
+ * Resolve the effective AI config for a project: its own ai_settings, else the system default
+ * (ai_defaults singleton), else a hardcoded fallback. The per-project vault key (named after the
+ * provider) overrides the matching environment key.
+ */
+async function resolveAiConfig(projectId: string): Promise<AiConfig> {
+  const db = getDb();
+  const e = env();
+  const [settings] = await db.select().from(aiSettings).where(eq(aiSettings.projectId, projectId));
+  const [defaults] = await db.select().from(aiDefaults).where(eq(aiDefaults.id, 'default'));
+  const prov = (settings?.provider ?? defaults?.provider ?? 'anthropic') as AiProviderName;
+  const model = settings?.model ?? defaults?.model ?? 'claude-sonnet-4-6';
+  const baseUrl = settings?.baseUrl ?? defaults?.baseUrl ?? undefined;
+  // Vault key name == provider name for the cloud providers; falls back to the env key.
+  const vaultKey = await getProjectSecret(db, projectId, prov, e.ENCRYPTION_KEY);
+  const cfg: AiConfig = { provider: prov, model, baseUrl, ollamaBaseUrl: e.OLLAMA_BASE_URL };
+  if (prov === 'anthropic') cfg.anthropicKey = vaultKey ?? e.ANTHROPIC_API_KEY;
+  else if (prov === 'openai') cfg.openaiKey = vaultKey ?? e.OPENAI_API_KEY;
+  else if (prov === 'deepseek') cfg.deepseekKey = vaultKey ?? e.DEEPSEEK_API_KEY;
+  else if (prov === 'kimi') cfg.kimiKey = vaultKey ?? e.KIMI_API_KEY;
+  return cfg;
+}
+
 /** Resolve an AI provider for a project (vault key → env fallback), or null if unconfigured. */
 async function providerFor(projectId: string): Promise<AiProvider | null> {
-  const db = getDb();
-  const [settings] = await db.select().from(aiSettings).where(eq(aiSettings.projectId, projectId));
-  const e = env();
-  const prov = (settings?.provider as 'anthropic' | 'openai' | 'ollama') ?? 'anthropic';
-  const vaultKey = await getProjectSecret(db, projectId, prov, e.ENCRYPTION_KEY);
-  return makeProvider({
-    provider: prov,
-    model: settings?.model ?? 'claude-sonnet-4-6',
-    anthropicKey: prov === 'anthropic' ? (vaultKey ?? e.ANTHROPIC_API_KEY) : e.ANTHROPIC_API_KEY,
-    openaiKey: prov === 'openai' ? (vaultKey ?? e.OPENAI_API_KEY) : e.OPENAI_API_KEY,
-    ollamaBaseUrl: e.OLLAMA_BASE_URL,
-    baseUrl: settings?.baseUrl ?? undefined,
-  });
+  return makeProvider(await resolveAiConfig(projectId));
 }
 
 export async function enrichVulnAction(formData: FormData) {
@@ -60,19 +77,7 @@ export async function enrichVulnAction(formData: FormData) {
   const [vuln] = await db.select().from(vulnerabilities).where(eq(vulnerabilities.id, id));
   if (!vuln) return;
   const [scan] = await db.select().from(scans).where(eq(scans.id, vuln.scanId));
-  const [settings] = scan ? await db.select().from(aiSettings).where(eq(aiSettings.projectId, scan.projectId)) : [];
-  const e = env();
-  const prov = (settings?.provider as 'anthropic' | 'openai' | 'ollama') ?? 'anthropic';
-  // Per-project vault key overrides the environment default for the chosen provider.
-  const vaultKey = scan ? await getProjectSecret(db, scan.projectId, prov, e.ENCRYPTION_KEY) : null;
-  const provider = await makeProvider({
-    provider: prov,
-    model: settings?.model ?? 'claude-sonnet-4-6',
-    anthropicKey: prov === 'anthropic' ? (vaultKey ?? e.ANTHROPIC_API_KEY) : e.ANTHROPIC_API_KEY,
-    openaiKey: prov === 'openai' ? (vaultKey ?? e.OPENAI_API_KEY) : e.OPENAI_API_KEY,
-    ollamaBaseUrl: e.OLLAMA_BASE_URL,
-    baseUrl: settings?.baseUrl ?? undefined,
-  });
+  const provider = scan ? await providerFor(scan.projectId) : null;
   if (!provider) {
     // No AI key configured - degrade gracefully (no-op).
     if (scanId) revalidatePath(`/scans/${scanId}`);
@@ -111,11 +116,26 @@ export async function saveAiSettingsAction(formData: FormData) {
   const rawBaseUrl = String(formData.get('baseUrl') ?? '').trim();
   // Optional override endpoint; must be a valid http(s) URL when present, else store null (vendor default).
   const baseUrl = rawBaseUrl && /^https?:\/\//i.test(rawBaseUrl) ? rawBaseUrl : null;
-  if (!projectId || !['anthropic', 'openai', 'ollama'].includes(provider)) return;
+  if (!projectId || !AI_PROVIDERS.includes(provider as AiProviderName)) return;
   await getDb()
     .insert(aiSettings)
     .values({ projectId, provider, model, baseUrl })
     .onConflictDoUpdate({ target: aiSettings.projectId, set: { provider, model, baseUrl } });
+  revalidatePath('/settings/integrations');
+}
+
+/** Save the system-wide default AI enrichment config (used by projects without their own setting). */
+export async function saveAiDefaultsAction(formData: FormData) {
+  await requirePermission(Permission.ModifySystemConfig);
+  const provider = String(formData.get('provider') ?? 'anthropic');
+  const model = String(formData.get('model') ?? '').trim() || 'claude-sonnet-4-6';
+  const rawBaseUrl = String(formData.get('baseUrl') ?? '').trim();
+  const baseUrl = rawBaseUrl && /^https?:\/\//i.test(rawBaseUrl) ? rawBaseUrl : null;
+  if (!AI_PROVIDERS.includes(provider as AiProviderName)) return;
+  await getDb()
+    .insert(aiDefaults)
+    .values({ id: 'default', provider, model, baseUrl, updatedAt: new Date() })
+    .onConflictDoUpdate({ target: aiDefaults.id, set: { provider, model, baseUrl, updatedAt: new Date() } });
   revalidatePath('/settings/integrations');
 }
 

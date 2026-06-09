@@ -39,6 +39,17 @@ describe('validateProviderKey', () => {
     expect((await validateProviderKey('anthropic', 'k', { fetchImpl })).status).toBe('error');
   });
 
+  it('supports deepseek and kimi with a Bearer key', async () => {
+    for (const p of ['deepseek', 'kimi']) {
+      const fetchImpl = vi.fn().mockResolvedValue(ok(200));
+      const res = await validateProviderKey(p, 'sk-x', { fetchImpl });
+      expect(res.status).toBe('valid');
+      const [url, init] = fetchImpl.mock.calls[0]!;
+      expect(String(url)).toContain('/models');
+      expect((init.headers as Record<string, string>).Authorization).toBe('Bearer sk-x');
+    }
+  });
+
   it('reports error for an unknown provider and invalid for an empty key', async () => {
     expect((await validateProviderKey('nope', 'k')).status).toBe('error');
     expect((await validateProviderKey('openai', '  ')).status).toBe('invalid');

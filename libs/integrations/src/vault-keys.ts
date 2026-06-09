@@ -3,7 +3,16 @@ import { apiKeys, type Database } from '@vacti/db';
 import { encryptSecret, decryptSecret } from '@vacti/auth';
 
 /** Logical names for per-project secrets stored (encrypted) in the api_keys vault. */
-export const SECRET_NAMES = ['otx', 'leakcheck', 'virustotal', 'urlscan', 'anthropic', 'openai'] as const;
+export const SECRET_NAMES = [
+  'otx',
+  'leakcheck',
+  'virustotal',
+  'urlscan',
+  'anthropic',
+  'openai',
+  'deepseek',
+  'kimi',
+] as const;
 export type SecretName = (typeof SECRET_NAMES)[number];
 
 /** Upsert an encrypted per-project secret. */

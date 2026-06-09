@@ -5,10 +5,12 @@ export interface AiProvider {
 }
 
 export interface AiConfig {
-  provider: 'anthropic' | 'openai' | 'ollama';
+  provider: 'anthropic' | 'openai' | 'deepseek' | 'kimi' | 'ollama';
   model: string;
   anthropicKey?: string;
   openaiKey?: string;
+  deepseekKey?: string;
+  kimiKey?: string;
   ollamaBaseUrl?: string;
   /**
    * Optional override endpoint for Anthropic/OpenAI-compatible APIs (a local proxy or gateway).
@@ -91,6 +93,32 @@ export async function makeProvider(cfg: AiConfig): Promise<AiProvider | null> {
       const openai = createOpenAI({ apiKey: cfg.openaiKey, ...(baseURL ? { baseURL } : {}) });
       return {
         generate: async (system, prompt) => (await generateText({ model: openai(cfg.model), system, prompt })).text,
+      };
+    }
+    if (cfg.provider === 'deepseek') {
+      if (!cfg.deepseekKey) return null;
+      // DeepSeek is OpenAI-compatible, so reuse the OpenAI SDK pointed at its endpoint (no new dep).
+      const [{ generateText }, { createOpenAI }] = await Promise.all([import('ai'), import('@ai-sdk/openai')]);
+      const deepseek = createOpenAI({
+        apiKey: cfg.deepseekKey,
+        baseURL: baseURL ?? 'https://api.deepseek.com/v1',
+        compatibility: 'compatible',
+      });
+      return {
+        generate: async (system, prompt) => (await generateText({ model: deepseek(cfg.model), system, prompt })).text,
+      };
+    }
+    if (cfg.provider === 'kimi') {
+      if (!cfg.kimiKey) return null;
+      // Kimi (Moonshot AI) is OpenAI-compatible, so reuse the OpenAI SDK pointed at its endpoint.
+      const [{ generateText }, { createOpenAI }] = await Promise.all([import('ai'), import('@ai-sdk/openai')]);
+      const kimi = createOpenAI({
+        apiKey: cfg.kimiKey,
+        baseURL: baseURL ?? 'https://api.moonshot.ai/v1',
+        compatibility: 'compatible',
+      });
+      return {
+        generate: async (system, prompt) => (await generateText({ model: kimi(cfg.model), system, prompt })).text,
       };
     }
     if (cfg.provider === 'ollama' && cfg.ollamaBaseUrl) {

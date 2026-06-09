@@ -225,6 +225,13 @@
       "when": 1780990431253,
       "tag": "0031_vault_key_check_status",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1780996754832,
+      "tag": "0032_ai_defaults_and_providers",
+      "breakpoints": true
     }
   ]
 }
