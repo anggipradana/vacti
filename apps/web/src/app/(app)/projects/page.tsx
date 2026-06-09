@@ -5,7 +5,7 @@ import { PageHeader } from '../../../components/ui/page-header';
 import { Card, CardContent } from '../../../components/ui/card';
 import { Input } from '../../../components/ui/input';
 import { Label } from '../../../components/ui/label';
-import { Button } from '../../../components/ui/button';
+import { SubmitButton } from '../../../components/ui/submit-button';
 import { ConfirmButton } from '../../../components/ui/confirm-button';
 import { Badge } from '../../../components/ui/badge';
 import { EmptyState } from '../../../components/ui/empty-state';
@@ -59,9 +59,9 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Pro
                 <Label htmlFor="slug">Slug</Label>
                 <Input id="slug" name="slug" data-testid="project-slug" placeholder="acme-corp" required />
               </div>
-              <Button type="submit" data-testid="create-project" className="w-full">
+              <SubmitButton data-testid="create-project" className="w-full">
                 Create project
-              </Button>
+              </SubmitButton>
             </form>
           </CardContent>
         </Card>
@@ -93,9 +93,9 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Pro
                         {!p.isDefault ? (
                           <form action={setDefaultProjectAction}>
                             <input type="hidden" name="id" value={p.id} />
-                            <Button type="submit" size="sm" variant="outline">
+                            <SubmitButton size="sm" variant="outline">
                               Set default
-                            </Button>
+                            </SubmitButton>
                           </form>
                         ) : null}
                         <form action={deleteProjectAction}>
@@ -135,9 +135,7 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Pro
                           <Label htmlFor={`slug-${p.id}`}>Slug</Label>
                           <Input id={`slug-${p.id}`} name="slug" defaultValue={p.slug} className="w-40" />
                         </div>
-                        <Button type="submit" size="sm">
-                          Save
-                        </Button>
+                        <SubmitButton size="sm">Save</SubmitButton>
                       </form>
                     </details>
                   ) : null}

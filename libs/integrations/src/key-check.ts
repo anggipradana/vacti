@@ -39,7 +39,9 @@ const CHECKS: Record<string, ProviderCheck> = {
     extraValid: [204],
   },
   urlscan: {
-    url: 'https://urlscan.io/user/quota/',
+    // Probe the same search endpoint the recon pipeline uses with the API-Key header: a valid key
+    // returns 200, a rejected key returns 401. (The /user/quota/ dashboard route can 401 valid keys.)
+    url: 'https://urlscan.io/api/v1/search/?q=domain:example.com&size=1',
     headers: (k) => ({ 'API-Key': k, Accept: 'application/json' }),
   },
   anthropic: {

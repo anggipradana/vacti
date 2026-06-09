@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Form from 'next/form';
 import { redirect } from 'next/navigation';
 import { and, eq, ilike, desc, count, sql, inArray } from 'drizzle-orm';
 import { ShieldAlert, FileSearch, Network } from 'lucide-react';
@@ -7,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui
 import { Table, THead, TBody, TR, TH, TD } from '../../../components/ui/table';
 import { Select } from '../../../components/ui/select';
 import { Button } from '../../../components/ui/button';
+import { SubmitButton } from '../../../components/ui/submit-button';
 import { Badge } from '../../../components/ui/badge';
 import { Input } from '../../../components/ui/input';
 import { EmptyState } from '../../../components/ui/empty-state';
@@ -165,7 +167,7 @@ export default async function SurfacePage({
 
       {/* Scan-diff: show only what a chosen scan newly discovered. */}
       <div className="mb-4 flex flex-wrap items-center gap-2">
-        <form method="get" className="flex items-center gap-1.5">
+        <Form action="/surface" className="flex items-center gap-1.5">
           <input type="hidden" name="project" value={projectId} />
           <Select name="scan" defaultValue={diffScanId} className="h-8 w-64 text-xs" aria-label="Diff: new in scan">
             <option value="">Diff: all discoveries</option>
@@ -179,7 +181,7 @@ export default async function SurfacePage({
           <Button type="submit" variant="ghost" size="sm">
             Apply diff
           </Button>
-        </form>
+        </Form>
         {diffScanId ? (
           <span className="flex items-center gap-2 text-xs text-fg-muted">
             <Badge variant="accent">Showing NEW discoveries from scan {diffScanId.slice(0, 8)}</Badge>
@@ -237,9 +239,9 @@ export default async function SurfacePage({
                   </option>
                 ))}
               </Select>
-              <Button type="submit" variant="outline" size="sm">
+              <SubmitButton variant="outline" size="sm">
                 Apply
-              </Button>
+              </SubmitButton>
             </form>
           ) : null}
         </CardHeader>
@@ -258,7 +260,7 @@ export default async function SurfacePage({
           <CardTitle className="flex items-center gap-2">
             <FileSearch className="size-4 text-accent" /> Discovered URLs
           </CardTitle>
-          <form method="get" className="flex flex-wrap items-center gap-1.5">
+          <Form action="/surface" className="flex flex-wrap items-center gap-1.5">
             <input type="hidden" name="project" value={projectId} />
             <Select name="cat" defaultValue={cat} className="h-8 w-44 text-xs" aria-label="Filter by category">
               <option value="all">All categories</option>
@@ -274,7 +276,7 @@ export default async function SurfacePage({
             <Button type="submit" variant="ghost" size="sm">
               Filter
             </Button>
-          </form>
+          </Form>
         </CardHeader>
         <CardContent className="pt-0">
           {urls.length === 0 ? (

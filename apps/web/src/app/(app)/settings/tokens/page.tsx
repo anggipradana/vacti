@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation';
 import { desc, eq } from 'drizzle-orm';
 import { KeyRound } from 'lucide-react';
 import { Table, THead, TBody, TR, TH, TD } from '../../../../components/ui/table';
-import { Button } from '../../../../components/ui/button';
+import { SubmitButton } from '../../../../components/ui/submit-button';
 import { EmptyState } from '../../../../components/ui/empty-state';
 import { apiTokens } from '@vacti/db';
 import { getDb } from '../../../../lib/db';
@@ -58,9 +58,9 @@ export default async function TokensPage() {
                     <TD className="text-right">
                       <form action={revokeTokenAction} className="inline">
                         <input type="hidden" name="id" value={t.id} />
-                        <Button type="submit" variant="ghost" size="sm" className="text-danger hover:bg-danger/10">
+                        <SubmitButton variant="ghost" size="sm" className="text-danger hover:bg-danger/10">
                           Revoke
-                        </Button>
+                        </SubmitButton>
                       </form>
                     </TD>
                   </TR>

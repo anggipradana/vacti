@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../components/ui/card';
 import { Input } from '../../../../components/ui/input';
 import { Label } from '../../../../components/ui/label';
-import { Button } from '../../../../components/ui/button';
+import { SubmitButton } from '../../../../components/ui/submit-button';
 import { Badge } from '../../../../components/ui/badge';
 import { ConfirmButton } from '../../../../components/ui/confirm-button';
 import { roleFromUser } from '@vacti/core';
@@ -77,7 +77,7 @@ export default async function AccountPage({
               <Label htmlFor="email">Email address</Label>
               <Input id="email" name="email" type="email" autoComplete="email" defaultValue={user.email} required />
             </div>
-            <Button type="submit">Save</Button>
+            <SubmitButton>Save</SubmitButton>
           </form>
         </CardContent>
       </Card>
@@ -110,7 +110,7 @@ export default async function AccountPage({
               <Label htmlFor="confirm">Confirm new password</Label>
               <Input id="confirm" name="confirm" type="password" autoComplete="new-password" minLength={8} required />
             </div>
-            <Button type="submit">Update password</Button>
+            <SubmitButton>Update password</SubmitButton>
           </form>
         </CardContent>
       </Card>

@@ -218,6 +218,13 @@
       "when": 1780880835484,
       "tag": "0030_analyst_notes",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1780990431253,
+      "tag": "0031_vault_key_check_status",
+      "breakpoints": true
     }
   ]
 }

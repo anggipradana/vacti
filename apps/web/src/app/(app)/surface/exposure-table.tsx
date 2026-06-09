@@ -4,6 +4,7 @@ import * as React from 'react';
 import { LEAK_STATUS_LABEL } from '@vacti/core';
 import { Table, THead, TBody, TR, TH, TD } from '../../../components/ui/table';
 import { Button } from '../../../components/ui/button';
+import { SubmitButton } from '../../../components/ui/submit-button';
 import { Input } from '../../../components/ui/input';
 import { Textarea } from '../../../components/ui/textarea';
 import { Select } from '../../../components/ui/select';
@@ -157,9 +158,9 @@ export function ExposureTable({ findings, canTriage }: { findings: ExposureRow[]
               </option>
             ))}
           </Select>
-          <Button type="submit" size="sm" variant="primary">
+          <SubmitButton size="sm" variant="primary">
             Apply to selected
-          </Button>
+          </SubmitButton>
           <Button type="button" size="sm" variant="ghost" onClick={() => setSelected(new Set())}>
             Clear
           </Button>
@@ -256,9 +257,9 @@ export function ExposureTable({ findings, canTriage }: { findings: ExposureRow[]
                         <form action={setExposureNoteAction} className="mt-1 space-y-1">
                           <input type="hidden" name="id" value={f.id} />
                           <Textarea name="note" defaultValue={f.analystNote ?? ''} rows={2} className="text-xs" />
-                          <Button type="submit" size="sm" variant="outline">
+                          <SubmitButton size="sm" variant="outline">
                             Save note
-                          </Button>
+                          </SubmitButton>
                         </form>
                       </details>
                     </div>

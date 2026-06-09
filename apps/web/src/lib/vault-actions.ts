@@ -7,6 +7,7 @@ import {
   setProjectSecret,
   clearProjectSecret,
   getProjectSecret,
+  setProjectSecretCheck,
   validateProviderKey,
   SECRET_NAMES,
 } from '@vacti/integrations';
@@ -45,6 +46,8 @@ export async function testProjectKeyAction(formData: FormData) {
     ? await validateProviderKey(name, key)
     : ({ status: 'invalid', message: 'No key stored.' } as const);
 
+  // Persist the verdict so the status badge survives reloads/navigation.
+  if (key) await setProjectSecretCheck(getDb(), projectId, name, result.status);
   await recordAudit({
     actorId: actor.id,
     action: 'vault.key_test',
@@ -52,9 +55,9 @@ export async function testProjectKeyAction(formData: FormData) {
     projectId,
     metadata: { name, status: result.status },
   });
-  // Carry the verdict back to the page via query params (never the key itself).
-  const params = new URLSearchParams({ project: projectId, ktest: name, kstatus: result.status });
-  redirect(`/settings/integrations?${params.toString()}`);
+  // The verdict is now persisted; revalidate so the sticky status badge re-renders.
+  revalidatePath('/settings/integrations');
+  redirect(`/settings/integrations?project=${encodeURIComponent(projectId)}`);
 }
 
 export async function clearProjectKeyAction(formData: FormData) {

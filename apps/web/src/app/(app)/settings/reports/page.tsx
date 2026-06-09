@@ -5,7 +5,7 @@ import { Input } from '../../../../components/ui/input';
 import { Textarea } from '../../../../components/ui/textarea';
 import { Label } from '../../../../components/ui/label';
 import { Select } from '../../../../components/ui/select';
-import { Button } from '../../../../components/ui/button';
+import { SubmitButton } from '../../../../components/ui/submit-button';
 import { Badge } from '../../../../components/ui/badge';
 import { projects, reportSettings, reportSignatories } from '@vacti/db';
 import { getDb } from '../../../../lib/db';
@@ -153,14 +153,14 @@ export default async function ReportSettingsPage({ searchParams }: { searchParam
                 />
               </div>
             ) : null}
-            <Button type="submit">Save</Button>
+            <SubmitButton>Save</SubmitButton>
           </form>
           {kind === 'va' ? (
             <form action={generateExecSummaryAction} className="mt-3 border-t border-border pt-3">
               <input type="hidden" name="projectId" value={projectId} />
-              <Button type="submit" variant="outline" size="sm">
+              <SubmitButton variant="outline" size="sm">
                 Generate executive summary with AI
-              </Button>
+              </SubmitButton>
               <p className="mt-1 text-xs text-fg-subtle">
                 Uses the latest scan + configured AI provider; fills both EN/ID and enables the custom summary.
               </p>
@@ -206,9 +206,7 @@ export default async function ReportSettingsPage({ searchParams }: { searchParam
                 <Label htmlFor="sigimg">Signature image</Label>
                 <Input id="sigimg" name="signatureImageFile" type="file" accept="image/*" className="h-9 py-1.5" />
               </div>
-              <Button type="submit" className="w-full">
-                Add signatory
-              </Button>
+              <SubmitButton className="w-full">Add signatory</SubmitButton>
             </form>
           </CardContent>
         </Card>
@@ -237,9 +235,9 @@ export default async function ReportSettingsPage({ searchParams }: { searchParam
                         <Badge variant="accent">{s.role}</Badge>
                         <form action={deleteSignatoryAction}>
                           <input type="hidden" name="id" value={s.id} />
-                          <Button type="submit" variant="ghost" size="sm" className="text-danger hover:bg-danger/10">
+                          <SubmitButton variant="ghost" size="sm" className="text-danger hover:bg-danger/10">
                             Remove
-                          </Button>
+                          </SubmitButton>
                         </form>
                       </div>
                     </div>
@@ -255,9 +253,9 @@ export default async function ReportSettingsPage({ searchParams }: { searchParam
                         <Input name="name" defaultValue={s.name} placeholder="Name" required />
                         <Input name="position" defaultValue={s.position} placeholder="Position" />
                         <Input name="signatureImageFile" type="file" accept="image/*" className="h-9 py-1.5" />
-                        <Button type="submit" size="sm" variant="outline">
+                        <SubmitButton size="sm" variant="outline">
                           Save
-                        </Button>
+                        </SubmitButton>
                       </form>
                     </details>
                   </CardContent>

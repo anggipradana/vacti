@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { NEWS_STATUS_LABEL } from '@vacti/core';
 import { Button } from '../../../components/ui/button';
+import { SubmitButton } from '../../../components/ui/submit-button';
 import { Input } from '../../../components/ui/input';
 import { Select } from '../../../components/ui/select';
 import { Badge } from '../../../components/ui/badge';
@@ -118,9 +119,9 @@ export function SectorNewsList({ items, canTriage }: { items: SectorNewsItem[]; 
               </option>
             ))}
           </Select>
-          <Button type="submit" size="sm" variant="primary">
+          <SubmitButton size="sm" variant="primary">
             Apply to selected
-          </Button>
+          </SubmitButton>
           <Button type="button" size="sm" variant="ghost" onClick={() => setSelected(new Set())}>
             Clear
           </Button>

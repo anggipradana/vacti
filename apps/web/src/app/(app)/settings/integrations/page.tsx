@@ -4,10 +4,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../../../components
 import { Input } from '../../../../components/ui/input';
 import { Label } from '../../../../components/ui/label';
 import { Select } from '../../../../components/ui/select';
-import { Button } from '../../../../components/ui/button';
+import { SubmitButton } from '../../../../components/ui/submit-button';
 import { Badge } from '../../../../components/ui/badge';
 import { EmptyState } from '../../../../components/ui/empty-state';
-import { ALL_EVENT_TYPES, listProjectSecretNames } from '@vacti/integrations';
+import { ALL_EVENT_TYPES, listProjectSecretNames, listProjectSecretChecks } from '@vacti/integrations';
 import { projects, webhooks, aiSettings } from '@vacti/db';
 import { getDb } from '../../../../lib/db';
 import { getCurrentUser } from '../../../../lib/session';
@@ -31,26 +31,19 @@ const VAULT_KEYS: { name: string; label: string; hint: string }[] = [
 
 export const dynamic = 'force-dynamic';
 
-export default async function IntegrationsPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ project?: string; ktest?: string; kstatus?: string }>;
-}) {
+export default async function IntegrationsPage({ searchParams }: { searchParams: Promise<{ project?: string }> }) {
   const user = await getCurrentUser();
   if (!user) redirect('/login');
   const db = getDb();
   const projectRows = await db.select().from(projects).orderBy(desc(projects.createdAt));
   const sp = await searchParams;
   const projectId = sp.project ?? projectRows[0]?.id;
-  // Verdict from a just-run key validity check (carried back via redirect query params).
-  const testResult =
-    sp.ktest && (sp.kstatus === 'valid' || sp.kstatus === 'invalid' || sp.kstatus === 'error')
-      ? { name: sp.ktest, status: sp.kstatus }
-      : null;
 
   const hooks = projectId ? await db.select().from(webhooks).where(eq(webhooks.projectId, projectId)) : [];
   const [ai] = projectId ? await db.select().from(aiSettings).where(eq(aiSettings.projectId, projectId)) : [];
   const setKeys = projectId ? new Set(await listProjectSecretNames(db, projectId)) : new Set<string>();
+  // Persisted validity-check verdicts, keyed by secret name, so the status badge survives reloads.
+  const keyChecks = new Map((projectId ? await listProjectSecretChecks(db, projectId) : []).map((c) => [c.name, c]));
 
   return (
     <>
@@ -114,9 +107,9 @@ export default async function IntegrationsPage({
                     ))}
                   </div>
                 </div>
-                <Button type="submit" className="w-full" data-testid="webhook-add">
+                <SubmitButton className="w-full" data-testid="webhook-add">
                   Add webhook
-                </Button>
+                </SubmitButton>
               </form>
             </CardContent>
           </Card>
@@ -139,15 +132,15 @@ export default async function IntegrationsPage({
                       <div className="flex items-center gap-2">
                         <form action={testWebhookAction}>
                           <input type="hidden" name="id" value={w.id} />
-                          <Button type="submit" variant="outline" size="sm">
+                          <SubmitButton variant="outline" size="sm">
                             Test
-                          </Button>
+                          </SubmitButton>
                         </form>
                         <form action={deleteWebhookAction}>
                           <input type="hidden" name="id" value={w.id} />
-                          <Button type="submit" variant="ghost" size="sm" className="text-danger hover:bg-danger/10">
+                          <SubmitButton variant="ghost" size="sm" className="text-danger hover:bg-danger/10">
                             Remove
-                          </Button>
+                          </SubmitButton>
                         </form>
                       </div>
                     </div>
@@ -215,9 +208,9 @@ export default async function IntegrationsPage({
                         <label className="flex items-center gap-2 text-sm">
                           <input type="checkbox" name="enabled" defaultChecked={w.enabled} /> Enabled
                         </label>
-                        <Button type="submit" size="sm" data-testid={`webhook-edit-save-${w.id}`}>
+                        <SubmitButton size="sm" data-testid={`webhook-edit-save-${w.id}`}>
                           Save changes
-                        </Button>
+                        </SubmitButton>
                       </form>
                     </details>
                   </CardContent>
@@ -269,9 +262,7 @@ export default async function IntegrationsPage({
                     the official cloud API. Does not change your API key. (Ollama uses OLLAMA_BASE_URL.)
                   </p>
                 </div>
-                <Button type="submit" data-testid="ai-save">
-                  Save
-                </Button>
+                <SubmitButton data-testid="ai-save">Save</SubmitButton>
               </form>
             </CardContent>
           </Card>
@@ -302,20 +293,25 @@ export default async function IntegrationsPage({
                       ) : (
                         <span className="text-xs text-fg-subtle">· {k.hint}</span>
                       )}{' '}
-                      {testResult?.name === k.name ? (
+                      {setKeys.has(k.name) && keyChecks.get(k.name)?.status ? (
                         <Badge
                           variant={
-                            testResult.status === 'valid'
+                            keyChecks.get(k.name)!.status === 'valid'
                               ? 'success'
-                              : testResult.status === 'invalid'
+                              : keyChecks.get(k.name)!.status === 'invalid'
                                 ? 'danger'
                                 : 'neutral'
                           }
                           data-testid={`vault-test-result-${k.name}`}
+                          title={
+                            keyChecks.get(k.name)?.checkedAt
+                              ? `Last checked ${keyChecks.get(k.name)!.checkedAt!.toISOString()}`
+                              : undefined
+                          }
                         >
-                          {testResult.status === 'valid'
+                          {keyChecks.get(k.name)!.status === 'valid'
                             ? 'valid'
-                            : testResult.status === 'invalid'
+                            : keyChecks.get(k.name)!.status === 'invalid'
                               ? 'invalid'
                               : 'check failed'}
                         </Badge>
@@ -331,9 +327,9 @@ export default async function IntegrationsPage({
                         data-testid={`vault-input-${k.name}`}
                         placeholder={setKeys.has(k.name) ? '•••••••• (replace)' : 'Paste key…'}
                       />
-                      <Button type="submit" variant="outline" size="sm" data-testid={`vault-save-${k.name}`}>
+                      <SubmitButton variant="outline" size="sm" data-testid={`vault-save-${k.name}`}>
                         Save
-                      </Button>
+                      </SubmitButton>
                     </form>
                   </div>
                   {setKeys.has(k.name) ? (
@@ -341,22 +337,26 @@ export default async function IntegrationsPage({
                       <form action={testProjectKeyAction}>
                         <input type="hidden" name="projectId" value={projectId} />
                         <input type="hidden" name="name" value={k.name} />
-                        <Button type="submit" variant="outline" size="sm" data-testid={`vault-test-${k.name}`}>
+                        <SubmitButton
+                          variant="outline"
+                          size="sm"
+                          pendingText="Testing..."
+                          data-testid={`vault-test-${k.name}`}
+                        >
                           Test
-                        </Button>
+                        </SubmitButton>
                       </form>
                       <form action={clearProjectKeyAction}>
                         <input type="hidden" name="projectId" value={projectId} />
                         <input type="hidden" name="name" value={k.name} />
-                        <Button
-                          type="submit"
+                        <SubmitButton
                           variant="ghost"
                           size="sm"
                           className="text-danger hover:bg-danger/10"
                           data-testid={`vault-clear-${k.name}`}
                         >
                           Clear
-                        </Button>
+                        </SubmitButton>
                       </form>
                     </>
                   ) : null}

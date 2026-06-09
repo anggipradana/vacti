@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Form from 'next/form';
 import { redirect } from 'next/navigation';
 import { Suspense } from 'react';
 import { desc, eq, count, sql } from 'drizzle-orm';
@@ -119,16 +120,16 @@ export default async function ThreatPage({
             </Button>
             <form action={refreshTiAction}>
               <input type="hidden" name="projectId" value={projectId} />
-              <Button type="submit">
+              <SubmitButton pendingText="Refreshing...">
                 <RefreshCw /> Refresh
-              </Button>
+              </SubmitButton>
             </form>
           </div>
         }
       />
 
       <div className="mb-6 flex flex-wrap items-center gap-3">
-        <form>
+        <Form action="/threat">
           <Select name="project" defaultValue={projectId} aria-label="Project">
             {projectRows.map((p) => (
               <option key={p.id} value={p.id}>
@@ -139,7 +140,7 @@ export default async function ThreatPage({
           <Button type="submit" variant="ghost" size="sm" className="ml-2">
             Switch
           </Button>
-        </form>
+        </Form>
         {status ? (
           <Badge variant={status.state === 'running' ? 'accent' : status.state === 'failed' ? 'danger' : 'neutral'}>
             {status.state === 'running' ? `refreshing ${status.progress}%` : `last refresh: ${status.state}`}
@@ -192,9 +193,9 @@ export default async function ThreatPage({
           {canTriage ? (
             <form action={generateThreatNarrativeAction}>
               <input type="hidden" name="projectId" value={projectId} />
-              <Button type="submit" variant="outline" size="sm">
+              <SubmitButton variant="outline" size="sm" pendingText="Generating...">
                 {status?.aiNarrative ? 'Regenerate' : 'Generate'}
-              </Button>
+              </SubmitButton>
             </form>
           ) : null}
         </CardHeader>
@@ -223,9 +224,9 @@ export default async function ThreatPage({
                       </option>
                     ))}
                   </Select>
-                  <Button type="submit" variant="outline" size="sm">
+                  <SubmitButton variant="outline" size="sm">
                     Apply
-                  </Button>
+                  </SubmitButton>
                 </form>
                 <form action={setSectorAction} className="flex items-center gap-2">
                   <input type="hidden" name="projectId" value={projectId} />
@@ -335,9 +336,9 @@ export default async function ThreatPage({
                 </option>
               ))}
             </Select>
-            <Button type="submit" variant="outline" size="sm">
+            <SubmitButton variant="outline" size="sm">
               Apply
-            </Button>
+            </SubmitButton>
           </form>
         ) : null}
       </div>
@@ -387,9 +388,9 @@ export default async function ThreatPage({
                 />
                 <p className="text-xs text-fg-subtle">One per line (or comma/space separated) for bulk add.</p>
               </div>
-              <Button type="submit" className="w-full">
+              <SubmitButton className="w-full">
                 <Plus /> Add indicator(s)
-              </Button>
+              </SubmitButton>
             </form>
           </CardContent>
         </Card>
@@ -433,9 +434,9 @@ export default async function ThreatPage({
                         </Select>
                         <Input name="value" defaultValue={ind.value} placeholder="Value" required />
                         <Input name="note" defaultValue={ind.note ?? ''} placeholder="Note (optional)" />
-                        <Button type="submit" size="sm" variant="outline">
+                        <SubmitButton size="sm" variant="outline">
                           Save
-                        </Button>
+                        </SubmitButton>
                       </form>
                     </details>
                   ) : null}

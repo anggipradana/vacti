@@ -4,7 +4,7 @@ import { desc, eq } from 'drizzle-orm';
 import { ArrowLeft, Trash2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../components/ui/card';
 import { Input } from '../../../../components/ui/input';
-import { Button } from '../../../../components/ui/button';
+import { SubmitButton } from '../../../../components/ui/submit-button';
 import { Badge } from '../../../../components/ui/badge';
 import { userCan, Permission } from '@vacti/core';
 import { targets, reconNotes } from '@vacti/db';
@@ -78,9 +78,7 @@ export default async function TargetDetail({ params }: { params: Promise<{ id: s
               <form action={addNoteAction} className="flex items-center gap-2">
                 <input type="hidden" name="targetId" value={target.id} />
                 <Input name="body" placeholder="Add a note or TODO…" required />
-                <Button type="submit" size="sm">
-                  Add
-                </Button>
+                <SubmitButton size="sm">Add</SubmitButton>
               </form>
             ) : null}
             {notes.length === 0 ? (
@@ -98,15 +96,14 @@ export default async function TargetDetail({ params }: { params: Promise<{ id: s
                             <form action={toggleNoteAction}>
                               <input type="hidden" name="id" value={n.id} />
                               <input type="hidden" name="targetId" value={target.id} />
-                              <Button type="submit" variant="ghost" size="sm">
+                              <SubmitButton variant="ghost" size="sm">
                                 {n.done ? 'Reopen' : 'Done'}
-                              </Button>
+                              </SubmitButton>
                             </form>
                             <form action={deleteNoteAction}>
                               <input type="hidden" name="id" value={n.id} />
                               <input type="hidden" name="targetId" value={target.id} />
-                              <Button
-                                type="submit"
+                              <SubmitButton
                                 variant="ghost"
                                 size="sm"
                                 className="text-danger hover:bg-danger/10"
@@ -114,7 +111,7 @@ export default async function TargetDetail({ params }: { params: Promise<{ id: s
                                 title="Delete note"
                               >
                                 <Trash2 className="size-4" />
-                              </Button>
+                              </SubmitButton>
                             </form>
                           </>
                         ) : null}
@@ -127,9 +124,7 @@ export default async function TargetDetail({ params }: { params: Promise<{ id: s
                           <input type="hidden" name="id" value={n.id} />
                           <input type="hidden" name="targetId" value={target.id} />
                           <Input name="body" defaultValue={n.body} required />
-                          <Button type="submit" size="sm">
-                            Save
-                          </Button>
+                          <SubmitButton size="sm">Save</SubmitButton>
                         </form>
                       </details>
                     ) : null}
