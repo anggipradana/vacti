@@ -56,10 +56,9 @@ export function VulnTable({ vulns, scanId, canTriage }: { vulns: VulnRow[]; scan
   // response gets dropped) and shows the result inline - a spinner on the button, no page reload.
   type Enrichment = { description: string; impact: string; remediation: string };
   const [enriched, setEnriched] = React.useState<Record<string, Enrichment>>({});
-  const [enriching, setEnriching] = React.useState<string | null>(null);
   const [enrichMsg, setEnrichMsg] = React.useState<Record<string, string>>({});
-  const runEnrich = async (id: string) => {
-    setEnriching(id);
+  const [bulkEnrich, setBulkEnrich] = React.useState<{ done: number; total: number } | null>(null);
+  const enrichOne = async (id: string): Promise<boolean> => {
     setEnrichMsg((m) => ({ ...m, [id]: '' }));
     try {
       const res = await fetch('/api/internal/enrich-vuln', {
@@ -70,17 +69,28 @@ export function VulnTable({ vulns, scanId, canTriage }: { vulns: VulnRow[]; scan
       const data = (await res.json()) as { ok?: boolean; enrichment?: Enrichment; error?: string };
       if (data.ok && data.enrichment) {
         setEnriched((e) => ({ ...e, [id]: data.enrichment! }));
-      } else {
-        setEnrichMsg((m) => ({
-          ...m,
-          [id]: data.error === 'no_ai_provider' ? 'Set an AI provider + key first' : 'AI failed, try again',
-        }));
+        return true;
       }
+      setEnrichMsg((m) => ({
+        ...m,
+        [id]: data.error === 'no_ai_provider' ? 'Set an AI provider + key first' : 'AI failed, try again',
+      }));
+      return false;
     } catch {
       setEnrichMsg((m) => ({ ...m, [id]: 'Request failed' }));
-    } finally {
-      setEnriching(null);
+      return false;
     }
+  };
+  // Bulk AI enrich the selected findings (sequential to be gentle on the provider).
+  const runEnrichBulk = async () => {
+    const ids = [...selected];
+    if (ids.length === 0) return;
+    setBulkEnrich({ done: 0, total: ids.length });
+    for (let i = 0; i < ids.length; i++) {
+      await enrichOne(ids[i]!);
+      setBulkEnrich({ done: i + 1, total: ids.length });
+    }
+    setBulkEnrich(null);
   };
 
   const filtered = React.useMemo(() => {
@@ -171,6 +181,16 @@ export function VulnTable({ vulns, scanId, canTriage }: { vulns: VulnRow[]; scan
           <ActionSubmit size="sm" variant="primary">
             Apply to selected
           </ActionSubmit>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            loading={Boolean(bulkEnrich)}
+            onClick={runEnrichBulk}
+            title="Generate AI description/impact/remediation for the selected findings (also used in the report)"
+          >
+            {bulkEnrich ? `AI enriching ${bulkEnrich.done}/${bulkEnrich.total}` : 'AI enrich'}
+          </Button>
           <Button type="button" size="sm" variant="ghost" onClick={() => setSelected(new Set())}>
             Clear
           </Button>
@@ -367,15 +387,6 @@ export function VulnTable({ vulns, scanId, canTriage }: { vulns: VulnRow[]; scan
                 {canTriage ? (
                   <TD>
                     <div className="flex items-center gap-1.5">
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        loading={enriching === v.id}
-                        onClick={() => runEnrich(v.id)}
-                      >
-                        AI
-                      </Button>
                       <ActionForm action={deleteVulnAction} confirm="Delete this finding?">
                         <input type="hidden" name="id" value={v.id} />
                         <input type="hidden" name="scanId" value={scanId} />
