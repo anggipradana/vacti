@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { NEWS_STATUS_LABEL } from '@vacti/core';
 import { Button } from '../../../components/ui/button';
-import { SubmitButton } from '../../../components/ui/submit-button';
+import { ActionForm, ActionSubmit } from '../../../components/ui/action-form';
 import { Input } from '../../../components/ui/input';
 import { Select } from '../../../components/ui/select';
 import { Badge } from '../../../components/ui/badge';
@@ -104,7 +104,7 @@ export function SectorNewsList({ items, canTriage }: { items: SectorNewsItem[]; 
 
       {/* Bulk action bar - appears when rows are selected. */}
       {canTriage && selected.size > 0 ? (
-        <form
+        <ActionForm
           action={bulkSetNewsStatusByIdsAction}
           className="flex flex-wrap items-center gap-2 rounded-md border border-accent/30 bg-accent/5 px-3 py-2"
         >
@@ -119,13 +119,13 @@ export function SectorNewsList({ items, canTriage }: { items: SectorNewsItem[]; 
               </option>
             ))}
           </Select>
-          <SubmitButton size="sm" variant="primary">
+          <ActionSubmit size="sm" variant="primary">
             Apply to selected
-          </SubmitButton>
+          </ActionSubmit>
           <Button type="button" size="sm" variant="ghost" onClick={() => setSelected(new Set())}>
             Clear
           </Button>
-        </form>
+        </ActionForm>
       ) : null}
 
       {filtered.length === 0 ? (
@@ -162,7 +162,7 @@ export function SectorNewsList({ items, canTriage }: { items: SectorNewsItem[]; 
               {canTriage ? (
                 <div className="flex shrink-0 items-center gap-1.5">
                   <NewsStatusBadge status={n.status} />
-                  <form action={setNewsStatusAction} className="flex items-center gap-1.5">
+                  <ActionForm action={setNewsStatusAction} className="flex items-center gap-1.5">
                     <input type="hidden" name="id" value={n.id} />
                     <AutoSubmitSelect
                       key={n.status}
@@ -177,7 +177,7 @@ export function SectorNewsList({ items, canTriage }: { items: SectorNewsItem[]; 
                         </option>
                       ))}
                     </AutoSubmitSelect>
-                  </form>
+                  </ActionForm>
                 </div>
               ) : (
                 <Badge variant="neutral" className="shrink-0">

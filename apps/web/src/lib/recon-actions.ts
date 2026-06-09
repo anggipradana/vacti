@@ -5,7 +5,7 @@ import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { Permission, isValidCron, buildCron, type ScheduleFrequency } from '@vacti/core';
 import { targets, scans, scanSchedules, reconNotes, scanProfiles } from '@vacti/db';
-import { eq } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { getDb } from './db';
 import { getQueue } from './queue';
 import { requirePermission } from './authz';
@@ -250,6 +250,48 @@ export async function startScanAction(formData: FormData) {
   const q = await getQueue();
   await q.enqueue('scan', scanJob, { scanId: scan!.id });
   redirect(`/scans/${scan!.id}`);
+}
+
+/**
+ * Run passive recon (VirusTotal + Wayback + URLScan OSINT) for every target in a project, straight
+ * from the Attack Surface page. Idempotent: skips a target that already has a queued/running passive
+ * or full scan, so a repeated click (or ActionForm's retry) does not pile up duplicate scans.
+ */
+export async function runPassiveReconAction(formData: FormData) {
+  const actor = await requirePermission(Permission.InitiateScans);
+  const projectId = String(formData.get('projectId') ?? '');
+  if (!projectId) return;
+  const db = getDb();
+  const projTargets = await db.select().from(targets).where(eq(targets.projectId, projectId));
+  if (projTargets.length === 0) return;
+
+  const active = await db
+    .select({ targetId: scans.targetId })
+    .from(scans)
+    .where(
+      and(
+        eq(scans.projectId, projectId),
+        inArray(scans.mode, ['passive', 'full']),
+        inArray(scans.status, ['queued', 'running']),
+      ),
+    );
+  const busy = new Set(active.map((s) => s.targetId));
+
+  const q = await getQueue();
+  let started = 0;
+  for (const t of projTargets) {
+    if (busy.has(t.id)) continue;
+    const [scan] = await db.insert(scans).values({ projectId, targetId: t.id, mode: 'passive' }).returning();
+    await q.enqueue('scan', scanJob, { scanId: scan!.id });
+    started++;
+  }
+  await recordAudit({
+    actorId: actor.id,
+    action: 'scan.start',
+    resource: `project:${projectId}`,
+    projectId,
+    metadata: { mode: 'passive', started, targets: projTargets.length },
+  });
 }
 
 /** Request cancellation of a running/queued scan (worker polls the flag and aborts). */

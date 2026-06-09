@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui
 import { StatCard } from '../../../components/ui/stat-card';
 import { RiskGauge } from '../../../components/ui/risk-gauge';
 import { Button } from '../../../components/ui/button';
-import { SubmitButton } from '../../../components/ui/submit-button';
+import { ActionForm, ActionSubmit } from '../../../components/ui/action-form';
 import { Textarea } from '../../../components/ui/textarea';
 import { Input } from '../../../components/ui/input';
 import { Label } from '../../../components/ui/label';
@@ -39,7 +39,6 @@ import {
   bulkReviewNewsAction,
   bulkReviewLeaksAction,
 } from '../../../lib/threat-actions';
-import { ConfirmButton } from '../../../components/ui/confirm-button';
 import { generateThreatNarrativeAction, aiTriageNewsAction } from '../../../lib/ai-actions';
 import { CtiCards } from './cti-cards';
 import { BrandNews } from './brand-news';
@@ -118,12 +117,12 @@ export default async function ThreatPage({
                 Generate report
               </a>
             </Button>
-            <form action={refreshTiAction}>
+            <ActionForm action={refreshTiAction}>
               <input type="hidden" name="projectId" value={projectId} />
-              <SubmitButton pendingText="Refreshing...">
+              <ActionSubmit pendingText="Refreshing...">
                 <RefreshCw /> Refresh
-              </SubmitButton>
-            </form>
+              </ActionSubmit>
+            </ActionForm>
           </div>
         }
       />
@@ -191,12 +190,12 @@ export default async function ThreatPage({
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>AI risk analysis</CardTitle>
           {canTriage ? (
-            <form action={generateThreatNarrativeAction}>
+            <ActionForm action={generateThreatNarrativeAction}>
               <input type="hidden" name="projectId" value={projectId} />
-              <SubmitButton variant="outline" size="sm" pendingText="Generating...">
+              <ActionSubmit variant="outline" size="sm" pendingText="Generating...">
                 {status?.aiNarrative ? 'Regenerate' : 'Generate'}
-              </SubmitButton>
-            </form>
+              </ActionSubmit>
+            </ActionForm>
           ) : null}
         </CardHeader>
         <CardContent className="pt-0 text-sm leading-relaxed text-fg-muted">
@@ -214,7 +213,7 @@ export default async function ThreatPage({
           <div className="flex flex-wrap items-center gap-2">
             {canTriage ? (
               <>
-                <form action={bulkReviewNewsAction} className="flex items-center gap-1.5">
+                <ActionForm action={bulkReviewNewsAction} className="flex items-center gap-1.5">
                   <input type="hidden" name="sector" value={sector} />
                   <input type="hidden" name="filter" value="all" />
                   <Select name="status" defaultValue="reviewed" className="h-8 w-36 text-xs" aria-label="Bulk status">
@@ -224,11 +223,15 @@ export default async function ThreatPage({
                       </option>
                     ))}
                   </Select>
-                  <SubmitButton variant="outline" size="sm">
+                  <ActionSubmit variant="outline" size="sm">
                     Apply
-                  </SubmitButton>
-                </form>
-                <form action={setSectorAction} className="flex items-center gap-2">
+                  </ActionSubmit>
+                </ActionForm>
+                <ActionForm
+                  action={setSectorAction}
+                  className="flex items-center gap-2"
+                  confirm="Fetching this sector's news keeps only the newest 15 headlines and removes older stored ones. Continue?"
+                >
                   <input type="hidden" name="projectId" value={projectId} />
                   <Select name="sector" defaultValue={sector} className="w-40">
                     {Object.keys(SECTORS).map((s) => (
@@ -237,24 +240,20 @@ export default async function ThreatPage({
                       </option>
                     ))}
                   </Select>
-                  <ConfirmButton
-                    variant="outline"
-                    size="sm"
-                    confirm="Fetching this sector's news keeps only the newest 15 headlines and removes older stored ones. Continue?"
-                  >
+                  <ActionSubmit variant="outline" size="sm">
                     Apply sector
-                  </ConfirmButton>
-                </form>
-                <form
+                  </ActionSubmit>
+                </ActionForm>
+                <ActionForm
                   action={aiTriageNewsAction}
                   title="Auto-mark off-topic headlines as Irrelevant (learns from your past triage)"
                 >
                   <input type="hidden" name="projectId" value={projectId} />
                   <input type="hidden" name="kind" value="sector" />
-                  <SubmitButton variant="ghost" size="sm" pendingText="Analyzing…">
+                  <ActionSubmit variant="ghost" size="sm" pendingText="Analyzing…">
                     AI: filter irrelevant
-                  </SubmitButton>
-                </form>
+                  </ActionSubmit>
+                </ActionForm>
               </>
             ) : null}
           </div>
@@ -326,7 +325,7 @@ export default async function ThreatPage({
           Leaked credentials
         </h2>
         {leakTotal > 0 && canTriage ? (
-          <form action={bulkReviewLeaksAction} className="flex items-center gap-1.5">
+          <ActionForm action={bulkReviewLeaksAction} className="flex items-center gap-1.5">
             <input type="hidden" name="projectId" value={projectId} />
             <input type="hidden" name="filter" value="all" />
             <Select name="status" defaultValue="investigating" className="h-8 w-40 text-xs" aria-label="Bulk status">
@@ -336,10 +335,10 @@ export default async function ThreatPage({
                 </option>
               ))}
             </Select>
-            <SubmitButton variant="outline" size="sm">
+            <ActionSubmit variant="outline" size="sm">
               Apply
-            </SubmitButton>
-          </form>
+            </ActionSubmit>
+          </ActionForm>
         ) : null}
       </div>
       {leakTotal === 0 ? (
@@ -367,7 +366,7 @@ export default async function ThreatPage({
       <div className="grid gap-4 lg:grid-cols-[360px_1fr]">
         <Card>
           <CardContent className="pt-5">
-            <form action={addIndicatorAction} className="space-y-3">
+            <ActionForm action={addIndicatorAction} className="space-y-3">
               <input type="hidden" name="projectId" value={projectId} />
               <div className="space-y-1.5">
                 <Label htmlFor="type">Type</Label>
@@ -388,10 +387,10 @@ export default async function ThreatPage({
                 />
                 <p className="text-xs text-fg-subtle">One per line (or comma/space separated) for bulk add.</p>
               </div>
-              <SubmitButton className="w-full">
+              <ActionSubmit className="w-full">
                 <Plus /> Add indicator(s)
-              </SubmitButton>
-            </form>
+              </ActionSubmit>
+            </ActionForm>
           </CardContent>
         </Card>
         <div className="space-y-2">
@@ -408,24 +407,19 @@ export default async function ThreatPage({
                     <div className="flex items-center gap-2">
                       <Badge variant="accent">{ind.type}</Badge>
                       {canTriage ? (
-                        <form action={deleteIndicatorAction}>
+                        <ActionForm action={deleteIndicatorAction} confirm="Delete this indicator?">
                           <input type="hidden" name="id" value={ind.id} />
-                          <ConfirmButton
-                            size="sm"
-                            variant="ghost"
-                            className="text-danger hover:bg-danger/10"
-                            confirm="Delete this indicator?"
-                          >
+                          <ActionSubmit size="sm" variant="ghost" className="text-danger hover:bg-danger/10">
                             Delete
-                          </ConfirmButton>
-                        </form>
+                          </ActionSubmit>
+                        </ActionForm>
                       ) : null}
                     </div>
                   </div>
                   {canTriage ? (
                     <details className="mt-2">
                       <summary className="cursor-pointer text-xs text-fg-subtle hover:text-fg-muted">Edit</summary>
-                      <form action={editIndicatorAction} className="mt-2 space-y-2">
+                      <ActionForm action={editIndicatorAction} className="mt-2 space-y-2">
                         <input type="hidden" name="id" value={ind.id} />
                         <Select name="type" defaultValue={ind.type} aria-label="Type">
                           <option value="domain">domain</option>
@@ -434,10 +428,10 @@ export default async function ThreatPage({
                         </Select>
                         <Input name="value" defaultValue={ind.value} placeholder="Value" required />
                         <Input name="note" defaultValue={ind.note ?? ''} placeholder="Note (optional)" />
-                        <SubmitButton size="sm" variant="outline">
+                        <ActionSubmit size="sm" variant="outline">
                           Save
-                        </SubmitButton>
-                      </form>
+                        </ActionSubmit>
+                      </ActionForm>
                     </details>
                   ) : null}
                 </CardContent>

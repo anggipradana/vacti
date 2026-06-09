@@ -13,6 +13,7 @@ import { Table, THead, TBody, TR, TH, TD } from '../../../../components/ui/table
 import { Badge } from '../../../../components/ui/badge';
 import { Button } from '../../../../components/ui/button';
 import { SubmitButton } from '../../../../components/ui/submit-button';
+import { ActionForm, ActionSubmit } from '../../../../components/ui/action-form';
 import { Select } from '../../../../components/ui/select';
 import { userCan, Permission } from '@vacti/core';
 import { scans, targets, scanActivity, subdomains, endpoints, ports as portsTable, vulnerabilities } from '@vacti/db';
@@ -108,17 +109,17 @@ export default async function ScanDetail({
           </div>
           <div className="flex items-center gap-2">
             {!terminal && userCan(user, Permission.InitiateScans) ? (
-              <form action={cancelScanAction}>
+              <ActionForm action={cancelScanAction}>
                 <input type="hidden" name="id" value={scan.id} />
-                <SubmitButton
+                <ActionSubmit
                   variant="outline"
                   size="sm"
                   className="text-danger hover:bg-danger/10"
                   pendingText="Cancelling..."
                 >
                   Cancel scan
-                </SubmitButton>
-              </form>
+                </ActionSubmit>
+              </ActionForm>
             ) : null}
             <Button asChild variant="secondary" size="sm">
               <a href={`/reports/va/${scan.id}?type=full`} target="_blank" rel="noopener noreferrer">

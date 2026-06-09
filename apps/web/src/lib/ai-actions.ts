@@ -11,6 +11,7 @@ import {
   generateExecutiveSummary,
   generateThreatNarrative,
   triageNewsRelevance,
+  resolveAiModel,
   type AiProvider,
   type AiConfig,
 } from '@vacti/integrations';
@@ -52,7 +53,9 @@ async function resolveAiConfig(projectId: string): Promise<AiConfig> {
   const [settings] = await db.select().from(aiSettings).where(eq(aiSettings.projectId, projectId));
   const [defaults] = await db.select().from(aiDefaults).where(eq(aiDefaults.id, 'default'));
   const prov = (settings?.provider ?? defaults?.provider ?? 'anthropic') as AiProviderName;
-  const model = settings?.model ?? defaults?.model ?? 'claude-sonnet-4-6';
+  // Use a model valid for the chosen provider (a leftover cross-provider model makes the API reject
+  // the call, which would silently disable enrichment).
+  const model = resolveAiModel(prov, settings?.model ?? defaults?.model);
   const baseUrl = settings?.baseUrl ?? defaults?.baseUrl ?? undefined;
   // Vault key name == provider name for the cloud providers; falls back to the env key.
   const vaultKey = await getProjectSecret(db, projectId, prov, e.ENCRYPTION_KEY);
@@ -112,7 +115,7 @@ export async function saveAiSettingsAction(formData: FormData) {
   await requirePermission(Permission.ModifySystemConfig);
   const projectId = String(formData.get('projectId') ?? '');
   const provider = String(formData.get('provider') ?? 'anthropic');
-  const model = String(formData.get('model') ?? '').trim() || 'claude-sonnet-4-6';
+  const model = resolveAiModel(provider, String(formData.get('model') ?? ''));
   const rawBaseUrl = String(formData.get('baseUrl') ?? '').trim();
   // Optional override endpoint; must be a valid http(s) URL when present, else store null (vendor default).
   const baseUrl = rawBaseUrl && /^https?:\/\//i.test(rawBaseUrl) ? rawBaseUrl : null;
@@ -128,7 +131,7 @@ export async function saveAiSettingsAction(formData: FormData) {
 export async function saveAiDefaultsAction(formData: FormData) {
   await requirePermission(Permission.ModifySystemConfig);
   const provider = String(formData.get('provider') ?? 'anthropic');
-  const model = String(formData.get('model') ?? '').trim() || 'claude-sonnet-4-6';
+  const model = resolveAiModel(provider, String(formData.get('model') ?? ''));
   const rawBaseUrl = String(formData.get('baseUrl') ?? '').trim();
   const baseUrl = rawBaseUrl && /^https?:\/\//i.test(rawBaseUrl) ? rawBaseUrl : null;
   if (!AI_PROVIDERS.includes(provider as AiProviderName)) return;

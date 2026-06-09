@@ -4,7 +4,7 @@ import * as React from 'react';
 import { LEAK_STATUS_LABEL } from '@vacti/core';
 import { Table, THead, TBody, TR, TH, TD } from '../../../components/ui/table';
 import { Button } from '../../../components/ui/button';
-import { SubmitButton } from '../../../components/ui/submit-button';
+import { ActionForm, ActionSubmit } from '../../../components/ui/action-form';
 import { Input } from '../../../components/ui/input';
 import { Textarea } from '../../../components/ui/textarea';
 import { Select } from '../../../components/ui/select';
@@ -12,7 +12,6 @@ import { Badge } from '../../../components/ui/badge';
 import { Reveal } from '../../../components/ui/reveal';
 import { LeakStatusBadge } from '../../../components/ui/finding-status';
 import { AutoSubmitSelect } from '../../../components/ui/auto-submit-select';
-import { ConfirmButton } from '../../../components/ui/confirm-button';
 import {
   setExposureStatusAction,
   setExposureNoteAction,
@@ -143,7 +142,7 @@ export function ExposureTable({ findings, canTriage }: { findings: ExposureRow[]
 
       {/* Bulk action bar - appears when rows are selected. */}
       {canTriage && selected.size > 0 ? (
-        <form
+        <ActionForm
           action={bulkSetExposureStatusByIdsAction}
           className="flex flex-wrap items-center gap-2 rounded-md border border-accent/30 bg-accent/5 px-3 py-2"
         >
@@ -158,13 +157,13 @@ export function ExposureTable({ findings, canTriage }: { findings: ExposureRow[]
               </option>
             ))}
           </Select>
-          <SubmitButton size="sm" variant="primary">
+          <ActionSubmit size="sm" variant="primary">
             Apply to selected
-          </SubmitButton>
+          </ActionSubmit>
           <Button type="button" size="sm" variant="ghost" onClick={() => setSelected(new Set())}>
             Clear
           </Button>
-        </form>
+        </ActionForm>
       ) : null}
 
       {filtered.length === 0 ? (
@@ -222,7 +221,7 @@ export function ExposureTable({ findings, canTriage }: { findings: ExposureRow[]
                   {canTriage ? (
                     <div className="flex flex-col gap-1.5">
                       <div className="flex items-center gap-1.5">
-                        <form action={setExposureStatusAction} className="flex items-center gap-1.5">
+                        <ActionForm action={setExposureStatusAction} className="flex items-center gap-1.5">
                           <input type="hidden" name="id" value={f.id} />
                           <AutoSubmitSelect
                             key={f.status}
@@ -237,30 +236,25 @@ export function ExposureTable({ findings, canTriage }: { findings: ExposureRow[]
                               </option>
                             ))}
                           </AutoSubmitSelect>
-                        </form>
-                        <form action={deleteExposureAction}>
+                        </ActionForm>
+                        <ActionForm action={deleteExposureAction} confirm="Delete this exposure finding?">
                           <input type="hidden" name="id" value={f.id} />
-                          <ConfirmButton
-                            size="sm"
-                            variant="ghost"
-                            className="text-danger hover:bg-danger/10"
-                            confirm="Delete this exposure finding?"
-                          >
+                          <ActionSubmit size="sm" variant="ghost" className="text-danger hover:bg-danger/10">
                             Delete
-                          </ConfirmButton>
-                        </form>
+                          </ActionSubmit>
+                        </ActionForm>
                       </div>
                       <details className="text-xs text-fg-muted">
                         <summary className="cursor-pointer text-accent">
                           {f.analystNote ? 'Edit note' : 'Add note'}
                         </summary>
-                        <form action={setExposureNoteAction} className="mt-1 space-y-1">
+                        <ActionForm action={setExposureNoteAction} className="mt-1 space-y-1">
                           <input type="hidden" name="id" value={f.id} />
                           <Textarea name="note" defaultValue={f.analystNote ?? ''} rows={2} className="text-xs" />
-                          <SubmitButton size="sm" variant="outline">
+                          <ActionSubmit size="sm" variant="outline">
                             Save note
-                          </SubmitButton>
-                        </form>
+                          </ActionSubmit>
+                        </ActionForm>
                       </details>
                     </div>
                   ) : (

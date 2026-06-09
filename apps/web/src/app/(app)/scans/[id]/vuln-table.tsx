@@ -4,14 +4,13 @@ import * as React from 'react';
 import { VULN_STATUS_LABEL, type SeverityValue } from '@vacti/core';
 import { Table, THead, TBody, TR, TH, TD } from '../../../../components/ui/table';
 import { Button } from '../../../../components/ui/button';
-import { SubmitButton } from '../../../../components/ui/submit-button';
+import { ActionForm, ActionSubmit } from '../../../../components/ui/action-form';
 import { Input } from '../../../../components/ui/input';
 import { Textarea } from '../../../../components/ui/textarea';
 import { Select } from '../../../../components/ui/select';
 import { SeverityBadge } from '../../../../components/ui/severity-badge';
 import { VulnStatusBadge } from '../../../../components/ui/finding-status';
 import { AutoSubmitSelect } from '../../../../components/ui/auto-submit-select';
-import { ConfirmButton } from '../../../../components/ui/confirm-button';
 // (Badge intentionally not imported - read-only status uses VulnStatusBadge.)
 import {
   setVulnStatusAction,
@@ -123,7 +122,7 @@ export function VulnTable({ vulns, scanId, canTriage }: { vulns: VulnRow[]; scan
 
       {/* Bulk action bar - appears when rows are selected. */}
       {canTriage && selected.size > 0 ? (
-        <form
+        <ActionForm
           action={bulkSetVulnStatusByIdsAction}
           className="flex flex-wrap items-center gap-2 rounded-md border border-accent/30 bg-accent/5 px-3 py-2"
         >
@@ -139,13 +138,13 @@ export function VulnTable({ vulns, scanId, canTriage }: { vulns: VulnRow[]; scan
               </option>
             ))}
           </Select>
-          <SubmitButton size="sm" variant="primary">
+          <ActionSubmit size="sm" variant="primary">
             Apply to selected
-          </SubmitButton>
+          </ActionSubmit>
           <Button type="button" size="sm" variant="ghost" onClick={() => setSelected(new Set())}>
             Clear
           </Button>
-        </form>
+        </ActionForm>
       ) : null}
 
       {filtered.length === 0 ? (
@@ -286,7 +285,7 @@ export function VulnTable({ vulns, scanId, canTriage }: { vulns: VulnRow[]; scan
                       <summary className="cursor-pointer text-accent">
                         {v.analystNote ? 'Edit note' : 'Add note'}
                       </summary>
-                      <form action={setVulnNoteAction} className="mt-1 space-y-1">
+                      <ActionForm action={setVulnNoteAction} className="mt-1 space-y-1">
                         <input type="hidden" name="id" value={v.id} />
                         <input type="hidden" name="scanId" value={scanId} />
                         <Textarea
@@ -296,10 +295,10 @@ export function VulnTable({ vulns, scanId, canTriage }: { vulns: VulnRow[]; scan
                           placeholder="Investigation context, false-positive reason, …"
                           className="text-xs"
                         />
-                        <SubmitButton size="sm" variant="outline">
+                        <ActionSubmit size="sm" variant="outline">
                           Save note
-                        </SubmitButton>
-                      </form>
+                        </ActionSubmit>
+                      </ActionForm>
                     </details>
                   ) : null}
                 </TD>
@@ -329,25 +328,20 @@ export function VulnTable({ vulns, scanId, canTriage }: { vulns: VulnRow[]; scan
                 {canTriage ? (
                   <TD>
                     <div className="flex items-center gap-1.5">
-                      <form action={enrichVulnAction}>
+                      <ActionForm action={enrichVulnAction}>
                         <input type="hidden" name="id" value={v.id} />
                         <input type="hidden" name="scanId" value={scanId} />
-                        <SubmitButton size="sm" variant="outline">
+                        <ActionSubmit size="sm" variant="outline">
                           AI
-                        </SubmitButton>
-                      </form>
-                      <form action={deleteVulnAction}>
+                        </ActionSubmit>
+                      </ActionForm>
+                      <ActionForm action={deleteVulnAction} confirm="Delete this finding?">
                         <input type="hidden" name="id" value={v.id} />
                         <input type="hidden" name="scanId" value={scanId} />
-                        <ConfirmButton
-                          size="sm"
-                          variant="ghost"
-                          className="text-danger hover:bg-danger/10"
-                          confirm="Delete this finding?"
-                        >
+                        <ActionSubmit size="sm" variant="ghost" className="text-danger hover:bg-danger/10">
                           Delete
-                        </ConfirmButton>
-                      </form>
+                        </ActionSubmit>
+                      </ActionForm>
                     </div>
                   </TD>
                 ) : null}

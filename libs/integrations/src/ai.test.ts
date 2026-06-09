@@ -1,5 +1,27 @@
 import { describe, it, expect } from 'vitest';
-import { buildNewsTriagePrompt, parseIrrelevantIndices, triageNewsRelevance, type AiProvider } from './ai';
+import {
+  buildNewsTriagePrompt,
+  parseIrrelevantIndices,
+  triageNewsRelevance,
+  resolveAiModel,
+  type AiProvider,
+} from './ai';
+
+describe('resolveAiModel', () => {
+  it('forces kimi-for-coding for Kimi regardless of stored model', () => {
+    expect(resolveAiModel('kimi', 'claude-sonnet-4-6')).toBe('kimi-for-coding');
+    expect(resolveAiModel('kimi', '')).toBe('kimi-for-coding');
+  });
+  it('defaults DeepSeek to deepseek-chat unless a deepseek model is set', () => {
+    expect(resolveAiModel('deepseek', 'claude-sonnet-4-6')).toBe('deepseek-chat');
+    expect(resolveAiModel('deepseek', 'deepseek-reasoner')).toBe('deepseek-reasoner');
+  });
+  it('keeps the stored model for anthropic/openai, or falls back to a default', () => {
+    expect(resolveAiModel('anthropic', 'claude-opus-4-1')).toBe('claude-opus-4-1');
+    expect(resolveAiModel('openai', 'gpt-4o')).toBe('gpt-4o');
+    expect(resolveAiModel('openai', '')).toBe('gpt-4o-mini');
+  });
+});
 
 describe('news triage helpers', () => {
   it('builds a prompt that lists candidates and learns from examples', () => {
