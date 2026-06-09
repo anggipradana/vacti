@@ -39,7 +39,8 @@ import {
   bulkReviewNewsAction,
   bulkReviewLeaksAction,
 } from '../../../lib/threat-actions';
-import { generateThreatNarrativeAction, aiTriageNewsAction } from '../../../lib/ai-actions';
+import { aiTriageNewsAction } from '../../../lib/ai-actions';
+import { NarrativeCard } from './narrative-card';
 import { CtiCards } from './cti-cards';
 import { BrandNews } from './brand-news';
 import { LeakTable } from './leak-table';
@@ -186,26 +187,7 @@ export default async function ThreatPage({
         />
       </Suspense>
 
-      <Card className="mt-4">
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>AI risk analysis</CardTitle>
-          {canTriage ? (
-            <ActionForm action={generateThreatNarrativeAction}>
-              <input type="hidden" name="projectId" value={projectId} />
-              <ActionSubmit variant="outline" size="sm" pendingText="Generating...">
-                {status?.aiNarrative ? 'Regenerate' : 'Generate'}
-              </ActionSubmit>
-            </ActionForm>
-          ) : null}
-        </CardHeader>
-        <CardContent className="pt-0 text-sm leading-relaxed text-fg-muted">
-          {status?.aiNarrative ? (
-            status.aiNarrative.replace(/[--]/g, '-')
-          ) : (
-            <span className="text-fg-subtle">Not generated yet.</span>
-          )}
-        </CardContent>
-      </Card>
+      <NarrativeCard projectId={projectId} initial={status?.aiNarrative ?? null} canTriage={canTriage} />
 
       <Card className="mt-4">
         <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3">

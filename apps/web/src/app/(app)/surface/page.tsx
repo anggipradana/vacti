@@ -20,8 +20,8 @@ import { getDb } from '../../../lib/db';
 import { getCurrentUser } from '../../../lib/session';
 import { getActiveProjectId } from '../../../lib/active-project';
 import { bulkReviewExposureAction } from '../../../lib/surface-actions';
-import { runPassiveReconAction } from '../../../lib/recon-actions';
 import { ExposureTable } from './exposure-table';
+import { PassiveReconRunner } from './passive-recon-runner';
 
 export const dynamic = 'force-dynamic';
 const PAGE = 25;
@@ -147,12 +147,7 @@ export default async function SurfacePage({
         description="Passive OSINT discovery (VirusTotal + Wayback): URLs, exposure findings, and IP resolutions. Run passive recon to populate (uses your VirusTotal key)."
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            <ActionForm action={runPassiveReconAction} redirectTo="/scans">
-              <input type="hidden" name="projectId" value={projectId} />
-              <ActionSubmit size="sm" data-testid="run-passive-recon">
-                Run passive recon
-              </ActionSubmit>
-            </ActionForm>
+            <PassiveReconRunner projectId={projectId} />
             <a href={`/surface/export?project=${projectId}&format=zip`}>
               <Button variant="secondary" size="sm">
                 Export ZIP
