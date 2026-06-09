@@ -18,7 +18,6 @@ import {
   bulkSetVulnStatusByIdsAction,
   deleteVulnAction,
 } from '../../../../lib/status-actions';
-import { enrichVulnAction } from '../../../../lib/ai-actions';
 
 export interface VulnRow {
   id: string;
@@ -52,6 +51,37 @@ export function VulnTable({ vulns, scanId, canTriage }: { vulns: VulnRow[]; scan
   const [statusFilter, setStatusFilter] = React.useState('all');
   const [selected, setSelected] = React.useState<Set<string>>(new Set());
   const [page, setPage] = React.useState(1);
+
+  // AI enrichment runs via a plain fetch (reliable on this heavy page, unlike a server action whose
+  // response gets dropped) and shows the result inline - a spinner on the button, no page reload.
+  type Enrichment = { description: string; impact: string; remediation: string };
+  const [enriched, setEnriched] = React.useState<Record<string, Enrichment>>({});
+  const [enriching, setEnriching] = React.useState<string | null>(null);
+  const [enrichMsg, setEnrichMsg] = React.useState<Record<string, string>>({});
+  const runEnrich = async (id: string) => {
+    setEnriching(id);
+    setEnrichMsg((m) => ({ ...m, [id]: '' }));
+    try {
+      const res = await fetch('/api/internal/enrich-vuln', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      });
+      const data = (await res.json()) as { ok?: boolean; enrichment?: Enrichment; error?: string };
+      if (data.ok && data.enrichment) {
+        setEnriched((e) => ({ ...e, [id]: data.enrichment! }));
+      } else {
+        setEnrichMsg((m) => ({
+          ...m,
+          [id]: data.error === 'no_ai_provider' ? 'Set an AI provider + key first' : 'AI failed, try again',
+        }));
+      }
+    } catch {
+      setEnrichMsg((m) => ({ ...m, [id]: 'Request failed' }));
+    } finally {
+      setEnriching(null);
+    }
+  };
 
   const filtered = React.useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -233,26 +263,35 @@ export function VulnTable({ vulns, scanId, canTriage }: { vulns: VulnRow[]; scan
                       ) : null}
                     </details>
                   ) : null}
-                  {v.isAiEnriched ? (
-                    <details className="mt-1 max-w-md text-xs text-fg-muted">
-                      <summary className="cursor-pointer text-accent">AI analysis</summary>
-                      {v.aiDescription ? (
-                        <p className="mt-1">
-                          <strong>Description:</strong> {v.aiDescription}
-                        </p>
-                      ) : null}
-                      {v.aiImpact ? (
-                        <p className="mt-1">
-                          <strong>Impact:</strong> {v.aiImpact}
-                        </p>
-                      ) : null}
-                      {v.aiRemediation ? (
-                        <p className="mt-1">
-                          <strong>Remediation:</strong> {v.aiRemediation}
-                        </p>
-                      ) : null}
-                    </details>
-                  ) : null}
+                  {enrichMsg[v.id] ? <p className="mt-1 max-w-md text-xs text-danger">{enrichMsg[v.id]}</p> : null}
+                  {(() => {
+                    const ai =
+                      enriched[v.id] ??
+                      (v.isAiEnriched
+                        ? { description: v.aiDescription, impact: v.aiImpact, remediation: v.aiRemediation }
+                        : null);
+                    if (!ai) return null;
+                    return (
+                      <details className="mt-1 max-w-md text-xs text-fg-muted" open={Boolean(enriched[v.id])}>
+                        <summary className="cursor-pointer text-accent">AI analysis</summary>
+                        {ai.description ? (
+                          <p className="mt-1">
+                            <strong>Description:</strong> {ai.description}
+                          </p>
+                        ) : null}
+                        {ai.impact ? (
+                          <p className="mt-1">
+                            <strong>Impact:</strong> {ai.impact}
+                          </p>
+                        ) : null}
+                        {ai.remediation ? (
+                          <p className="mt-1">
+                            <strong>Remediation:</strong> {ai.remediation}
+                          </p>
+                        ) : null}
+                      </details>
+                    );
+                  })()}
                   {v.request || v.response ? (
                     <details className="mt-1 max-w-md text-xs text-fg-muted">
                       <summary className="cursor-pointer text-accent">Request / Response</summary>
@@ -328,13 +367,15 @@ export function VulnTable({ vulns, scanId, canTriage }: { vulns: VulnRow[]; scan
                 {canTriage ? (
                   <TD>
                     <div className="flex items-center gap-1.5">
-                      <ActionForm action={enrichVulnAction}>
-                        <input type="hidden" name="id" value={v.id} />
-                        <input type="hidden" name="scanId" value={scanId} />
-                        <ActionSubmit size="sm" variant="outline">
-                          AI
-                        </ActionSubmit>
-                      </ActionForm>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        loading={enriching === v.id}
+                        onClick={() => runEnrich(v.id)}
+                      >
+                        AI
+                      </Button>
                       <ActionForm action={deleteVulnAction} confirm="Delete this finding?">
                         <input type="hidden" name="id" value={v.id} />
                         <input type="hidden" name="scanId" value={scanId} />

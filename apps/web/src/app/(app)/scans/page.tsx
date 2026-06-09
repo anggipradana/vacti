@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { desc, count, eq } from 'drizzle-orm';
+import { desc, count, eq, and, ne } from 'drizzle-orm';
 import { Radar } from 'lucide-react';
 import { PageHeader } from '../../../components/ui/page-header';
 import { Table, THead, TBody, TR, TH, TD } from '../../../components/ui/table';
@@ -40,7 +40,11 @@ export default async function ScansPage({
   const projectRows = await db.select().from(projects).orderBy(desc(projects.createdAt));
   const projectId = await getActiveProjectId(sp.project, projectRows);
   // Scope scans + targets to the active project (multi-project workspaces).
-  const scanWhere = projectId ? eq(scans.projectId, projectId) : undefined;
+  // Scans dashboard is for VA scans only (active/full). Passive-recon-only scans belong to Attack
+  // Surface and are excluded here.
+  const scanWhere = projectId
+    ? and(eq(scans.projectId, projectId), ne(scans.mode, 'passive'))
+    : ne(scans.mode, 'passive');
   const [scanRows, targetRows, profileRows, countRows] = await Promise.all([
     db.select().from(scans).where(scanWhere).orderBy(desc(scans.createdAt)).limit(PAGE_SIZE).offset(offset),
     projectId
