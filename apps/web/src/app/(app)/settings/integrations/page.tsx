@@ -18,7 +18,7 @@ import {
   testWebhookAction,
 } from '../../../../lib/integration-actions';
 import { saveAiSettingsAction } from '../../../../lib/ai-actions';
-import { saveProjectKeyAction, clearProjectKeyAction } from '../../../../lib/vault-actions';
+import { saveProjectKeyAction, clearProjectKeyAction, testProjectKeyAction } from '../../../../lib/vault-actions';
 
 const VAULT_KEYS: { name: string; label: string; hint: string }[] = [
   { name: 'otx', label: 'OTX (AlienVault)', hint: 'Threat-intel pulses' },
@@ -31,13 +31,22 @@ const VAULT_KEYS: { name: string; label: string; hint: string }[] = [
 
 export const dynamic = 'force-dynamic';
 
-export default async function IntegrationsPage({ searchParams }: { searchParams: Promise<{ project?: string }> }) {
+export default async function IntegrationsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ project?: string; ktest?: string; kstatus?: string }>;
+}) {
   const user = await getCurrentUser();
   if (!user) redirect('/login');
   const db = getDb();
   const projectRows = await db.select().from(projects).orderBy(desc(projects.createdAt));
   const sp = await searchParams;
   const projectId = sp.project ?? projectRows[0]?.id;
+  // Verdict from a just-run key validity check (carried back via redirect query params).
+  const testResult =
+    sp.ktest && (sp.kstatus === 'valid' || sp.kstatus === 'invalid' || sp.kstatus === 'error')
+      ? { name: sp.ktest, status: sp.kstatus }
+      : null;
 
   const hooks = projectId ? await db.select().from(webhooks).where(eq(webhooks.projectId, projectId)) : [];
   const [ai] = projectId ? await db.select().from(aiSettings).where(eq(aiSettings.projectId, projectId)) : [];
@@ -292,7 +301,25 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
                         <Badge variant="success">set</Badge>
                       ) : (
                         <span className="text-xs text-fg-subtle">· {k.hint}</span>
-                      )}
+                      )}{' '}
+                      {testResult?.name === k.name ? (
+                        <Badge
+                          variant={
+                            testResult.status === 'valid'
+                              ? 'success'
+                              : testResult.status === 'invalid'
+                                ? 'danger'
+                                : 'neutral'
+                          }
+                          data-testid={`vault-test-result-${k.name}`}
+                        >
+                          {testResult.status === 'valid'
+                            ? 'valid'
+                            : testResult.status === 'invalid'
+                              ? 'invalid'
+                              : 'check failed'}
+                        </Badge>
+                      ) : null}
                     </Label>
                     <form action={saveProjectKeyAction} className="flex items-center gap-2" id={`form-${k.name}`}>
                       <input type="hidden" name="projectId" value={projectId} />
@@ -310,19 +337,28 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
                     </form>
                   </div>
                   {setKeys.has(k.name) ? (
-                    <form action={clearProjectKeyAction}>
-                      <input type="hidden" name="projectId" value={projectId} />
-                      <input type="hidden" name="name" value={k.name} />
-                      <Button
-                        type="submit"
-                        variant="ghost"
-                        size="sm"
-                        className="text-danger hover:bg-danger/10"
-                        data-testid={`vault-clear-${k.name}`}
-                      >
-                        Clear
-                      </Button>
-                    </form>
+                    <>
+                      <form action={testProjectKeyAction}>
+                        <input type="hidden" name="projectId" value={projectId} />
+                        <input type="hidden" name="name" value={k.name} />
+                        <Button type="submit" variant="outline" size="sm" data-testid={`vault-test-${k.name}`}>
+                          Test
+                        </Button>
+                      </form>
+                      <form action={clearProjectKeyAction}>
+                        <input type="hidden" name="projectId" value={projectId} />
+                        <input type="hidden" name="name" value={k.name} />
+                        <Button
+                          type="submit"
+                          variant="ghost"
+                          size="sm"
+                          className="text-danger hover:bg-danger/10"
+                          data-testid={`vault-clear-${k.name}`}
+                        >
+                          Clear
+                        </Button>
+                      </form>
+                    </>
                   ) : null}
                 </div>
               ))}
