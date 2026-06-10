@@ -244,8 +244,8 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
         <Card className="max-w-xl">
           <CardContent className="pt-5">
             <p className="mb-3 text-sm text-fg-muted">
-              The default provider used for AI enrichment when a project has not chosen its own below. Set the matching
-              API key in the vault (or environment). Features degrade gracefully without a key.
+              The default provider used for AI enrichment when a project has not chosen its own below. The system API
+              key works across all projects; a key stored in a project vault overrides it for that project.
             </p>
             <ActionForm action={saveAiDefaultsAction} className="space-y-3">
               <div className="flex items-end gap-3">
@@ -284,7 +284,53 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
                   defaultValue={aiDefault?.baseUrl ?? ''}
                 />
               </div>
-              <ActionSubmit data-testid="ai-default-save">Save default</ActionSubmit>
+              <div className="space-y-1">
+                <Label htmlFor="default-apiKey">
+                  System API key{' '}
+                  {aiDefault?.apiKeyCiphertext ? (
+                    <Badge variant="success">set</Badge>
+                  ) : (
+                    <span className="text-xs text-fg-subtle">· used by every project without its own key</span>
+                  )}{' '}
+                  {aiDefault?.apiKeyCiphertext && aiDefault?.lastCheckStatus ? (
+                    <Badge
+                      variant={
+                        aiDefault.lastCheckStatus === 'valid'
+                          ? 'success'
+                          : aiDefault.lastCheckStatus === 'invalid'
+                            ? 'danger'
+                            : 'neutral'
+                      }
+                      data-testid="ai-default-key-status"
+                      title={
+                        aiDefault.lastCheckedAt ? `Last checked ${aiDefault.lastCheckedAt.toISOString()}` : undefined
+                      }
+                    >
+                      {aiDefault.lastCheckStatus === 'valid'
+                        ? 'valid'
+                        : aiDefault.lastCheckStatus === 'invalid'
+                          ? 'invalid'
+                          : 'check failed'}
+                    </Badge>
+                  ) : null}
+                </Label>
+                <Input
+                  id="default-apiKey"
+                  name="apiKey"
+                  type="password"
+                  autoComplete="off"
+                  placeholder={aiDefault?.apiKeyCiphertext ? 'Leave blank to keep the stored key' : 'sk-...'}
+                  data-testid="ai-default-key"
+                />
+                {aiDefault?.apiKeyCiphertext ? (
+                  <label className="flex items-center gap-2 pt-1 text-xs text-fg-subtle">
+                    <input type="checkbox" name="clearKey" className="size-3.5" /> Remove the stored system key
+                  </label>
+                ) : null}
+              </div>
+              <ActionSubmit data-testid="ai-default-save" pendingText="Saving + testing key...">
+                Save default
+              </ActionSubmit>
             </ActionForm>
           </CardContent>
         </Card>

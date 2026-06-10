@@ -2,15 +2,26 @@
 import * as React from 'react';
 import { Command } from 'cmdk';
 import { useRouter } from 'next/navigation';
-import { LayoutDashboard, Crosshair, Radar, KeyRound, FolderKanban, Search } from 'lucide-react';
+import {
+  LayoutDashboard,
+  Crosshair,
+  Radar,
+  KeyRound,
+  FolderKanban,
+  FileText,
+  CalendarClock,
+  Search,
+} from 'lucide-react';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { cn } from '../../lib/cn';
 
 const items = [
   { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { label: 'Targets', href: '/targets', icon: Crosshair },
-  { label: 'Scans', href: '/scans', icon: Radar },
-  { label: 'Projects', href: '/projects', icon: FolderKanban },
+  { label: 'VA Scans', href: '/scans', icon: Radar },
+  { label: 'Reports', href: '/reports', icon: FileText },
+  { label: 'Projects', href: '/settings/projects', icon: FolderKanban },
+  { label: 'Schedules', href: '/settings/schedules', icon: CalendarClock },
   { label: 'API Tokens', href: '/settings/tokens', icon: KeyRound },
 ];
 

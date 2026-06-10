@@ -1,6 +1,7 @@
 import { eq } from 'drizzle-orm';
 import { aiSettings, aiDefaults } from '@vacti/db';
 import { makeProvider, getProjectSecret, resolveAiModel, type AiProvider, type AiConfig } from '@vacti/integrations';
+import { decryptSecret } from '@vacti/auth';
 import { getDb, env } from './db';
 
 // Shared (NOT a 'use server' module) so both server actions and internal route handlers can use it.
@@ -22,13 +23,24 @@ export async function resolveAiConfig(projectId: string): Promise<AiConfig> {
   // the call, which would silently disable enrichment).
   const model = resolveAiModel(prov, settings?.model ?? defaults?.model);
   const baseUrl = settings?.baseUrl ?? defaults?.baseUrl ?? undefined;
-  // Vault key name == provider name for the cloud providers; falls back to the env key.
+  // Key resolution: project vault key, else the system default key (only when the effective
+  // provider IS the default provider - a deepseek system key must never be sent to e.g. kimi),
+  // else the environment key. The system key makes one stored key work across every project.
   const vaultKey = await getProjectSecret(db, projectId, prov, e.ENCRYPTION_KEY);
+  let systemKey: string | null = null;
+  if (!vaultKey && defaults?.apiKeyCiphertext && prov === defaults.provider) {
+    try {
+      systemKey = decryptSecret(defaults.apiKeyCiphertext, e.ENCRYPTION_KEY);
+    } catch {
+      systemKey = null;
+    }
+  }
+  const key = vaultKey ?? systemKey ?? undefined;
   const cfg: AiConfig = { provider: prov, model, baseUrl, ollamaBaseUrl: e.OLLAMA_BASE_URL };
-  if (prov === 'anthropic') cfg.anthropicKey = vaultKey ?? e.ANTHROPIC_API_KEY;
-  else if (prov === 'openai') cfg.openaiKey = vaultKey ?? e.OPENAI_API_KEY;
-  else if (prov === 'deepseek') cfg.deepseekKey = vaultKey ?? e.DEEPSEEK_API_KEY;
-  else if (prov === 'kimi') cfg.kimiKey = vaultKey ?? e.KIMI_API_KEY;
+  if (prov === 'anthropic') cfg.anthropicKey = key ?? e.ANTHROPIC_API_KEY;
+  else if (prov === 'openai') cfg.openaiKey = key ?? e.OPENAI_API_KEY;
+  else if (prov === 'deepseek') cfg.deepseekKey = key ?? e.DEEPSEEK_API_KEY;
+  else if (prov === 'kimi') cfg.kimiKey = key ?? e.KIMI_API_KEY;
   return cfg;
 }
 

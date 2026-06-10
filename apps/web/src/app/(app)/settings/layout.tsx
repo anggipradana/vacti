@@ -10,7 +10,10 @@ export default async function SettingsLayout({ children }: { children: React.Rea
   if (!user) redirect('/login');
   return (
     <>
-      <PageHeader title="Settings" description="API tokens, scan profiles, reports, integrations, users, and audit." />
+      <PageHeader
+        title="Settings"
+        description="Projects, schedules, API tokens, scan profiles, reports, integrations, users, and audit."
+      />
       <SettingsTabs isSysAdmin={user.isSysAdmin} />
       {children}
     </>

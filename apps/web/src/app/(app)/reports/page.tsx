@@ -97,7 +97,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
               description="Reports become available once a scan completes."
               action={
                 <Button asChild variant="secondary">
-                  <Link href="/scans">Go to Scans</Link>
+                  <Link href="/scans">Go to VA scans</Link>
                 </Button>
               }
             />

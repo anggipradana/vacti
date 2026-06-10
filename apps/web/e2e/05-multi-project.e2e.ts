@@ -13,7 +13,7 @@ test.describe.serial('multi-project scoping', () => {
 
   test('create two projects', async ({ page }) => {
     for (const p of [A, B]) {
-      await page.goto('/projects');
+      await page.goto('/settings/projects');
       await page.getByTestId('project-name').fill(p.name);
       await page.getByTestId('project-slug').fill(p.slug);
       await page.getByTestId('create-project').click();
@@ -59,7 +59,7 @@ test.describe.serial('multi-project scoping', () => {
   });
 
   test('set a default project: shows a Default badge and becomes the active project', async ({ page }) => {
-    await page.goto('/projects');
+    await page.goto('/settings/projects');
     // The Alpha card's "Set default" button - scope to the card containing the Alpha slug.
     const alphaCard = page.locator('[data-testid="project-list"] > *', { hasText: A.slug });
     await alphaCard.getByRole('button', { name: 'Set default' }).click();

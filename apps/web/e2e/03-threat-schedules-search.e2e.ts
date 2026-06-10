@@ -19,7 +19,7 @@ test.describe.serial('threat / schedules / search', () => {
   });
 
   test('schedules: create (friendly picker), pause, enable, delete', async ({ page }) => {
-    await page.goto('/schedules');
+    await page.goto('/settings/schedules');
     // Friendly pickers (freq/time/day) replaced the raw cron field; defaults are valid.
     await page.getByRole('button', { name: 'Add schedule' }).click();
     await expect(page.getByTestId('schedule-row')).toHaveCount(1);
@@ -34,7 +34,7 @@ test.describe.serial('threat / schedules / search', () => {
   });
 
   test('schedules: weekly frequency picker (no raw cron field)', async ({ page }) => {
-    await page.goto('/schedules');
+    await page.goto('/settings/schedules');
     await expect(page.locator('select[name="freq"]')).toBeVisible();
     await page.locator('select[name="freq"]').selectOption('weekly');
     await page.getByRole('button', { name: 'Add schedule' }).click();

@@ -308,9 +308,9 @@ export async function createScheduleAction(formData: FormData) {
     dow: Number(formData.get('dow') ?? 1),
     dom: Number(formData.get('dom') ?? 1),
   });
-  if (!targetId || !isValidCron(cron)) redirect('/schedules?error=invalid');
+  if (!targetId || !isValidCron(cron)) redirect('/settings/schedules?error=invalid');
   await getDb().insert(scanSchedules).values({ targetId, cron, profileId });
-  revalidatePath('/schedules');
+  revalidatePath('/settings/schedules');
 }
 
 /** Update a schedule's cron, profile and enabled flag. InitiateScans + audit. */
@@ -320,10 +320,10 @@ export async function editScheduleAction(formData: FormData) {
   const cron = String(formData.get('cron') ?? '').trim();
   const profileId = String(formData.get('profileId') ?? '').trim() || null;
   const enabled = String(formData.get('enabled') ?? '') === '1';
-  if (!id || !isValidCron(cron)) redirect('/schedules?error=invalid');
+  if (!id || !isValidCron(cron)) redirect('/settings/schedules?error=invalid');
   await getDb().update(scanSchedules).set({ cron, profileId, enabled }).where(eq(scanSchedules.id, id));
   await recordAudit({ actorId: actor.id, action: 'schedule.update', resource: `schedule:${id}` });
-  revalidatePath('/schedules');
+  revalidatePath('/settings/schedules');
 }
 
 export async function toggleScheduleAction(formData: FormData) {
@@ -332,14 +332,14 @@ export async function toggleScheduleAction(formData: FormData) {
   if (!id) return;
   const [row] = await getDb().select().from(scanSchedules).where(eq(scanSchedules.id, id));
   if (row) await getDb().update(scanSchedules).set({ enabled: !row.enabled }).where(eq(scanSchedules.id, id));
-  revalidatePath('/schedules');
+  revalidatePath('/settings/schedules');
 }
 
 export async function deleteScheduleAction(formData: FormData) {
   await requirePermission(Permission.InitiateScans);
   const id = String(formData.get('id') ?? '');
   if (id) await getDb().delete(scanSchedules).where(eq(scanSchedules.id, id));
-  revalidatePath('/schedules');
+  revalidatePath('/settings/schedules');
 }
 
 // ---- Recon notes / TODOs (per target) ----

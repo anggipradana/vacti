@@ -11,7 +11,7 @@ test.describe.serial('core journey', () => {
   });
 
   test('create a project', async ({ page }) => {
-    await page.goto('/projects');
+    await page.goto('/settings/projects');
     await page.getByTestId('project-name').fill('Acme Corp');
     await page.getByTestId('project-slug').fill('acme');
     await page.getByTestId('create-project').click();

@@ -12,17 +12,25 @@ test.describe.serial('settings', () => {
   });
 
   test('add, test and remove a webhook', async ({ page }) => {
-    // Integrations forms submit via ActionForm (reloads after persisting), so reload between steps
-    // rather than chaining clicks, which would race an in-flight reload.
-    await page.goto('/settings/integrations');
-    await page.getByLabel('Channel').selectOption('generic');
+    // Integrations forms submit via ActionForm (reloads after persisting). A goto racing that
+    // in-flight reload aborts (net::ERR_ABORTED) and leaves a blank document, so every navigation
+    // here retries until the page content is actually there.
+    const gotoIntegrations = async () => {
+      await expect(async () => {
+        await page.goto('/settings/integrations');
+        // #channel = the CREATE form's select (each webhook row also has an edit-form Channel).
+        await expect(page.locator('#channel')).toBeVisible({ timeout: 3000 });
+      }).toPass({ timeout: 30_000 });
+    };
+    await gotoIntegrations();
+    await page.locator('#channel').selectOption('generic');
     await page.getByLabel('Label').fill('QA hook');
     await page.getByLabel('Webhook URL').fill('https://example.com/hook');
     await page.getByTestId('webhook-add').click();
     await expect(page.getByText('QA hook')).toBeVisible({ timeout: 15_000 });
     // Test just needs to not error (the probe needs outbound network, blocked in CI).
     await page.getByRole('button', { name: 'Test' }).first().click();
-    await page.goto('/settings/integrations');
+    await gotoIntegrations();
     await page.getByRole('button', { name: 'Remove' }).first().click();
     await expect(page.getByText('QA hook')).toHaveCount(0, { timeout: 15_000 });
   });
@@ -33,9 +41,19 @@ test.describe.serial('settings', () => {
     await page.goto('/settings/integrations');
     await page.getByTestId('ai-default-provider').selectOption('deepseek');
     await page.locator('#default-model').fill('deepseek-chat');
+    // System API key: stored encrypted, works for every project without its own vault key.
+    await page.getByTestId('ai-default-key').fill('sk-e2e-system-key');
     await page.getByTestId('ai-default-save').click();
-    await expect(page.getByTestId('ai-default-provider')).toHaveValue('deepseek', { timeout: 15_000 });
+    await expect(page.getByTestId('ai-default-provider')).toHaveValue('deepseek', { timeout: 20_000 });
     await expect(page.locator('#default-model')).toHaveValue('deepseek-chat');
+    // The key persisted: remove-checkbox shows immediately; the validity verdict badge lands after
+    // the network probe (up to ~12s when egress is blocked), so reload-poll for it. Its VALUE needs
+    // outbound network, so only presence is asserted.
+    await expect(page.getByText('Remove the stored system key')).toBeVisible();
+    await expect(async () => {
+      await page.goto('/settings/integrations');
+      await expect(page.getByTestId('ai-default-key-status')).toBeVisible({ timeout: 2000 });
+    }).toPass({ timeout: 30_000 });
 
     await page.goto('/settings/integrations');
     await page.locator('#provider').selectOption('openai');
