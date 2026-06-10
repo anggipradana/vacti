@@ -285,9 +285,19 @@ export async function rescanAction(formData: FormData) {
   // A subset (not all tools) → partial rescan; full selection reuses the profile as-is.
   const isSubset = picked.size > 0 && picked.size < ALL_TOOLS.length;
   const toolsOverride = isSubset ? Object.fromEntries(ALL_TOOLS.map((t) => [t, picked.has(t)])) : null;
+  // Carry mode + deepScan from the source scan: without this, rescanning a PASSIVE scan silently
+  // launched the full ACTIVE pipeline at the target (unintended traffic), and a deep scan lost
+  // its deep-fetch phase.
   const [created] = await db
     .insert(scans)
-    .values({ projectId: scan.projectId, targetId: scan.targetId, profileId: scan.profileId, toolsOverride })
+    .values({
+      projectId: scan.projectId,
+      targetId: scan.targetId,
+      profileId: scan.profileId,
+      mode: scan.mode,
+      deepScan: scan.deepScan,
+      toolsOverride: scan.mode === 'passive' ? null : toolsOverride,
+    })
     .returning();
   const q = await getQueue();
   await q.enqueue('scan', scanJob, { scanId: created!.id });

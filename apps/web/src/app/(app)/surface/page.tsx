@@ -129,10 +129,11 @@ export default async function SurfacePage({
   const endpoints = analyzeEndpoints(allUrlRows.map((r) => r.u));
 
   // Scan-diff: recent passive/full scans for the picker ("show only new discoveries from a scan").
+  // Completed only: a queued/failed scan would show "0 new" indistinguishable from a real result.
   const passiveScans = await db
     .select({ id: scans.id, createdAt: scans.createdAt, mode: scans.mode })
     .from(scans)
-    .where(and(eq(scans.projectId, projectId), inArray(scans.mode, ['passive', 'full'])))
+    .where(and(eq(scans.projectId, projectId), inArray(scans.mode, ['passive', 'full']), eq(scans.status, 'completed')))
     .orderBy(desc(scans.createdAt))
     .limit(20);
 
