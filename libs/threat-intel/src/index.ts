@@ -6,3 +6,4 @@ export * from './refresh';
 export * from './news';
 export * from './cve-intel';
 export * from './ransomware';
+export * from './vt-verdict';

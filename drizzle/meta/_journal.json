@@ -239,6 +239,13 @@
       "when": 1781063750837,
       "tag": "0033_ambiguous_fenris",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1781090662907,
+      "tag": "0034_medical_grey_gargoyle",
+      "breakpoints": true
     }
   ]
 }
