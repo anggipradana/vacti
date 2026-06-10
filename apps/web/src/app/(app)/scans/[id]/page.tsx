@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import Form from 'next/form';
 import { notFound, redirect } from 'next/navigation';
-import { desc, eq } from 'drizzle-orm';
+import { and, desc, eq, ne } from 'drizzle-orm';
 import { diffScans } from '@vacti/recon';
 import { ArrowLeft, Globe, Network, Server, ShieldAlert } from 'lucide-react';
 import { StatusPill } from '../../../../components/ui/status-pill';
@@ -54,9 +54,15 @@ export default async function ScanDetail({
   const canScan = userCan(user, Permission.InitiateScans);
   const canTriage = userCan(user, Permission.ModifyScanResults);
 
-  // Sibling scans of the same target (for the compare dropdown) + optional diff.
+  // Sibling scans of the same target (for the compare dropdown) + optional diff. Only COMPLETED
+  // non-passive baselines: a passive scan has no endpoint/port/vuln rows and a failed/running one
+  // is partial, so diffing against either fabricates "+added/-removed" results.
   const siblings = (
-    await db.select().from(scans).where(eq(scans.targetId, scan.targetId)).orderBy(desc(scans.createdAt))
+    await db
+      .select()
+      .from(scans)
+      .where(and(eq(scans.targetId, scan.targetId), eq(scans.status, 'completed'), ne(scans.mode, 'passive')))
+      .orderBy(desc(scans.createdAt))
   ).filter((s) => s.id !== id);
   const keysOf = (
     sd: { host: string }[],
@@ -121,11 +127,19 @@ export default async function ScanDetail({
                 </ActionSubmit>
               </ActionForm>
             ) : null}
-            <Button asChild variant="secondary" size="sm">
-              <a href={`/reports/va/${scan.id}?type=full`} target="_blank" rel="noopener noreferrer">
-                Generate report
-              </a>
-            </Button>
+            {scan.mode === 'passive' ? (
+              // A passive scan has no VA results: a VA PDF for it would document an assessment
+              // that never ran. Its output lives on the Attack Surface page instead.
+              <Button asChild variant="secondary" size="sm">
+                <Link href="/surface">View on Attack Surface</Link>
+              </Button>
+            ) : (
+              <Button asChild variant="secondary" size="sm">
+                <a href={`/reports/va/${scan.id}?type=full`} target="_blank" rel="noopener noreferrer">
+                  Generate report
+                </a>
+              </Button>
+            )}
             {terminal && userCan(user, Permission.InitiateScans) ? (
               <form action={deleteScanAction}>
                 <input type="hidden" name="id" value={scan.id} />
@@ -206,12 +220,19 @@ export default async function ScanDetail({
             {canScan ? (
               <form action={rescanAction} className="flex flex-wrap items-center gap-3 border-t border-border pt-4">
                 <input type="hidden" name="id" value={scan.id} />
-                <span className="text-xs font-medium text-fg-subtle">Rescan (uncheck tools for a sub-scan):</span>
-                {STAGES.map((t) => (
-                  <label key={t} className="flex items-center gap-1 text-xs">
-                    <input type="checkbox" name="tools" value={t} defaultChecked /> {t}
-                  </label>
-                ))}
+                {scan.mode === 'passive' ? (
+                  // The tool checkboxes are active-pipeline stages; a passive rescan re-runs OSINT only.
+                  <span className="text-xs font-medium text-fg-subtle">Re-run passive recon for this target:</span>
+                ) : (
+                  <>
+                    <span className="text-xs font-medium text-fg-subtle">Rescan (uncheck tools for a sub-scan):</span>
+                    {STAGES.map((t) => (
+                      <label key={t} className="flex items-center gap-1 text-xs">
+                        <input type="checkbox" name="tools" value={t} defaultChecked /> {t}
+                      </label>
+                    ))}
+                  </>
+                )}
                 <SubmitButton size="sm" pendingText="Starting...">
                   Rescan
                 </SubmitButton>
