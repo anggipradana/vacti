@@ -277,7 +277,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
                 </span>
                 <span className={targetRows.length ? 'text-fg-subtle line-through' : ''}>Create a project</span>
                 {targetRows.length === 0 ? (
-                  <Link href="/projects" className="text-accent hover:underline">
+                  <Link href="/settings/projects" className="text-accent hover:underline">
                     → Projects
                   </Link>
                 ) : null}

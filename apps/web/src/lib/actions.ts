@@ -100,7 +100,7 @@ export async function createProjectAction(formData: FormData) {
   const user = await requirePermission(Permission.ModifyTargets);
   const name = String(formData.get('name') ?? '').trim();
   const slug = String(formData.get('slug') ?? '').trim();
-  if (!name || !/^[a-z][a-z0-9-]*$/.test(slug)) redirect('/projects?error=invalid');
+  if (!name || !/^[a-z][a-z0-9-]*$/.test(slug)) redirect('/settings/projects?error=invalid');
   const db = getDb();
   const [project] = await db.insert(projects).values({ name, slug }).returning();
   await db.insert(projectMembers).values({ projectId: project!.id, userId: user!.id, role: Role.SysAdmin });
@@ -111,7 +111,7 @@ export async function createProjectAction(formData: FormData) {
     projectId: project!.id,
     metadata: { slug },
   });
-  revalidatePath('/projects');
+  revalidatePath('/settings/projects');
 }
 
 /** Edit a project's name, sector, and (optionally) slug. Requires ModifyTargets + audit. */
@@ -121,7 +121,7 @@ export async function editProjectAction(formData: FormData) {
   const name = String(formData.get('name') ?? '').trim();
   const sector = String(formData.get('sector') ?? '');
   const slug = String(formData.get('slug') ?? '').trim();
-  if (!id || !name || !isSector(sector)) redirect('/projects?error=invalid');
+  if (!id || !name || !isSector(sector)) redirect('/settings/projects?error=invalid');
   const set: { name: string; sector: string; updatedAt: Date; slug?: string } = {
     name,
     sector,
@@ -129,12 +129,12 @@ export async function editProjectAction(formData: FormData) {
   };
   // Only touch the slug when a (valid) one is supplied; blank keeps the current slug.
   if (slug) {
-    if (!/^[a-z][a-z0-9-]*$/.test(slug)) redirect('/projects?error=invalid');
+    if (!/^[a-z][a-z0-9-]*$/.test(slug)) redirect('/settings/projects?error=invalid');
     set.slug = slug;
   }
   await getDb().update(projects).set(set).where(eq(projects.id, id));
   await recordAudit({ actorId: actor.id, action: 'project.update', resource: `project:${id}`, projectId: id });
-  revalidatePath('/projects');
+  revalidatePath('/settings/projects');
 }
 
 /** Delete a project and all its scoped data (cascades via FK). Requires ModifyTargets + audit. */
@@ -144,7 +144,7 @@ export async function deleteProjectAction(formData: FormData) {
   if (!id) return;
   await getDb().delete(projects).where(eq(projects.id, id));
   await recordAudit({ actorId: actor.id, action: 'project.delete', resource: `project:${id}`, projectId: id });
-  revalidatePath('/projects');
+  revalidatePath('/settings/projects');
 }
 
 /** Mark a project as the default workspace (shown on login). At most one project is default. */
@@ -158,7 +158,7 @@ export async function setDefaultProjectAction(formData: FormData) {
   await db.update(projects).set({ isDefault: true }).where(eq(projects.id, id));
   await setActiveProjectCookie(id);
   await recordAudit({ actorId: actor.id, action: 'project.set_default', resource: `project:${id}`, projectId: id });
-  revalidatePath('/projects');
+  revalidatePath('/settings/projects');
 }
 
 /** Create a user (email + password + role). SysAdmin-only; deduped by email; audited. */

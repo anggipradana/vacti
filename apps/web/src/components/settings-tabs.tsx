@@ -6,6 +6,8 @@ import { cn } from '../lib/cn';
 
 const tabs = [
   { label: 'Account', href: '/settings/account' },
+  { label: 'Projects', href: '/settings/projects' },
+  { label: 'Schedules', href: '/settings/schedules' },
   { label: 'API Tokens', href: '/settings/tokens' },
   { label: 'Scan Profiles', href: '/settings/profiles' },
   { label: 'Reports', href: '/settings/reports' },

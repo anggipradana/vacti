@@ -18,17 +18,17 @@ import {
 } from '../ui/dropdown-menu';
 import { logoutAction } from '../../lib/actions';
 
+// Lean top nav: the operational surfaces (VA / Attack Surface / CTI) up front; Projects and
+// Schedules live under Settings (workspace config, not day-to-day ops).
 const nav = [
   { label: 'Dashboard', href: '/dashboard' },
   { label: 'Targets', href: '/targets' },
-  { label: 'Scans', href: '/scans' },
+  { label: 'VA', href: '/scans' },
   { label: 'Attack Surface', href: '/surface' },
-  { label: 'Schedules', href: '/schedules' },
   { label: 'Cyber Threat Intel', href: '/threat' },
   { label: 'Reports', href: '/reports' },
   { label: 'Search', href: '/search' },
-  { label: 'Projects', href: '/projects' },
-  { label: 'Settings', href: '/settings/tokens' },
+  { label: 'Settings', href: '/settings/account' },
   { label: 'Docs', href: '/docs' },
 ];
 

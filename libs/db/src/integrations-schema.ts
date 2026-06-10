@@ -48,6 +48,11 @@ export const aiDefaults = pgTable('ai_defaults', {
   provider: text('provider').notNull().default('anthropic'), // anthropic | openai | deepseek | kimi | ollama
   model: text('model').notNull().default('claude-sonnet-4-6'),
   baseUrl: text('base_url'),
+  // System-wide API key for the default provider (AES-256-GCM, same scheme as the api_keys vault).
+  // Fallback for projects whose vault has no key for that provider, so one key powers all projects.
+  apiKeyCiphertext: text('api_key_ciphertext'),
+  lastCheckStatus: text('last_check_status'), // valid | invalid | error (persistent badge)
+  lastCheckedAt: timestamp('last_checked_at', { withTimezone: true }),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
 

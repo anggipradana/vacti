@@ -10,7 +10,9 @@ import {
   generateThreatNarrative,
   triageNewsRelevance,
   resolveAiModel,
+  validateProviderKey,
 } from '@vacti/integrations';
+import { encryptSecret } from '@vacti/auth';
 import { computeProjectRisk } from '@vacti/threat-intel';
 import {
   vulnerabilities,
@@ -30,7 +32,7 @@ import {
   threatNews,
   brandNews,
 } from '@vacti/db';
-import { getDb } from './db';
+import { getDb, env } from './db';
 import { requirePermission } from './authz';
 import { recordAudit } from './audit';
 import { providerFor, AI_PROVIDERS, type AiProviderName } from './ai-provider';
@@ -99,16 +101,48 @@ export async function saveAiSettingsAction(formData: FormData) {
 
 /** Save the system-wide default AI enrichment config (used by projects without their own setting). */
 export async function saveAiDefaultsAction(formData: FormData) {
-  await requirePermission(Permission.ModifySystemConfig);
+  const actor = await requirePermission(Permission.ModifySystemConfig);
   const provider = String(formData.get('provider') ?? 'anthropic');
   const model = resolveAiModel(provider, String(formData.get('model') ?? ''));
   const rawBaseUrl = String(formData.get('baseUrl') ?? '').trim();
   const baseUrl = rawBaseUrl && /^https?:\/\//i.test(rawBaseUrl) ? rawBaseUrl : null;
   if (!AI_PROVIDERS.includes(provider as AiProviderName)) return;
-  await getDb()
+
+  // Optional system API key: works across ALL projects (fallback when a project's vault has no key
+  // for the default provider). Blank keeps the stored key; the clearKey checkbox removes it.
+  const rawKey = String(formData.get('apiKey') ?? '').trim();
+  const clearKey = formData.get('clearKey') === 'on';
+  const set: Record<string, unknown> = { provider, model, baseUrl, updatedAt: new Date() };
+  if (clearKey) {
+    set.apiKeyCiphertext = null;
+    set.lastCheckStatus = null;
+    set.lastCheckedAt = null;
+  } else if (rawKey) {
+    set.apiKeyCiphertext = encryptSecret(rawKey, env().ENCRYPTION_KEY);
+  }
+  // Persist config + key FIRST so the page reload right after submit already shows them; the
+  // validity probe (network, up to 12s) lands in a second write below.
+  const db = getDb();
+  await db
     .insert(aiDefaults)
-    .values({ id: 'default', provider, model, baseUrl, updatedAt: new Date() })
-    .onConflictDoUpdate({ target: aiDefaults.id, set: { provider, model, baseUrl, updatedAt: new Date() } });
+    .values({ id: 'default', ...set })
+    .onConflictDoUpdate({ target: aiDefaults.id, set });
+  if (rawKey && !clearKey) {
+    // Validate on save so the badge is meaningful without a separate Test click (and persists).
+    const result = await validateProviderKey(provider, rawKey);
+    await db
+      .update(aiDefaults)
+      .set({ lastCheckStatus: result.status, lastCheckedAt: new Date() })
+      .where(eq(aiDefaults.id, 'default'));
+  }
+  if (clearKey || rawKey) {
+    await recordAudit({
+      actorId: actor.id,
+      action: clearKey ? 'ai.default_key_clear' : 'ai.default_key_set',
+      resource: `ai-default:${provider}`,
+      metadata: { provider },
+    });
+  }
   revalidatePath('/settings/integrations');
 }
 

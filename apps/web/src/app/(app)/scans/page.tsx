@@ -59,7 +59,7 @@ export default async function ScansPage({
   return (
     <>
       <PageHeader
-        title="Scans"
+        title="Vulnerability Assessment"
         description="Recon runs across your targets."
         actions={
           <div className="flex items-center gap-2">
