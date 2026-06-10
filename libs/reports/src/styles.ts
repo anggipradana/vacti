@@ -5,7 +5,20 @@
  * (it has known, hand-placed content); our reports are data-driven and must auto-paginate, so we use
  * CSS `@page` print rules + running header/footer instead. Sizes are in px to match the reference 1:1
  * (A4 = 794x1123px at 96dpi, the same size the reference sheets use). */
-export function reportCss(primary: string, secondary: string, footer: string, classification: string): string {
+/** Only allow CSS color literals (#hex / rgb()/hsl() / simple names): these values are interpolated
+ * raw into a <style> block, so anything else could break out of the CSS context (stored injection
+ * into the Chromium render). Falls back to the default when the value does not look like a color. */
+function safeColor(value: string, fallback: string): string {
+  const v = (value ?? '').trim();
+  if (/^#[0-9a-fA-F]{3,8}$/.test(v)) return v;
+  if (/^(rgb|rgba|hsl|hsla)\(\s*[\d.,%\s/-]+\)$/i.test(v)) return v;
+  if (/^[a-zA-Z]{3,20}$/.test(v)) return v; // named colors (teal, navy, ...)
+  return fallback;
+}
+
+export function reportCss(rawPrimary: string, rawSecondary: string, footer: string, classification: string): string {
+  const primary = safeColor(rawPrimary, '#069EC6');
+  const secondary = safeColor(rawSecondary, '#08222B');
   return `
   @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
   :root{

@@ -1,4 +1,4 @@
-import { eq, inArray, count } from 'drizzle-orm';
+import { and, eq, inArray, count } from 'drizzle-orm';
 import { Severity, VULN_ACTIVE_STATUSES, LEAK_UNRESOLVED_STATUSES } from '@vacti/core';
 import {
   scans,
@@ -19,31 +19,44 @@ export async function computeProjectRisk(db: Database, projectId: string): Promi
   const scanRows = await db.select({ id: scans.id }).from(scans).where(eq(scans.projectId, projectId));
   const scanIds = scanRows.map((s) => s.id);
 
+  // SQL-side aggregates: counting in the database keeps memory flat on large projects and (for
+  // leaks) keeps plaintext credentials out of process memory entirely. The predicates are the exact
+  // status filters the old in-memory loops applied, so the score is unchanged (must stay +-0).
   const vuln = { critical: 0, high: 0, medium: 0, low: 0 };
   if (scanIds.length) {
     const vrows = await db
-      .select({ severity: vulnerabilities.severity, status: vulnerabilities.status })
+      .select({ severity: vulnerabilities.severity, n: count() })
       .from(vulnerabilities)
-      .where(inArray(vulnerabilities.scanId, scanIds));
+      .where(and(inArray(vulnerabilities.scanId, scanIds), inArray(vulnerabilities.status, [...activeVuln])))
+      .groupBy(vulnerabilities.severity);
     for (const v of vrows) {
-      if (!activeVuln.has(v.status)) continue; // only active findings feed the score
-      if (v.severity === Severity.Critical) vuln.critical++;
-      else if (v.severity === Severity.High) vuln.high++;
-      else if (v.severity === Severity.Medium) vuln.medium++;
-      else if (v.severity === Severity.Low) vuln.low++;
+      if (v.severity === Severity.Critical) vuln.critical = Number(v.n);
+      else if (v.severity === Severity.High) vuln.high = Number(v.n);
+      else if (v.severity === Severity.Medium) vuln.medium = Number(v.n);
+      else if (v.severity === Severity.Low) vuln.low = Number(v.n);
     }
   }
 
   const targetRows = await db.select({ id: targets.id }).from(targets).where(eq(targets.projectId, projectId));
-  const leaks = await db.select().from(leakcheckData).where(eq(leakcheckData.projectId, projectId));
-  const otx = await db.select().from(otxThreatData).where(eq(otxThreatData.projectId, projectId));
+  const [leakAgg] = await db
+    .select({ n: count() })
+    .from(leakcheckData)
+    .where(and(eq(leakcheckData.projectId, projectId), inArray(leakcheckData.status, [...unresolvedLeak])));
+  const otx = await db
+    .select({
+      pulses: otxThreatData.pulses,
+      reputation: otxThreatData.reputation,
+      malwareCount: otxThreatData.malwareCount,
+    })
+    .from(otxThreatData)
+    .where(eq(otxThreatData.projectId, projectId));
   const [exp] = await db.select({ n: count() }).from(exposureFindings).where(eq(exposureFindings.projectId, projectId));
 
   return calculateRiskScore({
     hasVa: scanIds.length > 0,
     vuln,
     domainCount: Math.max(1, targetRows.length),
-    uncheckedLeaks: leaks.filter((l) => unresolvedLeak.has(l.status)).length,
+    uncheckedLeaks: Number(leakAgg?.n ?? 0),
     threatIndicators: otx.reduce((a, o) => a + o.pulses, 0),
     reputation: otx.length ? Math.max(...otx.map((o) => o.reputation)) / 100 : 0,
     malwareCount: otx.reduce((a, o) => a + o.malwareCount, 0),

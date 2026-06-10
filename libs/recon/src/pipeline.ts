@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import type { Database } from '@vacti/db';
 import { scans, scanActivity, commands, subdomains, endpoints, ports as portsTable, vulnerabilities } from '@vacti/db';
 import { runTool, type RunResult } from './runner';
@@ -92,11 +92,19 @@ export async function runScanPipeline(input: ScanInput, deps: PipelineDeps): Pro
   const checkAbort = () => {
     if (input.signal?.aborted) throw new Error('cancelled');
   };
+  // Merge into the existing counts jsonb instead of replacing it: in 'full' mode the passive phase
+  // already wrote discoveredUrls/exposureFindings/ipResolutions, which a plain set() would clobber.
+  const mergedCounts = () => sql`coalesce(${scans.counts}, '{}'::jsonb) || ${JSON.stringify(counts)}::jsonb`;
 
   const activity = async (stage: string, status: string, message?: string): Promise<void> => {
     await db.insert(scanActivity).values({ scanId: input.scanId, stage, status, message });
     deps.onProgress?.(stage, message ?? status);
   };
+  // A SIGKILLed (timed-out) tool still resolves with partial lines; surface that in the timeline
+  // instead of silently labelling the stage completed.
+  const stageStatus = (r: RunResult) => (r.timedOut ? 'failed' : 'completed');
+  const stageNote = (r: RunResult, msg: string) =>
+    r.timedOut ? `${msg} (tool timed out after ${Math.round(r.durationMs / 1000)}s, partial results)` : msg;
   const record = async (tool: string, args: string[], r: RunResult): Promise<void> => {
     await db
       .insert(commands)
@@ -134,6 +142,16 @@ export async function runScanPipeline(input: ScanInput, deps: PipelineDeps): Pro
       .set({ status: 'running', stage: 'start', startedAt: new Date() })
       .where(eq(scans.id, input.scanId));
 
+    // Idempotency: pg-boss is at-least-once, so a re-delivered job must not duplicate result rows.
+    // Wipe this scan's previous active-pipeline output before re-inserting (passive tables upsert).
+    await Promise.all([
+      db.delete(subdomains).where(eq(subdomains.scanId, input.scanId)),
+      db.delete(endpoints).where(eq(endpoints.scanId, input.scanId)),
+      db.delete(portsTable).where(eq(portsTable.scanId, input.scanId)),
+      db.delete(vulnerabilities).where(eq(vulnerabilities.scanId, input.scanId)),
+      db.delete(commands).where(eq(commands.scanId, input.scanId)),
+    ]);
+
     // Stage 1 - subdomains (skipped when predefined list provided).
     let hosts: string[] = [];
     if (input.predefinedSubdomains?.length) {
@@ -149,7 +167,7 @@ export async function runScanPipeline(input: ScanInput, deps: PipelineDeps): Pro
       if (subs.length)
         await db.insert(subdomains).values(subs.map((s) => ({ scanId: input.scanId, host: s.host, source: s.source })));
       counts.subdomains = subs.length;
-      await activity('subfinder', 'completed', `${subs.length} subdomains`);
+      await activity('subfinder', stageStatus(r), stageNote(r, `${subs.length} subdomains`));
     }
     if (!hosts.length) hosts = [input.domain];
     // Drop profile-excluded subdomains before probing.
@@ -193,7 +211,7 @@ export async function runScanPipeline(input: ScanInput, deps: PipelineDeps): Pro
       }
       for (const h of results) live.push({ url: h.url, host: h.host, isWp: isWordPress(h) });
       counts.endpoints = results.length;
-      await activity('httpx', 'completed', `${results.length} live endpoints`);
+      await activity('httpx', stageStatus(r), stageNote(r, `${results.length} live endpoints`));
     }
 
     // Stage 3 - naabu port scan.
@@ -201,9 +219,11 @@ export async function runScanPipeline(input: ScanInput, deps: PipelineDeps): Pro
     if (input.profile.tools.naabu !== false) {
       await activity('naabu', 'running');
       const scanHosts = [...new Set((live.length ? live.map((e) => e.host) : hosts).filter(Boolean))];
+      let naabuTimeouts = 0;
       for (const host of scanHosts) {
         const args = naabuArgs(host, input.profile.ports);
         const r = await runTool({ bin: 'naabu', args, timeoutMs, signal: input.signal });
+        if (r.timedOut) naabuTimeouts++;
         await record('naabu', args, r);
         const seen = new Set<string>();
         const ps = r.lines
@@ -221,7 +241,13 @@ export async function runScanPipeline(input: ScanInput, deps: PipelineDeps): Pro
             .values(ps.map((p) => ({ scanId: input.scanId, ip: p.ip, port: p.port, protocol: p.protocol })));
         counts.ports += ps.length;
       }
-      await activity('naabu', 'completed', `${counts.ports} open ports`);
+      await activity(
+        'naabu',
+        naabuTimeouts ? 'failed' : 'completed',
+        naabuTimeouts
+          ? `${counts.ports} open ports (${naabuTimeouts}/${scanHosts.length} host(s) timed out, partial results)`
+          : `${counts.ports} open ports`,
+      );
     }
 
     // Stage 4 - nuclei.
@@ -249,7 +275,7 @@ export async function runScanPipeline(input: ScanInput, deps: PipelineDeps): Pro
       });
       await record('nuclei', args, r);
       await insertVulns(r.lines.map(parseNucleiLine).flatMap((v) => (v ? [v] : [])));
-      await activity('nuclei', 'completed', `${counts.vulnerabilities} findings`);
+      await activity('nuclei', stageStatus(r), stageNote(r, `${counts.vulnerabilities} findings`));
     }
 
     // Stage 4b - wordfence: WordPress-focused nuclei templates on detected WP hosts. Runs
@@ -268,12 +294,12 @@ export async function runScanPipeline(input: ScanInput, deps: PipelineDeps): Pro
       });
       await record('nuclei', wargs, wr);
       await insertVulns(wr.lines.map(parseNucleiLine).flatMap((v) => (v ? [v] : [])));
-      await activity('wordfence', 'completed');
+      await activity('wordfence', stageStatus(wr));
     }
 
     await db
       .update(scans)
-      .set({ status: 'completed', stage: 'done', finishedAt: new Date(), counts })
+      .set({ status: 'completed', stage: 'done', finishedAt: new Date(), counts: mergedCounts() })
       .where(eq(scans.id, input.scanId));
     await activity('done', 'completed');
   } catch (err) {
@@ -281,7 +307,7 @@ export async function runScanPipeline(input: ScanInput, deps: PipelineDeps): Pro
     const message = err instanceof Error ? err.message : String(err);
     await db
       .update(scans)
-      .set({ status: aborted ? 'cancelled' : 'failed', finishedAt: new Date(), error: message, counts })
+      .set({ status: aborted ? 'cancelled' : 'failed', finishedAt: new Date(), error: message, counts: mergedCounts() })
       .where(eq(scans.id, input.scanId));
     await activity('done', aborted ? 'cancelled' : 'failed', message);
     if (!aborted) throw err;

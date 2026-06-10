@@ -66,6 +66,7 @@ export function runTool(opts: RunToolOptions): Promise<RunResult> {
     child.stderr.on('data', (chunk: Buffer) => (stderr += chunk.toString()));
     child.on('error', (err) => {
       if (timer) clearTimeout(timer);
+      if (opts.signal) opts.signal.removeEventListener('abort', onAbort);
       reject(err);
     });
     child.on('close', (code) => {
@@ -77,9 +78,17 @@ export function runTool(opts: RunToolOptions): Promise<RunResult> {
     });
 
     // Always close stdin: tools like naabu block waiting on an open stdin pipe otherwise.
+    // The 'error' handler is mandatory: if the child dies before draining stdin (bad args, fast
+    // crash, timeout SIGKILL) the async write fails with EPIPE, which without a listener becomes
+    // an uncaughtException that takes down the whole worker.
     if (child.stdin) {
-      if (opts.input !== undefined) child.stdin.write(opts.input);
-      child.stdin.end();
+      child.stdin.on('error', () => {});
+      try {
+        if (opts.input !== undefined) child.stdin.write(opts.input);
+        child.stdin.end();
+      } catch {
+        // child already gone; 'close' will still fire and resolve
+      }
     }
   });
 }

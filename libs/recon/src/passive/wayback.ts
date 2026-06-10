@@ -14,6 +14,8 @@ export interface WaybackOptions {
   retries?: number;
   /** Cap returned rows (archives can be huge); 0 = unlimited. */
   limit?: number;
+  /** Outer cancellation (scan cancel/abort) - this call can take up to 120s otherwise. */
+  signal?: AbortSignal;
 }
 
 /**
@@ -26,8 +28,11 @@ export async function fetchWaybackUrls(domain: string, opts: WaybackOptions = {}
   const cdx = `https://web.archive.org/cdx/search/cdx?url=${encodeURIComponent(domain)}&matchType=domain&collapse=urlkey&output=text&fl=original`;
 
   for (let attempt = 1; attempt <= retries; attempt++) {
+    if (opts.signal?.aborted) return [];
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+    const onOuterAbort = (): void => ctrl.abort();
+    opts.signal?.addEventListener('abort', onOuterAbort, { once: true });
     try {
       const res = await fetchImpl(cdx, { signal: ctrl.signal, headers: { 'user-agent': UA } });
       if (res.status === 503 && attempt < retries) {
@@ -43,6 +48,7 @@ export async function fetchWaybackUrls(domain: string, opts: WaybackOptions = {}
         .filter(Boolean);
       return limit > 0 ? urls.slice(0, limit) : urls;
     } catch {
+      if (opts.signal?.aborted) return [];
       if (attempt < retries) {
         await sleep(5000);
         continue;
@@ -50,6 +56,7 @@ export async function fetchWaybackUrls(domain: string, opts: WaybackOptions = {}
       return [];
     } finally {
       clearTimeout(timer);
+      opts.signal?.removeEventListener('abort', onOuterAbort);
     }
   }
   return [];

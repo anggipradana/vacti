@@ -9,7 +9,7 @@ import { cn } from '../../../lib/cn';
 export interface Doc {
   slug: string;
   title: string;
-  /** Repo-relative source path, e.g. `docs/how-to/deploy.md` — used to resolve relative links. */
+  /** Repo-relative source path, e.g. `docs/how-to/deploy.md` - used to resolve relative links. */
   path: string;
   markdown: string;
 }

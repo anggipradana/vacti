@@ -15,14 +15,21 @@ import { setActiveProjectCookie } from './active-project';
 
 export async function createAdminAction(formData: FormData) {
   if ((await userCount()) > 0) redirect('/login');
-  const email = String(formData.get('email') ?? '');
+  const email = String(formData.get('email') ?? '')
+    .trim()
+    .toLowerCase();
   const password = String(formData.get('password') ?? '');
-  if (!email || password.length < 8) redirect('/login?error=weak');
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || password.length < 8) redirect('/login?error=weak');
+  // onConflictDoNothing + the re-check close the count-then-insert race: two concurrent first-run
+  // submissions must not both become SysAdmin.
+  if ((await userCount()) > 0) redirect('/login');
   const [user] = await getDb()
     .insert(users)
     .values({ email, passwordHash: await hashPassword(password), isSysAdmin: true, role: Role.SysAdmin })
+    .onConflictDoNothing({ target: users.email })
     .returning();
-  await createSession(user!.id);
+  if (!user) redirect('/login');
+  await createSession(user.id);
   redirect('/dashboard');
 }
 

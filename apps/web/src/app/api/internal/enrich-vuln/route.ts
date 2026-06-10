@@ -58,6 +58,8 @@ export async function POST(req: Request): Promise<Response> {
       .where(eq(vulnerabilities.id, id));
     return Response.json({ ok: true, enrichment });
   } catch (e) {
-    return Response.json({ ok: false, error: 'ai_failed', detail: String((e as Error)?.message ?? e).slice(0, 200) });
+    // Detail stays server-side: provider/SDK messages can include endpoint or config hints.
+    console.error('[enrich-vuln] AI call failed:', e);
+    return Response.json({ ok: false, error: 'ai_failed' });
   }
 }

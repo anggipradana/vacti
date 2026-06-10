@@ -44,11 +44,24 @@ export async function acquireRotatingKey(
     } catch {
       continue;
     }
-    await db
+    // Atomic claim: increment in SQL, re-checking the cap in the WHERE so two concurrent acquirers
+    // can neither lose an update nor push the same key past dailyCap. 0 rows = lost the race; try
+    // the next key. The day-rollover resets usage_count to 1 when usage_date is a previous UTC day.
+    const claimed = await db
       .update(apiKeys)
-      .set({ usageCount: usedToday + 1, usageDate: now, lastUsedAt: now })
-      .where(eq(apiKeys.id, row.id));
-    return { id: row.id, secret };
+      .set({
+        usageCount: sql`case when ${apiKeys.usageDate} >= date_trunc('day', now()) then ${apiKeys.usageCount} + 1 else 1 end`,
+        usageDate: now,
+        lastUsedAt: now,
+      })
+      .where(
+        and(
+          eq(apiKeys.id, row.id),
+          sql`(${apiKeys.usageDate} is null or ${apiKeys.usageDate} < date_trunc('day', now()) or ${apiKeys.usageCount} < ${dailyCap})`,
+        ),
+      )
+      .returning({ id: apiKeys.id });
+    if (claimed.length) return { id: row.id, secret };
   }
   return null;
 }

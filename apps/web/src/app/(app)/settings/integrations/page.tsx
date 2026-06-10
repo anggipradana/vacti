@@ -11,6 +11,8 @@ import { ALL_EVENT_TYPES, listProjectSecretNames, listProjectSecretChecks } from
 import { projects, webhooks, aiSettings, aiDefaults } from '@vacti/db';
 import { getDb } from '../../../../lib/db';
 import { getCurrentUser } from '../../../../lib/session';
+import { getActiveProjectId } from '../../../../lib/active-project';
+import { ProjectSwitcher } from '../../../../components/project-switcher';
 import {
   addWebhookAction,
   deleteWebhookAction,
@@ -48,7 +50,8 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
   const db = getDb();
   const projectRows = await db.select().from(projects).orderBy(desc(projects.createdAt));
   const sp = await searchParams;
-  const projectId = sp.project ?? projectRows[0]?.id;
+  // Cookie-aware: follow the active project like the other project-scoped pages (a switch persists).
+  const projectId = await getActiveProjectId(sp.project, projectRows);
 
   const hooks = projectId ? await db.select().from(webhooks).where(eq(webhooks.projectId, projectId)) : [];
   const [ai] = projectId ? await db.select().from(aiSettings).where(eq(aiSettings.projectId, projectId)) : [];
@@ -59,16 +62,19 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
 
   return (
     <>
-      <p className="mb-4 text-sm text-fg-muted">
-        Public REST API docs:{' '}
-        <a href="/api/docs" target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">
-          /api/docs
-        </a>{' '}
-        · OpenAPI:{' '}
-        <a href="/api/openapi.json" target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">
-          /api/openapi.json
-        </a>
-      </p>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-fg-muted">
+          Public REST API docs:{' '}
+          <a href="/api/docs" target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">
+            /api/docs
+          </a>{' '}
+          · OpenAPI:{' '}
+          <a href="/api/openapi.json" target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">
+            /api/openapi.json
+          </a>
+        </p>
+        <ProjectSwitcher projects={projectRows} current={projectId} basePath="/settings/integrations" />
+      </div>
 
       {!projectId ? (
         <p className="text-sm text-fg-muted">Create a project first.</p>

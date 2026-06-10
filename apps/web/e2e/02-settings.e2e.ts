@@ -55,11 +55,13 @@ test.describe.serial('settings', () => {
       await expect(page.getByTestId('ai-default-key-status')).toBeVisible({ timeout: 2000 });
     }).toPass({ timeout: 30_000 });
 
+    // :visible - right after an ActionForm reload the dev server can transiently leave a hidden
+    // duplicate of the page in the DOM, which trips strict mode (steady-state DOM is single).
     await page.goto('/settings/integrations');
-    await page.locator('#provider').selectOption('openai');
-    await page.locator('#model').fill('gpt-4o-mini');
+    await page.locator('#provider:visible').selectOption('openai');
+    await page.locator('#model:visible').fill('gpt-4o-mini');
     await page.getByTestId('ai-save').click();
-    await expect(page.locator('#model')).toHaveValue('gpt-4o-mini', { timeout: 15_000 });
+    await expect(page.locator('#model:visible')).toHaveValue('gpt-4o-mini', { timeout: 15_000 });
   });
 
   test('set, test and clear a vault API key (masked)', async ({ page }) => {

@@ -32,7 +32,7 @@ export function NarrativeCard({
       });
       const data = (await res.json()) as { ok?: boolean; narrative?: string; error?: string };
       if (data.ok && typeof data.narrative === 'string') {
-        setNarrative(data.narrative.replace(/[—–]/g, '-'));
+        setNarrative(data.narrative.replace(/[\u2014\u2013]/g, '-'));
       } else {
         setErr(data.error === 'no_ai_provider' ? 'Set an AI provider + key first' : 'AI failed, try again');
       }

@@ -153,7 +153,7 @@ export async function runPassiveScan(
   // ── Wayback ──
   checkAbort();
   await activity('wayback', 'running');
-  const wb = await fetchWaybackUrls(target, { limit: waybackLimit });
+  const wb = await fetchWaybackUrls(target, { limit: waybackLimit, signal: input.signal });
   for (const url of wb) {
     const h = hostOf(url);
     if (!h || (h !== target && !h.endsWith(`.${target}`))) continue;
@@ -302,7 +302,7 @@ export async function runPassiveScan(
       .limit(deepLimit);
     for (const cand of candidates) {
       checkAbort();
-      const r = await deepFetch(cand.urlText);
+      const r = await deepFetch(cand.urlText, { signal: input.signal });
       const state = r.blocked ? 'blocked' : r.status >= 200 && r.status < 400 ? 'done' : 'failed';
       await db
         .update(discoveredUrls)
@@ -342,7 +342,8 @@ export async function runPassiveScan(
     passiveSubdomains: passiveSubs.length,
     discoveredUrls: urls.length,
     exposureFindings: findingCount,
-    ipResolutions: resolutions.length,
+    // Distinct ip/host pairs: VT + URLScan can sight the same resolution, and the rows are upserted.
+    ipResolutions: new Set(resolutions.map((r) => `${r.ip}|${r.host}`)).size,
     deepFetched,
   };
   // Merge into scans.counts (preserve any active-pipeline counts).
