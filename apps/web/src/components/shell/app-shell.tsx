@@ -25,6 +25,7 @@ const nav = [
   { label: 'Attack Surface', href: '/surface' },
   { label: 'Schedules', href: '/schedules' },
   { label: 'Cyber Threat Intel', href: '/threat' },
+  { label: 'Reports', href: '/reports' },
   { label: 'Search', href: '/search' },
   { label: 'Projects', href: '/projects' },
   { label: 'Settings', href: '/settings/tokens' },
