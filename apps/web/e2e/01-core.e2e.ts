@@ -55,6 +55,20 @@ test.describe.serial('core journey', () => {
     await expect(page.getByTestId('scan-list')).toBeVisible();
   });
 
+  test('reports panel lists the cancelled scan with download actions', async ({ page }) => {
+    await page.goto('/reports');
+    await expect(page.getByRole('heading', { name: 'Reports', exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Threat Intelligence report' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Download PDF' })).toBeVisible();
+    // The scan cancelled in the earlier step is terminal, so it appears with per-type download links.
+    // Cancellation lands asynchronously (worker side), so reload until the row shows up.
+    await expect(async () => {
+      await page.reload();
+      await expect(page.getByRole('link', { name: 'Full' }).first()).toBeVisible({ timeout: 2000 });
+    }).toPass({ timeout: 30000 });
+    await expect(page.getByRole('link', { name: 'Findings' }).first()).toBeVisible();
+  });
+
   test('docs page renders the markdown docs module', async ({ page }) => {
     await page.goto('/docs');
     await expect(page.getByRole('heading', { name: 'Documentation' })).toBeVisible();

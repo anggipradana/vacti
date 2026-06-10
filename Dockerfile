@@ -16,6 +16,9 @@ FROM node:20-bookworm-slim AS runtime
 WORKDIR /app
 ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1
 COPY --from=build /app ./
+# Chromium for PDF report rendering: the /reports/va and /reports/ti route handlers render PDFs
+# in-process (Playwright), so the app image needs the browser too, not just the worker.
+RUN npx playwright install --with-deps chromium
 EXPOSE 3000
 CMD ["npx", "next", "start", "apps/web", "-p", "3000"]
 
@@ -29,7 +32,7 @@ ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1
 RUN apt-get update \
   && apt-get install -y --no-install-recommends ca-certificates curl unzip libpcap0.8 \
   && rm -rf /var/lib/apt/lists/*
-# Pinned active-scan toolset (prebuilt release zips — keeps the image free of the Go toolchain).
+# Pinned active-scan toolset (prebuilt release zips - keeps the image free of the Go toolchain).
 # Bump these to upgrade tools; the set is frozen by governance (subfinder/httpx/naabu/nuclei).
 ARG SUBFINDER_VERSION=2.14.0
 ARG HTTPX_VERSION=1.9.0
