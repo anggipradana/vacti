@@ -18,7 +18,7 @@ import {
   editSignatoryAction,
   deleteSignatoryAction,
 } from '../../../../lib/report-actions';
-import { generateExecSummaryAction } from '../../../../lib/ai-actions';
+import { ExecSummaryButton } from './exec-summary-button';
 
 export const dynamic = 'force-dynamic';
 
@@ -134,6 +134,7 @@ export default async function ReportSettingsPage({ searchParams }: { searchParam
                 <label className="flex items-center gap-2 text-sm font-medium">
                   <input
                     type="checkbox"
+                    id="va-exec-show"
                     name="showExecutiveSummary"
                     defaultChecked={s?.showExecutiveSummary ?? false}
                   />
@@ -144,12 +145,14 @@ export default async function ReportSettingsPage({ searchParams }: { searchParam
                   {'{critical_count}'} {'{high_count}'} {'{active_count}'} {'{scan_date}'}
                 </p>
                 <Textarea
+                  id="va-exec-en"
                   name="executiveSummary"
                   rows={4}
                   placeholder="Executive summary (English)…"
                   defaultValue={s?.executiveSummary ?? ''}
                 />
                 <Textarea
+                  id="va-exec-id"
                   name="executiveSummaryId"
                   rows={4}
                   placeholder="Ringkasan eksekutif (Indonesia)…"
@@ -159,17 +162,7 @@ export default async function ReportSettingsPage({ searchParams }: { searchParam
             ) : null}
             <SubmitButton>Save</SubmitButton>
           </form>
-          {kind === 'va' ? (
-            <form action={generateExecSummaryAction} className="mt-3 border-t border-border pt-3">
-              <input type="hidden" name="projectId" value={projectId} />
-              <SubmitButton variant="outline" size="sm">
-                Generate executive summary with AI
-              </SubmitButton>
-              <p className="mt-1 text-xs text-fg-subtle">
-                Uses the latest scan + configured AI provider; fills both EN/ID and enables the custom summary.
-              </p>
-            </form>
-          ) : null}
+          {kind === 'va' ? <ExecSummaryButton projectId={projectId} /> : null}
         </CardContent>
       </Card>
     );
