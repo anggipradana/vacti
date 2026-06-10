@@ -10,6 +10,8 @@ import { Badge } from '../../../../components/ui/badge';
 import { projects, reportSettings, reportSignatories } from '@vacti/db';
 import { getDb } from '../../../../lib/db';
 import { getCurrentUser } from '../../../../lib/session';
+import { getActiveProjectId } from '../../../../lib/active-project';
+import { ProjectSwitcher } from '../../../../components/project-switcher';
 import {
   saveReportSettingsAction,
   addSignatoryAction,
@@ -34,7 +36,9 @@ export default async function ReportSettingsPage({ searchParams }: { searchParam
   const db = getDb();
   const projectRows = await db.select().from(projects).orderBy(desc(projects.createdAt));
   const sp = await searchParams;
-  const projectId = sp.project ?? projectRows[0]?.id;
+  // Cookie-aware: must follow the ACTIVE project. Defaulting to the newest project made the AI
+  // exec-summary (and branding edits) silently target the wrong project.
+  const projectId = await getActiveProjectId(sp.project, projectRows);
 
   if (!projectId) {
     return <p className="text-sm text-fg-muted">Create a project first.</p>;
@@ -173,6 +177,13 @@ export default async function ReportSettingsPage({ searchParams }: { searchParam
 
   return (
     <>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-fg-muted">
+          PDF report branding, executive summary and signatories for{' '}
+          <span className="font-medium text-fg">{projectRows.find((p) => p.id === projectId)?.name ?? 'project'}</span>.
+        </p>
+        <ProjectSwitcher projects={projectRows} current={projectId} basePath="/settings/reports" />
+      </div>
       <div className="grid gap-4 lg:grid-cols-2">
         {brandingForm('va')}
         {brandingForm('ti')}
