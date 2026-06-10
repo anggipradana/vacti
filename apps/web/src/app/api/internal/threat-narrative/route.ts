@@ -59,6 +59,8 @@ export async function POST(req: Request): Promise<Response> {
       .onConflictDoUpdate({ target: threatIntelStatus.projectId, set: { aiNarrative: narrative } });
     return Response.json({ ok: true, narrative });
   } catch (e) {
-    return Response.json({ ok: false, error: 'ai_failed', detail: String((e as Error)?.message ?? e).slice(0, 200) });
+    // Detail stays server-side: provider/SDK messages can include endpoint or config hints.
+    console.error('[threat-narrative] AI call failed:', e);
+    return Response.json({ ok: false, error: 'ai_failed' });
   }
 }

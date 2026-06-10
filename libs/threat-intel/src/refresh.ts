@@ -84,7 +84,16 @@ export async function capNews(
         .limit(limit);
       const ids = keep.map((r) => r.id);
       if (ids.length) {
-        await db.delete(threatNews).where(and(eq(threatNews.sector, scope.sector), notInArray(threatNews.id, ids)));
+        // Never cap away analyst-flagged rows: KEEP_STATUSES outranks recency (same rule as prune).
+        await db
+          .delete(threatNews)
+          .where(
+            and(
+              eq(threatNews.sector, scope.sector),
+              notInArray(threatNews.id, ids),
+              notInArray(threatNews.status, KEEP_STATUSES),
+            ),
+          );
       }
     } else {
       const keep = await db
@@ -95,7 +104,15 @@ export async function capNews(
         .limit(limit);
       const ids = keep.map((r) => r.id);
       if (ids.length) {
-        await db.delete(brandNews).where(and(eq(brandNews.projectId, scope.projectId), notInArray(brandNews.id, ids)));
+        await db
+          .delete(brandNews)
+          .where(
+            and(
+              eq(brandNews.projectId, scope.projectId),
+              notInArray(brandNews.id, ids),
+              notInArray(brandNews.status, KEEP_STATUSES),
+            ),
+          );
       }
     }
   } catch {
@@ -135,12 +152,27 @@ export async function refreshThreatIntel(deps: RefreshDeps): Promise<void> {
       ...ipValues.map((value) => ({ value, otxType: 'IPv4' as const, leak: false })),
     ];
 
-    await db.delete(otxThreatData).where(eq(otxThreatData.projectId, projectId));
+    // Drop rows for indicators no longer in scope (removed targets/indicators). Refreshes replace
+    // data per-indicator below, so an OTX outage (every fetch null) can no longer wipe prior intel.
+    if (lookups.length) {
+      await db.delete(otxThreatData).where(
+        and(
+          eq(otxThreatData.projectId, projectId),
+          notInArray(
+            otxThreatData.indicator,
+            lookups.map((l) => l.value),
+          ),
+        ),
+      );
+    }
 
     let i = 0;
     for (const { value: domain, otxType, leak } of lookups) {
       const otx = await fetchOtxIndicator(domain, { apiKey: deps.otxKey, type: otxType });
       if (otx) {
+        await db
+          .delete(otxThreatData)
+          .where(and(eq(otxThreatData.projectId, projectId), eq(otxThreatData.indicator, domain)));
         await db.insert(otxThreatData).values({
           projectId,
           indicator: domain,

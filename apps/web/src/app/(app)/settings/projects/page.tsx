@@ -147,7 +147,7 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Pro
             totalPages={totalPages}
             total={total}
             label="projects"
-            makeHref={(p) => '/projects?ppage=' + p}
+            makeHref={(p) => '/settings/projects?ppage=' + p}
           />
         </div>
       </div>

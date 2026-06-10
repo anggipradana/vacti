@@ -8,6 +8,17 @@ import { dispatchWebhook, type Channel } from '@vacti/integrations';
 import { getDb } from './db';
 import { requirePermission } from './authz';
 
+/** Webhook destinations must be real http(s) URLs; anything else is stored as null (no dispatch). */
+function validHttpUrl(s: string | null): string | null {
+  if (!s) return null;
+  try {
+    const u = new URL(s);
+    return u.protocol === 'http:' || u.protocol === 'https:' ? s : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function addWebhookAction(formData: FormData) {
   await requirePermission(Permission.ModifySystemConfig);
   const projectId = String(formData.get('projectId') ?? '');
@@ -23,7 +34,7 @@ export async function addWebhookAction(formData: FormData) {
       projectId,
       channel,
       label: v('label'),
-      url: v('url'),
+      url: validHttpUrl(v('url')),
       telegramToken: v('telegramToken'),
       telegramChatId: v('telegramChatId'),
       events: formData.getAll('events').map(String),
@@ -46,7 +57,7 @@ export async function editWebhookAction(formData: FormData) {
     .set({
       channel,
       label: v('label'),
-      url: v('url'),
+      url: validHttpUrl(v('url')),
       telegramToken: v('telegramToken'),
       telegramChatId: v('telegramChatId'),
       events: formData.getAll('events').map(String),

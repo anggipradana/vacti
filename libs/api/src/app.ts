@@ -951,7 +951,7 @@ export function buildApi(deps: ApiDeps): Hono<{ Variables: Vars }> {
       .object({
         channel: z.enum(['discord', 'slack', 'telegram', 'google_chat', 'generic']),
         label: z.string().nullable().optional(),
-        url: z.string().nullable().optional(),
+        url: z.string().url().nullable().optional(),
         telegramToken: z.string().nullable().optional(),
         telegramChatId: z.string().nullable().optional(),
         events: z.array(z.string()).optional(),

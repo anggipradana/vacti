@@ -27,9 +27,18 @@ const STATUS_OPTIONS = Object.entries(NEWS_STATUS_LABEL);
  * Sector security-news list with text search, status filter, and checkbox multi-select for bulk
  * status changes - plus per-row instant status change (AutoSubmitSelect).
  */
-export function SectorNewsList({ items, canTriage }: { items: SectorNewsItem[]; canTriage: boolean }) {
+export function SectorNewsList({
+  items,
+  canTriage,
+  initialStatus = 'all',
+}: {
+  items: SectorNewsItem[];
+  canTriage: boolean;
+  /** Pre-applied status filter (deep links like the dashboard's "New sector news" tile). */
+  initialStatus?: string;
+}) {
   const [query, setQuery] = React.useState('');
-  const [statusFilter, setStatusFilter] = React.useState('all');
+  const [statusFilter, setStatusFilter] = React.useState(initialStatus);
   const [selected, setSelected] = React.useState<Set<string>>(new Set());
   const [page, setPage] = React.useState(1);
 

@@ -23,10 +23,11 @@ export interface ScanDiff {
 function diffList(baseline: string[], current: string[]): DiffEntry {
   const base = new Set(baseline);
   const cur = new Set(current);
+  // Iterate the sets (not the raw arrays) so duplicate input rows cannot inflate the diff.
   return {
-    added: current.filter((x) => !base.has(x)),
-    removed: baseline.filter((x) => !cur.has(x)),
-    unchanged: current.filter((x) => base.has(x)).length,
+    added: [...cur].filter((x) => !base.has(x)),
+    removed: [...base].filter((x) => !cur.has(x)),
+    unchanged: [...cur].filter((x) => base.has(x)).length,
   };
 }
 

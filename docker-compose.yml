@@ -14,7 +14,9 @@ services:
       timeout: 5s
       retries: 10
     ports:
-      - '5432:5432'
+      # Loopback only: app/worker reach the db over the compose network; this host mapping exists
+      # solely for local tooling (drizzle-kit migrate, psql) and must not be reachable externally.
+      - '127.0.0.1:5432:5432'
 
   # Recon worker: self-contained image (pinned subfinder/httpx/naabu/nuclei + nuclei-templates +
   # Chromium). Runs DB migrations on boot, then consumes the pg-boss queue (scans / TI / schedules /

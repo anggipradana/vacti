@@ -1,4 +1,4 @@
-import { and, count, eq, inArray, lt } from 'drizzle-orm';
+import { and, count, eq, inArray, isNull, lt, or } from 'drizzle-orm';
 import { z } from 'zod';
 import { loadEnv } from '@vacti/config';
 import { cronMatches, Severity, SEVERITY_LABEL, type SeverityValue } from '@vacti/core';
@@ -74,17 +74,42 @@ async function main(): Promise<void> {
   if (reaped.length) console.log(`[worker] reaped ${reaped.length} orphaned scan(s) stuck in 'running'`);
 
   // Live watchdog: even while the worker stays up, a scan that runs far longer than any real scan
-  // should (stalled tool, hung host, lost job) is failed so it can never sit "running" forever. The
-  // cap is generous (default 60 min vs a ~10-16 min normal scan) so a legitimately long scan is safe.
+  // should (stalled tool, hung host, lost job) must never sit "running" forever. The cap is generous
+  // (default 60 min vs a ~10-16 min normal scan) so a legitimately long scan is safe.
+  // Live runs hold their AbortController here; the per-run deadline (below) aborts them for real
+  // (kills child processes), so the watchdog only relabels rows NO live handler owns (orphans) -
+  // relabeling a live run would race the handler's own terminal update.
+  const liveRuns = new Map<string, AbortController>();
   const MAX_SCAN_MS = Number(process.env.SCAN_MAX_RUNTIME_MS ?? 60 * 60 * 1000);
   const watchdog = setInterval(() => {
     void db
-      .update(scans)
-      .set({ status: 'failed', stage: 'interrupted', error: 'Stalled (watchdog timeout)', finishedAt: new Date() })
+      .select({ id: scans.id })
+      .from(scans)
       .where(and(eq(scans.status, 'running'), lt(scans.startedAt, new Date(Date.now() - MAX_SCAN_MS))))
-      .returning({ id: scans.id })
-      .then((rows) => rows.length && console.log(`[worker] watchdog failed ${rows.length} stalled scan(s)`))
+      .then(async (rows) => {
+        const orphaned = rows.map((r) => r.id).filter((id) => !liveRuns.has(id));
+        if (!orphaned.length) return;
+        await db
+          .update(scans)
+          .set({ status: 'failed', stage: 'interrupted', error: 'Stalled (watchdog timeout)', finishedAt: new Date() })
+          .where(and(inArray(scans.id, orphaned), eq(scans.status, 'running')));
+        console.log(`[worker] watchdog failed ${orphaned.length} stalled orphaned scan(s)`);
+      })
       .catch((err) => console.error('[worker] watchdog error:', err));
+    // Queued scans whose pg-boss job was lost (enqueue failed, queue wiped) have startedAt=null and
+    // are invisible to the reaper + the running-watchdog above; fail them after a generous window.
+    void db
+      .update(scans)
+      .set({
+        status: 'failed',
+        stage: 'interrupted',
+        error: 'Never picked up (queue job lost)',
+        finishedAt: new Date(),
+      })
+      .where(and(eq(scans.status, 'queued'), lt(scans.createdAt, new Date(Date.now() - 2 * 60 * 60 * 1000))))
+      .returning({ id: scans.id })
+      .then((rows) => rows.length && console.log(`[worker] watchdog failed ${rows.length} lost queued scan(s)`))
+      .catch((err) => console.error('[worker] watchdog error (queued):', err));
   }, 60_000);
   watchdog.unref();
 
@@ -114,7 +139,14 @@ async function main(): Promise<void> {
       return;
     }
     const [target] = await db.select().from(targets).where(eq(targets.id, scan.targetId));
-    if (!target) return;
+    if (!target) {
+      // Target deleted while the scan sat queued: terminate the row, never leave it stuck 'queued'.
+      await db
+        .update(scans)
+        .set({ status: 'failed', stage: 'interrupted', error: 'Target no longer exists', finishedAt: new Date() })
+        .where(eq(scans.id, scanId));
+      return;
+    }
     let profile = DEFAULT_PROFILE;
     if (scan.profileId) {
       const [p] = await db.select().from(scanProfiles).where(eq(scanProfiles.id, scan.profileId));
@@ -134,6 +166,15 @@ async function main(): Promise<void> {
     console.log(`[worker] scan ${scanId} starting (${target.domain})`);
     // Poll the cancel flag and abort the in-flight run (kills child processes).
     const controller = new AbortController();
+    liveRuns.set(scanId, controller);
+    // Hard wall-clock deadline owned by the handler itself: aborting the controller SIGKILLs the
+    // child process group, so a hung tool cannot hold the run (and its job slot) forever.
+    let stalled = false;
+    const deadline = setTimeout(() => {
+      stalled = true;
+      console.log(`[worker] scan ${scanId} exceeded max runtime, aborting`);
+      controller.abort();
+    }, MAX_SCAN_MS);
     const poll = setInterval(() => {
       void db
         .select()
@@ -144,7 +185,9 @@ async function main(): Promise<void> {
             console.log(`[worker] scan ${scanId} cancellation requested`);
             controller.abort();
           }
-        });
+        })
+        // A transient DB error here must not become an unhandled rejection (it would kill the worker).
+        .catch((err) => console.error(`[worker] cancel-poll error (${scanId}):`, err));
     }, 2000);
     const mode = scan.mode ?? 'active';
     try {
@@ -229,6 +272,16 @@ async function main(): Promise<void> {
       }
     } finally {
       clearInterval(poll);
+      clearTimeout(deadline);
+      liveRuns.delete(scanId);
+    }
+    // A deadline abort goes through the pipelines' abort path (which labels it 'cancelled');
+    // relabel it as a stall so the user sees what actually happened.
+    if (stalled) {
+      await db
+        .update(scans)
+        .set({ status: 'failed', stage: 'interrupted', error: 'Stalled (max runtime exceeded)' })
+        .where(and(eq(scans.id, scanId), eq(scans.status, 'cancelled')));
     }
     const [done] = await db.select().from(scans).where(eq(scans.id, scanId));
     if (done && done.status !== 'cancelled') {
@@ -315,8 +368,19 @@ async function main(): Promise<void> {
     const rows = await db.select().from(scanSchedules).where(eq(scanSchedules.enabled, true));
     for (const s of rows) {
       if (!cronMatches(s.cron, now)) continue;
-      // Idempotent within a minute (the tick may fire slightly more than once).
-      if (s.lastRunAt && Math.floor(s.lastRunAt.getTime() / 60000) === minute) continue;
+      // Atomic once-per-minute claim: flip lastRunAt first with a guard so two overlapping ticks
+      // can never both pass (the old read-then-write check raced and could double-fire).
+      const claimed = await db
+        .update(scanSchedules)
+        .set({ lastRunAt: now })
+        .where(
+          and(
+            eq(scanSchedules.id, s.id),
+            or(isNull(scanSchedules.lastRunAt), lt(scanSchedules.lastRunAt, new Date(minute * 60000))),
+          ),
+        )
+        .returning({ id: scanSchedules.id });
+      if (!claimed.length) continue;
       const [target] = await db.select().from(targets).where(eq(targets.id, s.targetId));
       if (!target) continue;
       const [scan] = await db
@@ -324,7 +388,6 @@ async function main(): Promise<void> {
         .values({ projectId: target.projectId, targetId: target.id, profileId: s.profileId ?? null })
         .returning();
       await queue.enqueue('scan', scanJobSchema, { scanId: scan!.id });
-      await db.update(scanSchedules).set({ lastRunAt: now }).where(eq(scanSchedules.id, s.id));
       console.log(`[worker] scheduled scan ${scan!.id} for ${target.domain} (cron ${s.cron})`);
     }
   });

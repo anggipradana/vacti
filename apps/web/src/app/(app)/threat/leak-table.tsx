@@ -31,9 +31,18 @@ const STATUS_OPTIONS = Object.entries(LEAK_STATUS_LABEL);
  * status changes - plus per-row instant status change (AutoSubmitSelect) and delete. Passwords stay
  * masked behind the click-to-reveal `Reveal` cell exactly as before.
  */
-export function LeakTable({ leaks, canTriage }: { leaks: LeakRow[]; canTriage: boolean }) {
+export function LeakTable({
+  leaks,
+  canTriage,
+  initialStatus = 'all',
+}: {
+  leaks: LeakRow[];
+  canTriage: boolean;
+  /** Pre-applied status filter (deep links like the dashboard's "New leaked creds" tile). */
+  initialStatus?: string;
+}) {
   const [query, setQuery] = React.useState('');
-  const [statusFilter, setStatusFilter] = React.useState('all');
+  const [statusFilter, setStatusFilter] = React.useState(initialStatus);
   const [selected, setSelected] = React.useState<Set<string>>(new Set());
   const [page, setPage] = React.useState(1);
 

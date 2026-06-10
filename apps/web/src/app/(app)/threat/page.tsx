@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import Form from 'next/form';
 import { redirect } from 'next/navigation';
 import { Suspense } from 'react';
 import { desc, eq, count, sql } from 'drizzle-orm';
@@ -16,6 +15,7 @@ import { Label } from '../../../components/ui/label';
 import { Select } from '../../../components/ui/select';
 import { Badge } from '../../../components/ui/badge';
 import { EmptyState } from '../../../components/ui/empty-state';
+import { ProjectSwitcher } from '../../../components/project-switcher';
 import { computeProjectRisk } from '@vacti/threat-intel';
 import { LEAK_STATUS_LABEL, NEWS_STATUS_LABEL, userCan, Permission } from '@vacti/core';
 import { SECTORS } from '@vacti/threat-intel';
@@ -52,7 +52,7 @@ export const dynamic = 'force-dynamic';
 export default async function ThreatPage({
   searchParams,
 }: {
-  searchParams: Promise<{ project?: string; bnews?: string }>;
+  searchParams: Promise<{ project?: string; bnews?: string; leak?: string; news?: string }>;
 }) {
   const user = await getCurrentUser();
   if (!user) redirect('/login');
@@ -61,6 +61,9 @@ export default async function ThreatPage({
   const sp = await searchParams;
   const projectId = await getActiveProjectId(sp.project, projectRows);
   const brandFilter = sp.bnews ?? 'all';
+  // Deep-link filters (dashboard "Needs review" tiles): only known statuses, else show all.
+  const leakFilter = sp.leak && sp.leak in LEAK_STATUS_LABEL ? sp.leak : 'all';
+  const newsFilter = sp.news && sp.news in NEWS_STATUS_LABEL ? sp.news : 'all';
 
   if (!projectId) {
     return (
@@ -129,18 +132,7 @@ export default async function ThreatPage({
       />
 
       <div className="mb-6 flex flex-wrap items-center gap-3">
-        <Form action="/threat">
-          <Select name="project" defaultValue={projectId} aria-label="Project">
-            {projectRows.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </Select>
-          <Button type="submit" variant="ghost" size="sm" className="ml-2">
-            Switch
-          </Button>
-        </Form>
+        <ProjectSwitcher projects={projectRows} current={projectId} basePath="/threat" />
         {status ? (
           <Badge variant={status.state === 'running' ? 'accent' : status.state === 'failed' ? 'danger' : 'neutral'}>
             {status.state === 'running' ? `refreshing ${status.progress}%` : `last refresh: ${status.state}`}
@@ -247,6 +239,7 @@ export default async function ThreatPage({
             </p>
           ) : (
             <SectorNewsList
+              initialStatus={newsFilter}
               items={news.map((n) => ({
                 id: n.id,
                 title: n.title,
@@ -329,6 +322,7 @@ export default async function ThreatPage({
         </Card>
       ) : (
         <LeakTable
+          initialStatus={leakFilter}
           leaks={leaks.map((l) => ({
             id: l.id,
             identifier: l.identifier,
