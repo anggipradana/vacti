@@ -6,7 +6,6 @@ import { Permission } from '@vacti/core';
 import {
   enrichVulnerability,
   enrichmentHash,
-  generateExecutiveSummary,
   generateThreatNarrative,
   triageNewsRelevance,
   resolveAiModel,
@@ -20,11 +19,6 @@ import {
   aiSettings,
   aiDefaults,
   aiCache,
-  targets,
-  subdomains,
-  endpoints,
-  ports as portsTable,
-  reportSettings,
   threatIntelStatus,
   otxThreatData,
   leakcheckData,
@@ -144,53 +138,6 @@ export async function saveAiDefaultsAction(formData: FormData) {
     });
   }
   revalidatePath('/settings/integrations');
-}
-
-/** G7 - generate the VA executive summary (EN+ID) from the project's latest scan, store on report settings. */
-export async function generateExecSummaryAction(formData: FormData) {
-  await requirePermission(Permission.ModifyReport);
-  const projectId = String(formData.get('projectId') ?? '');
-  if (!projectId) return;
-  const db = getDb();
-  const provider = await providerFor(projectId);
-  if (!provider) {
-    revalidatePath('/settings/reports');
-    return;
-  }
-  const [scan] = await db
-    .select()
-    .from(scans)
-    .where(eq(scans.projectId, projectId))
-    .orderBy(desc(scans.createdAt))
-    .limit(1);
-  if (!scan) return;
-  const [target] = await db.select().from(targets).where(eq(targets.id, scan.targetId));
-  const [subs, eps, prt, vulns] = await Promise.all([
-    db.select().from(subdomains).where(eq(subdomains.scanId, scan.id)),
-    db.select().from(endpoints).where(eq(endpoints.scanId, scan.id)),
-    db.select().from(portsTable).where(eq(portsTable.scanId, scan.id)),
-    db.select().from(vulnerabilities).where(eq(vulnerabilities.scanId, scan.id)),
-  ]);
-  const sev = (n: number) => vulns.filter((v) => v.severity === n).length;
-  const active = vulns.filter((v) => ['open', 'in_progress', 'reopened'].includes(v.status)).length;
-  const base = {
-    target: target?.domain ?? 'target',
-    counts: { subdomains: subs.length, endpoints: eps.length, ports: prt.length, vulns: vulns.length, active },
-    severities: { critical: sev(4), high: sev(3), medium: sev(2), low: sev(1), info: sev(0) },
-    topFindings: [...new Set(vulns.filter((v) => v.severity >= 3).map((v) => v.name))].slice(0, 5),
-  };
-  const [en, id] = await Promise.all([
-    generateExecutiveSummary({ ...base, lang: 'en' }, provider),
-    generateExecutiveSummary({ ...base, lang: 'id' }, provider),
-  ]);
-  await db
-    .insert(reportSettings)
-    .values({ projectId, kind: 'va', showExecutiveSummary: true, executiveSummary: en, executiveSummaryId: id })
-    .onConflictDoUpdate({
-      target: [reportSettings.projectId, reportSettings.kind],
-      set: { showExecutiveSummary: true, executiveSummary: en, executiveSummaryId: id },
-    });
-  revalidatePath('/settings/reports');
 }
 
 /** G8 - generate the threat-intelligence narrative for a project, store on the TI status row. */
