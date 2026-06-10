@@ -26,6 +26,7 @@ import { TrendArea } from '../../../components/ui/trend-area';
 import { Severity, VULN_ACTIVE_STATUSES, VULN_STATUS_LABEL, LEAK_STATUS_LABEL } from '@vacti/core';
 import type { SeverityValue, VulnStatusValue, LeakStatusValue } from '@vacti/core';
 import { SeverityBadge } from '../../../components/ui/severity-badge';
+import { CountBar } from '../../../components/ui/count-bar';
 import { Badge } from '../../../components/ui/badge';
 import { RiskGauge } from '../../../components/ui/risk-gauge';
 import {
@@ -550,7 +551,9 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
                         <TD>
                           <SeverityBadge severity={h.severity as SeverityValue} />
                         </TD>
-                        <TD className="text-right tabular">{h.count}</TD>
+                        <TD>
+                          <CountBar value={h.count} max={topHosts[0]?.count ?? 1} />
+                        </TD>
                       </TR>
                     ))}
                   </TBody>
@@ -580,7 +583,9 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
                       <TD>
                         <SeverityBadge severity={info.severity as SeverityValue} />
                       </TD>
-                      <TD className="text-right tabular">{info.count}</TD>
+                      <TD>
+                        <CountBar value={info.count} max={mostCommon[0]?.[1].count ?? 1} />
+                      </TD>
                     </TR>
                   ))}
                 </TBody>
@@ -604,7 +609,9 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
                     {topTargets.map((t) => (
                       <TR key={t.domain}>
                         <TD className="font-mono text-sm">{t.domain}</TD>
-                        <TD className="text-right tabular">{t.count}</TD>
+                        <TD>
+                          <CountBar value={t.count} max={topTargets[0]?.count ?? 1} />
+                        </TD>
                       </TR>
                     ))}
                   </TBody>
