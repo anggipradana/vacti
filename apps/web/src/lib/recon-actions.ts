@@ -227,31 +227,6 @@ export async function deleteScanAction(formData: FormData) {
   redirect('/scans');
 }
 
-export async function startScanAction(formData: FormData) {
-  const actor = await requirePermission(Permission.InitiateScans);
-  const targetId = String(formData.get('targetId') ?? '');
-  const profileId = String(formData.get('profileId') ?? '').trim() || null;
-  const m = String(formData.get('mode') ?? 'active');
-  const mode = m === 'passive' || m === 'full' ? m : 'active';
-  const deepScan = String(formData.get('deepScan') ?? '') === '1';
-  const [target] = await getDb().select().from(targets).where(eq(targets.id, targetId));
-  if (!target) redirect('/scans?error=notarget');
-  const [scan] = await getDb()
-    .insert(scans)
-    .values({ projectId: target.projectId, targetId: target.id, profileId, mode, deepScan })
-    .returning();
-  await recordAudit({
-    actorId: actor.id,
-    action: 'scan.start',
-    resource: `scan:${scan!.id}`,
-    projectId: target.projectId,
-    metadata: { targetId },
-  });
-  const q = await getQueue();
-  await q.enqueue('scan', scanJob, { scanId: scan!.id });
-  redirect(`/scans/${scan!.id}`);
-}
-
 /** Request cancellation of a running/queued scan (worker polls the flag and aborts). */
 export async function cancelScanAction(formData: FormData) {
   const actor = await requirePermission(Permission.InitiateScans);
