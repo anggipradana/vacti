@@ -227,8 +227,9 @@ async function main(): Promise<void> {
           );
           passiveHosts = res.hosts;
         } catch (err) {
-          const aborted = controller.signal.aborted;
-          const msg = err instanceof Error ? err.message : String(err);
+          // A deadline abort is a stall, not a user cancel: label it failed with the real reason.
+          const aborted = controller.signal.aborted && !stalled;
+          const msg = stalled ? 'Stalled (max runtime exceeded)' : err instanceof Error ? err.message : String(err);
           await db
             .insert(scanActivity)
             .values({ scanId, stage: 'done', status: aborted ? 'cancelled' : 'failed', message: msg });

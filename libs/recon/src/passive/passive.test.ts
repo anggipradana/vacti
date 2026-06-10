@@ -92,6 +92,18 @@ describe('ssrf guard', () => {
     expect(isUrlSafeForServerFetch('http://api.internal/')).toBe(false);
     expect(() => assertUrlSafeForServerFetch('not a url')).toThrow();
   });
+  it('blocks IPv4-mapped IPv6, numeric-host encodings, and extra reserved ranges', () => {
+    expect(isUrlSafeForServerFetch('http://[::ffff:169.254.169.254]/')).toBe(false); // mapped metadata IP
+    expect(isUrlSafeForServerFetch('http://[::ffff:127.0.0.1]/')).toBe(false);
+    expect(isUrlSafeForServerFetch('http://[::ffff:7f00:1]/')).toBe(false); // hex-group mapped 127.0.0.1
+    expect(isUrlSafeForServerFetch('http://[::1]/')).toBe(false);
+    expect(isUrlSafeForServerFetch('http://2130706433/')).toBe(false); // decimal 127.0.0.1
+    expect(isUrlSafeForServerFetch('http://0x7f000001/')).toBe(false); // hex 127.0.0.1
+    expect(isUrlSafeForServerFetch('http://100.64.0.1/')).toBe(false); // CGNAT
+    expect(isUrlSafeForServerFetch('http://198.18.0.1/')).toBe(false); // benchmarking
+    expect(isUrlSafeForServerFetch('http://224.0.0.1/')).toBe(false); // multicast
+    expect(isUrlSafeForServerFetch('http://192.0.2.10/')).toBe(false); // TEST-NET-1
+  });
 });
 
 describe('virustotal harvesters', () => {
