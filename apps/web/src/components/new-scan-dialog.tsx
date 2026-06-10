@@ -1,11 +1,10 @@
 'use client';
+import * as React from 'react';
 import { Plus } from 'lucide-react';
 import { Button } from './ui/button';
-import { SubmitButton } from './ui/submit-button';
 import { Select } from './ui/select';
 import { Label } from './ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from './ui/dialog';
-import { startScanAction } from '../lib/recon-actions';
 
 export function NewScanDialog({
   targets,
@@ -15,6 +14,41 @@ export function NewScanDialog({
   profiles?: { id: string; name: string }[];
 }) {
   const disabled = targets.length === 0;
+  const [starting, setStarting] = React.useState(false);
+  const [err, setErr] = React.useState('');
+
+  // Plain fetch + window.location: the server action's redirect response was dropped on this page
+  // in the production build, leaving the button spinning while the scan silently started.
+  const start = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (starting) return;
+    setStarting(true);
+    setErr('');
+    const fd = new FormData(e.currentTarget);
+    try {
+      const res = await fetch('/api/internal/start-scan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          targetId: String(fd.get('targetId') ?? ''),
+          profileId: String(fd.get('profileId') ?? ''),
+          mode: String(fd.get('mode') ?? 'active'),
+          deepScan: fd.get('deepScan') === '1',
+        }),
+      });
+      const data = (await res.json()) as { ok?: boolean; scanId?: string };
+      if (data.ok && data.scanId) {
+        window.location.assign(`/scans/${data.scanId}`);
+        return; // keep the spinner while the browser navigates
+      }
+      setErr('Could not start the scan, try again.');
+      setStarting(false);
+    } catch {
+      setErr('Request failed, try again.');
+      setStarting(false);
+    }
+  };
+
   return (
     <Dialog>
       <DialogTrigger asChild>
@@ -30,7 +64,7 @@ export function NewScanDialog({
             URLs/IPs/exposures with no traffic to the target. Full does both.
           </DialogDescription>
         </DialogHeader>
-        <form action={startScanAction} className="space-y-4">
+        <form onSubmit={start} className="space-y-4">
           <div className="space-y-1.5">
             <Label htmlFor="targetId">Target</Label>
             <Select id="targetId" name="targetId" data-testid="scan-target" required>
@@ -66,9 +100,10 @@ export function NewScanDialog({
               </Select>
             </div>
           ) : null}
-          <SubmitButton data-testid="start-scan" className="w-full" pendingText="Starting…">
-            Start scan
-          </SubmitButton>
+          {err ? <p className="text-sm text-danger">{err}</p> : null}
+          <Button type="submit" data-testid="start-scan" className="w-full" loading={starting}>
+            {starting ? 'Starting…' : 'Start scan'}
+          </Button>
         </form>
       </DialogContent>
     </Dialog>
