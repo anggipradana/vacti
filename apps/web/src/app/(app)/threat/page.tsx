@@ -336,9 +336,13 @@ export default async function ThreatPage({
         />
       )}
 
-      <h2 className="mb-3 mt-8 font-display text-sm font-semibold uppercase tracking-wider text-fg-subtle">
-        Manual indicators
+      <h2 className="mb-1 mt-8 font-display text-sm font-semibold uppercase tracking-wider text-fg-subtle">
+        Monitored assets (manual indicators)
       </h2>
+      <p className="mb-3 text-sm text-fg-muted">
+        Your public IPs and domains, checked against VirusTotal engines and OTX pulses on every refresh: a flagged asset
+        usually means compromise, blacklisting, or abuse of your infrastructure.
+      </p>
       <div className="grid gap-4 lg:grid-cols-[360px_1fr]">
         <Card>
           <CardContent className="pt-5">
@@ -381,6 +385,23 @@ export default async function ThreatPage({
                   <div className="flex items-center justify-between">
                     <span className="font-mono text-sm">{ind.value}</span>
                     <div className="flex items-center gap-2">
+                      <Badge
+                        variant={
+                          ind.verdict === 'malicious'
+                            ? 'danger'
+                            : ind.verdict === 'suspicious'
+                              ? 'accent'
+                              : ind.verdict === 'clean'
+                                ? 'success'
+                                : 'neutral'
+                        }
+                        title={
+                          ind.lastCheckedAt ? `Last checked ${ind.lastCheckedAt.toISOString()}` : 'Not checked yet'
+                        }
+                        data-testid={`indicator-verdict-${ind.id}`}
+                      >
+                        {ind.verdict === 'unknown' ? 'not checked' : ind.verdict}
+                      </Badge>
                       <Badge variant="accent">{ind.type}</Badge>
                       {canTriage ? (
                         <ActionForm action={deleteIndicatorAction} confirm="Delete this indicator?">
@@ -392,6 +413,12 @@ export default async function ThreatPage({
                       ) : null}
                     </div>
                   </div>
+                  {ind.lastCheckedAt ? (
+                    <p className="mt-1 text-xs text-fg-subtle">
+                      VT: {ind.vtMalicious ?? 0} malicious · {ind.vtSuspicious ?? 0} suspicious
+                      {ind.vtTotal ? ` of ${ind.vtTotal} engines` : ''} · OTX: {ind.otxPulses ?? 0} pulse(s)
+                    </p>
+                  ) : null}
                   {canTriage ? (
                     <details className="mt-2">
                       <summary className="cursor-pointer text-xs text-fg-subtle hover:text-fg-muted">Edit</summary>

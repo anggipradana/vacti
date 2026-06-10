@@ -13,14 +13,19 @@ import {
 import { fetchOtxIndicator, type FetchLike } from './otx';
 import { fetchLeaks } from './leakcheck';
 import { fetchSectorNews, fetchBrandNews } from './news';
+import { fetchVtVerdict, computeIndicatorVerdict } from './vt-verdict';
 
 export interface RefreshDeps {
   db: Database;
   projectId: string;
   otxKey?: string;
   leakKey?: string;
+  /** VirusTotal key for manual-indicator reputation verdicts (monitored company IPs/domains). */
+  vtKey?: string;
   /** Injected fetch for the sector news feeds (mocked in tests). */
   newsFetch?: FetchLike;
+  /** Injected fetch for the VT verdict lookups (mocked in tests). */
+  vtFetch?: FetchLike;
   /** Prune news older than this many days (default 90). Analyst-flagged items are always kept. */
   retentionDays?: number;
   onProgress?: (progress: number, message: string) => void;
@@ -167,8 +172,10 @@ export async function refreshThreatIntel(deps: RefreshDeps): Promise<void> {
     }
 
     let i = 0;
+    const otxPulsesByValue = new Map<string, number>();
     for (const { value: domain, otxType, leak } of lookups) {
       const otx = await fetchOtxIndicator(domain, { apiKey: deps.otxKey, type: otxType });
+      if (otx) otxPulsesByValue.set(domain, otx.pulses);
       if (otx) {
         await db
           .delete(otxThreatData)
@@ -209,6 +216,29 @@ export async function refreshThreatIntel(deps: RefreshDeps): Promise<void> {
       }
       i += 1;
       await setStatus('running', Math.round((i / Math.max(1, lookups.length)) * 90), `processed ${domain}`);
+    }
+
+    // Reputation verdicts for the monitored assets (manual indicators): is the company's public
+    // IP/domain flagged by VT engines or sitting in OTX pulses? Best-effort per indicator; when
+    // both sources are unavailable the previous verdict is preserved (never downgraded to unknown).
+    await setStatus('running', 91, 'checking indicator reputation');
+    for (const ind of inds) {
+      const kind = ind.type === 'ip' ? ('ip' as const) : ('domain' as const);
+      const vt = await fetchVtVerdict(ind.value, kind, { apiKey: deps.vtKey, fetchImpl: deps.vtFetch });
+      const pulses = otxPulsesByValue.get(ind.value) ?? null;
+      if (!vt && pulses === null) continue;
+      await db
+        .update(manualIndicators)
+        .set({
+          vtMalicious: vt?.malicious ?? null,
+          vtSuspicious: vt?.suspicious ?? null,
+          vtHarmless: vt?.harmless ?? null,
+          vtTotal: vt?.total ?? null,
+          otxPulses: pulses,
+          verdict: computeIndicatorVerdict(vt, pulses),
+          lastCheckedAt: new Date(),
+        })
+        .where(eq(manualIndicators.id, ind.id));
     }
 
     // Sector security news (RSS) - refresh the shared per-sector cache for the project's sector.

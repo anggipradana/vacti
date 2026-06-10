@@ -14,6 +14,15 @@ export const manualIndicators = pgTable(
     type: text('type').notNull(), // domain | subdomain | ip
     value: text('value').notNull(),
     note: text('note'),
+    // Reputation monitoring (the point of manual indicators: are the company's public IPs/domains
+    // flagged anywhere?). Refreshed by ti-refresh from VirusTotal v3 last_analysis_stats + OTX.
+    vtMalicious: integer('vt_malicious'),
+    vtSuspicious: integer('vt_suspicious'),
+    vtHarmless: integer('vt_harmless'),
+    vtTotal: integer('vt_total'),
+    otxPulses: integer('otx_pulses'),
+    verdict: text('verdict').notNull().default('unknown'), // malicious | suspicious | clean | unknown
+    lastCheckedAt: timestamp('last_checked_at', { withTimezone: true }),
     createdAt: createdAt(),
   },
   (t) => ({

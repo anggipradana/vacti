@@ -332,6 +332,7 @@ async function main(): Promise<void> {
     // Per-project vault keys override the environment defaults.
     const otxKey = (await getProjectSecret(db, projectId, 'otx', env.ENCRYPTION_KEY)) ?? env.OTX_API_KEY;
     const leakKey = (await getProjectSecret(db, projectId, 'leakcheck', env.ENCRYPTION_KEY)) ?? env.LEAKCHECK_API_KEY;
+    const vtKey = (await getProjectSecret(db, projectId, 'virustotal', env.ENCRYPTION_KEY)) ?? env.VT_API_KEY;
     const leaksBefore = await db
       .select({ n: count() })
       .from(leakcheckData)
@@ -341,6 +342,7 @@ async function main(): Promise<void> {
       projectId,
       otxKey,
       leakKey,
+      vtKey,
       retentionDays: env.NEWS_RETENTION_DAYS,
       onProgress: (p, msg) => console.log(`[ti ${projectId}] ${p}% ${msg}`),
     });
