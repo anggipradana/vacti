@@ -44,6 +44,7 @@ describe('dispatchWebhook', () => {
       channel: 'slack',
       event: ev,
       fetchImpl: f as unknown as typeof fetch,
+      dnsGuard: async () => {},
     });
     expect(r.ok).toBe(true);
     expect(f).toHaveBeenCalledOnce();
@@ -56,6 +57,7 @@ describe('dispatchWebhook', () => {
       event: ev,
       retries: 1,
       fetchImpl: f as unknown as typeof fetch,
+      dnsGuard: async () => {},
     });
     expect(r.ok).toBe(false);
     expect(r.attempts).toBe(2);
@@ -68,8 +70,30 @@ describe('dispatchWebhook', () => {
       event: ev,
       retries: 3,
       fetchImpl: f as unknown as typeof fetch,
+      dnsGuard: async () => {},
     });
     expect(r.attempts).toBe(1);
+  });
+  it('blocks private/internal destinations without sending (SSRF guard)', async () => {
+    const f = vi.fn(async () => ({ ok: true, status: 200 }) as Response);
+    const literal = await dispatchWebhook({
+      url: 'http://169.254.169.254/hook',
+      channel: 'generic',
+      event: ev,
+      fetchImpl: f as unknown as typeof fetch,
+    });
+    expect(literal).toEqual({ ok: false, status: 0, attempts: 0 });
+    const viaDns = await dispatchWebhook({
+      url: 'http://internal-host.example.com/hook',
+      channel: 'generic',
+      event: ev,
+      fetchImpl: f as unknown as typeof fetch,
+      dnsGuard: async () => {
+        throw new Error('resolves private');
+      },
+    });
+    expect(viaDns).toEqual({ ok: false, status: 0, attempts: 0 });
+    expect(f).not.toHaveBeenCalled();
   });
 });
 

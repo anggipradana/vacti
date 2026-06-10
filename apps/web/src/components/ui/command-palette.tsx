@@ -18,7 +18,7 @@ import { cn } from '../../lib/cn';
 const items = [
   { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { label: 'Targets', href: '/targets', icon: Crosshair },
-  { label: 'VA Scans', href: '/scans', icon: Radar },
+  { label: 'Vulnerability Assessment', href: '/scans', icon: Radar },
   { label: 'Reports', href: '/reports', icon: FileText },
   { label: 'Projects', href: '/settings/projects', icon: FolderKanban },
   { label: 'Schedules', href: '/settings/schedules', icon: CalendarClock },

@@ -30,9 +30,10 @@ export default defineConfig({
     timeout: 120_000,
     cwd: process.cwd(),
     env: {
-      DATABASE_URL: process.env.DATABASE_URL ?? 'postgres://vacti:vacti@localhost:5432/vacti_e2e',
+      DATABASE_URL:
+        process.env.DATABASE_URL ??
+        `postgres://vacti:${process.env.POSTGRES_PASSWORD ?? 'vacti'}@localhost:5432/vacti_e2e`,
       ENCRYPTION_KEY: process.env.ENCRYPTION_KEY ?? '',
-      SESSION_SECRET: process.env.SESSION_SECRET ?? '',
       NODE_ENV: 'development',
       // Isolated build dir when set, so the e2e server never shares .next with a running dev/live server.
       NEXT_DIST_DIR: process.env.NEXT_DIST_DIR ?? '',

@@ -14,9 +14,8 @@ window. CI always runs headless and needs no display.
 
 ```bash
 # Env the app needs (Postgres + secrets); e2e DB = vacti_e2e
-export DATABASE_URL="postgres://vacti:vacti@localhost:5432/vacti_e2e"
+export DATABASE_URL="postgres://vacti:$POSTGRES_PASSWORD@localhost:5432/vacti_e2e"
 export ENCRYPTION_KEY="dGVzdC1lbmNyeXB0aW9uLWtleS0zMmJ5dGVzLXRlc3Q="
-export SESSION_SECRET="test-session-secret-0000000000000000"
 
 npm run e2e          # headless (CI parity) - all specs
 npm run e2e:ui       # Playwright UI mode - interactive, watch/replay each step (desktop window)

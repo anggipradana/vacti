@@ -30,8 +30,9 @@ services:
     environment:
       DATABASE_URL: postgres://vacti:${POSTGRES_PASSWORD:-vacti}@db:5432/vacti
       ENCRYPTION_KEY: ${ENCRYPTION_KEY}
-      SESSION_SECRET: ${SESSION_SECRET}
       NODE_ENV: production
+      # Scan schedules are evaluated in this timezone (cron + time pickers in the UI).
+      TZ: ${SCHEDULE_TZ:-Asia/Jakarta}
       # Optional integrations (features degrade gracefully when unset).
       OTX_API_KEY: ${OTX_API_KEY:-}
       LEAKCHECK_API_KEY: ${LEAKCHECK_API_KEY:-}
@@ -58,7 +59,6 @@ services:
     environment:
       DATABASE_URL: postgres://vacti:${POSTGRES_PASSWORD:-vacti}@db:5432/vacti
       ENCRYPTION_KEY: ${ENCRYPTION_KEY}
-      SESSION_SECRET: ${SESSION_SECRET}
       NODE_ENV: production
       ADMIN_EMAIL: ${ADMIN_EMAIL:-}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}

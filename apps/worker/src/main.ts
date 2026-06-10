@@ -394,14 +394,14 @@ async function main(): Promise<void> {
   });
   await queue.schedule('schedule-tick', '* * * * *');
 
-  // Daily news refresh at 02:00 UTC = 09:00 WIB - enqueues a TI refresh (which fetches sector +
-  // brand news, then caps each to NEWS_CAP) for every project, so news stays fresh automatically.
+  // Daily news refresh at 09:00 local time (TZ env, Asia/Jakarta in compose) - enqueues a TI
+  // refresh (sector + brand news, capped to NEWS_CAP) for every project, so news stays fresh.
   await queue.work('news-refresh-daily', z.unknown(), async () => {
     const projs = await db.select({ id: projects.id }).from(projects);
     for (const p of projs) await queue.enqueue('ti-refresh', tiJobSchema, { projectId: p.id });
     console.log(`[worker] daily news refresh: enqueued ti-refresh for ${projs.length} project(s)`);
   });
-  await queue.schedule('news-refresh-daily', '0 2 * * *');
+  await queue.schedule('news-refresh-daily', '0 9 * * *');
 
   console.log('[worker] started; consuming scan + ti-refresh + schedule-tick + news-refresh-daily queues');
 

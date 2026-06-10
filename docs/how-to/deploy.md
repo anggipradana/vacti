@@ -18,7 +18,7 @@ the app, it just forwards to `http://localhost:3100`.
   v2** plugin (`docker compose`).
 - Outbound network access to scan targets and external OSINT/AI APIs.
 - ~3 GB free disk for the worker image (recon binaries + nuclei-templates + Chromium).
-- Secrets ready: a 32-byte base64 `ENCRYPTION_KEY` and a `SESSION_SECRET` (`openssl rand -base64 32`).
+- Secrets ready: a 32-byte base64 `ENCRYPTION_KEY` (`openssl rand -base64 32`).
 - (Optional) `cloudflared` if you want public access without opening inbound ports.
 
 ## Deploy
