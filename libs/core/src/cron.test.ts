@@ -29,6 +29,16 @@ describe('cron parser', () => {
     expect(cronMatches('*/15 * * * *', new Date(2026, 5, 4, 9, 30))).toBe(true);
     expect(cronMatches('*/15 * * * *', new Date(2026, 5, 4, 9, 31))).toBe(false);
   });
+
+  it('uses standard OR semantics when both day-of-month and day-of-week are restricted', () => {
+    // 2026-06-04 is a Thursday (dow 4) and the 4th (dom 4).
+    const thu4th = new Date(2026, 5, 4, 2, 0, 0);
+    expect(cronMatches('0 2 13 * 4', thu4th)).toBe(true); // the 13th OR any Thursday: dow matches
+    expect(cronMatches('0 2 4 * 1', thu4th)).toBe(true); // the 4th OR any Monday: dom matches
+    expect(cronMatches('0 2 13 * 1', thu4th)).toBe(false); // neither the 13th nor a Monday
+    expect(cronMatches('0 2 13 * *', thu4th)).toBe(false); // only dom restricted: AND as usual
+    expect(cronMatches('0 2 * * 1', thu4th)).toBe(false); // only dow restricted: AND as usual
+  });
 });
 
 import { buildCron } from './cron';

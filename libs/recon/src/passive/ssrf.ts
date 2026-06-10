@@ -17,7 +17,9 @@ export function assertUrlSafeForServerFetch(rawUrl: string): void {
     throw new Error('Invalid URL for deep fetch');
   }
   if (u.protocol !== 'http:' && u.protocol !== 'https:') throw new Error('Only http(s) URLs allowed for deep fetch');
-  const host = u.hostname.toLowerCase();
+  // URL.hostname keeps the brackets on IPv6 literals ('[::1]'), which net.isIPv6 does not accept -
+  // strip them or every IPv6 check below silently never fires.
+  const host = u.hostname.toLowerCase().replace(/^\[|\]$/g, '');
   if (BLOCKED_HOSTNAMES.has(host)) throw new Error('Blocked host');
   if (host.endsWith('.localhost') || host.endsWith('.local') || host.endsWith('.internal'))
     throw new Error('Blocked host suffix');

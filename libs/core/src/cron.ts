@@ -61,14 +61,18 @@ export function isValidCron(expr: string): boolean {
 
 /** Does `date` (local time) satisfy the cron expression? */
 export function cronMatches(expr: string, date: Date): boolean {
+  const fields = expr.trim().split(/\s+/);
   const sets = parseCron(expr);
-  if (!sets) return false;
+  if (!sets || fields.length !== 5) return false;
+  // Standard cron rule: when BOTH day-of-month and day-of-week are restricted (not '*'), the day
+  // matches when EITHER does (OR), not both. With only one restricted, that one decides.
+  const domRestricted = fields[2] !== '*';
+  const dowRestricted = fields[4] !== '*';
+  const domMatch = sets[2]!.has(date.getDate());
+  const dowMatch = sets[4]!.has(date.getDay());
+  const dayMatch = domRestricted && dowRestricted ? domMatch || dowMatch : domMatch && dowMatch;
   return (
-    sets[0]!.has(date.getMinutes()) &&
-    sets[1]!.has(date.getHours()) &&
-    sets[2]!.has(date.getDate()) &&
-    sets[3]!.has(date.getMonth() + 1) &&
-    sets[4]!.has(date.getDay())
+    sets[0]!.has(date.getMinutes()) && sets[1]!.has(date.getHours()) && sets[3]!.has(date.getMonth() + 1) && dayMatch
   );
 }
 
