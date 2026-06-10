@@ -6,7 +6,8 @@ import { Pool } from 'pg';
  * real GUI to assert findings render with a masked snippet, category filtering works, and exposure
  * triage updates the dropdown in place. Guards the passive-recon UI end to end.
  */
-const DB = process.env.DATABASE_URL ?? 'postgres://vacti:vacti@localhost:5432/vacti_e2e';
+const DB =
+  process.env.DATABASE_URL ?? `postgres://vacti:${process.env.POSTGRES_PASSWORD ?? 'vacti'}@localhost:5432/vacti_e2e`;
 const pool = new Pool({ connectionString: DB });
 const ids: { project?: string } = {};
 

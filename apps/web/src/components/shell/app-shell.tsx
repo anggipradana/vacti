@@ -23,7 +23,7 @@ import { logoutAction } from '../../lib/actions';
 const nav = [
   { label: 'Dashboard', href: '/dashboard' },
   { label: 'Targets', href: '/targets' },
-  { label: 'VA', href: '/scans' },
+  { label: 'Vulnerability Assessment', href: '/scans' },
   { label: 'Attack Surface', href: '/surface' },
   { label: 'Cyber Threat Intel', href: '/threat' },
   { label: 'Reports', href: '/reports' },

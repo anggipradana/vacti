@@ -52,7 +52,9 @@ export default async function SchedulesPage({ searchParams }: { searchParams: Pr
   return (
     <>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-fg-muted">Recurring scans via a lightweight cron tick (local server time).</p>
+        <p className="text-sm text-fg-muted">
+          Recurring scans via a lightweight cron tick. Times are WIB (Asia/Jakarta).
+        </p>
         <ProjectSwitcher projects={projectRows} current={projectId} basePath="/settings/schedules" />
       </div>
 
@@ -119,7 +121,7 @@ export default async function SchedulesPage({ searchParams }: { searchParams: Pr
               </SubmitButton>
             </form>
             <p className="mt-2 text-xs text-fg-subtle">
-              Pick a frequency and time. Day applies to Weekly; Date applies to Monthly. Times use the server timezone.
+              Pick a frequency and time. Day applies to Weekly; Date applies to Monthly. Times are WIB (Asia/Jakarta).
             </p>
           </CardContent>
         </Card>

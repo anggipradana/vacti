@@ -1,3 +1,4 @@
+import { isUrlSafeForServerFetch, assertHostResolvesPublic } from '@vacti/recon';
 import { formatPayload } from './format';
 import type { Channel, NotificationEvent } from './events';
 
@@ -10,6 +11,8 @@ export interface DispatchOptions {
   telegram?: { botToken: string; chatId: string };
   retries?: number;
   fetchImpl?: FetchLike;
+  /** DNS-resolution guard (throws to block); injectable for tests. Defaults to the SSRF check. */
+  dnsGuard?: (host: string) => Promise<void>;
 }
 
 export interface DispatchResult {
@@ -22,9 +25,19 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /** POST a notification to a webhook with simple backoff retry. Never throws. */
 export async function dispatchWebhook(opts: DispatchOptions): Promise<DispatchResult> {
-  const { channel, event, telegram, retries = 2, fetchImpl = fetch } = opts;
+  const { channel, event, telegram, retries = 2, fetchImpl = fetch, dnsGuard = assertHostResolvesPublic } = opts;
   const { body, overrideUrl } = formatPayload(channel, event, telegram);
   const target = overrideUrl ?? opts.url;
+  // SSRF guard on user-configured destinations (overrideUrl is the fixed Telegram API host):
+  // a webhook must never reach localhost/cloud-metadata/private ranges, by literal or by DNS.
+  if (!overrideUrl) {
+    if (!isUrlSafeForServerFetch(target)) return { ok: false, status: 0, attempts: 0 };
+    try {
+      await dnsGuard(new URL(target).hostname);
+    } catch {
+      return { ok: false, status: 0, attempts: 0 };
+    }
+  }
   let attempts = 0;
   let status = 0;
   for (let i = 0; i <= retries; i++) {

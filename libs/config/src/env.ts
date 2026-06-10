@@ -12,7 +12,6 @@ export const envSchema = z.object({
     .refine((v) => Buffer.from(v, 'base64').length === 32, {
       message: 'ENCRYPTION_KEY must be 32 bytes (base64-encoded)',
     }),
-  SESSION_SECRET: z.string().min(16),
   ADMIN_EMAIL: z.string().email().optional(),
   ADMIN_PASSWORD: z.string().min(8).optional(),
   // Optional external integrations - features degrade gracefully when absent.

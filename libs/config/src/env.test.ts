@@ -5,7 +5,6 @@ const KEY = Buffer.alloc(32, 7).toString('base64');
 const base = {
   DATABASE_URL: 'postgres://u:p@localhost:5432/db',
   ENCRYPTION_KEY: KEY,
-  SESSION_SECRET: 'a-sufficiently-long-secret',
 };
 
 describe('loadEnv', () => {

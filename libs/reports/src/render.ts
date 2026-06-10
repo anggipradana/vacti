@@ -14,7 +14,10 @@ export interface RenderOptions {
 export async function renderPdf(html: string, opts: RenderOptions = {}): Promise<Buffer> {
   // ubuntu26.04 isn't a Playwright-recognised host; treat as ubuntu24.04 for the bundled browser.
   if (!process.env.PLAYWRIGHT_HOST_PLATFORM_OVERRIDE) process.env.PLAYWRIGHT_HOST_PLATFORM_OVERRIDE = 'ubuntu24.04';
-  const browser = await chromium.launch();
+  // chromiumSandbox false: the containers run as a non-root user without user-namespace privileges,
+  // and the rendered HTML is self-generated (fully escaped + sanitized) - same trust level as the
+  // previous root-with-implicit-no-sandbox setup.
+  const browser = await chromium.launch({ chromiumSandbox: false });
   let pdf: Buffer;
   try {
     const page = await browser.newPage();

@@ -1,4 +1,5 @@
 import { desc, eq } from 'drizzle-orm';
+import { userCan, Permission } from '@vacti/core';
 import { discoveredUrls, exposureFindings, ipResolutions } from '@vacti/db';
 import { getDb } from '../../../../lib/db';
 import { getCurrentUser } from '../../../../lib/session';
@@ -9,10 +10,13 @@ export const dynamic = 'force-dynamic';
 
 /**
  * Export attack-surface data for a project as CSV (one resource) or a ZIP bundle (all three).
- * Session-authenticated. `?project=<id>&format=csv|zip&resource=urls|findings|ips`.
+ * `?project=<id>&format=csv|zip&resource=urls|findings|ips`. Restricted to operator roles: the
+ * findings CSV carries exposure snippets (confidential, credential-like) unmasked.
  */
 export async function GET(req: Request) {
-  if (!(await getCurrentUser())) return new Response('Unauthorized', { status: 401 });
+  const user = await getCurrentUser();
+  if (!user) return new Response('Unauthorized', { status: 401 });
+  if (!userCan(user, Permission.ModifyScanResults)) return new Response('Forbidden', { status: 403 });
   const url = new URL(req.url);
   const projectId = url.searchParams.get('project');
   if (!projectId) return new Response('project required', { status: 400 });

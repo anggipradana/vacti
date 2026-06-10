@@ -11,5 +11,8 @@ export default defineConfig({
   ],
   out: './drizzle',
   dialect: 'postgresql',
-  dbCredentials: { url: process.env.DATABASE_URL ?? 'postgres://vacti:vacti@localhost:5432/vacti' },
+  dbCredentials: {
+    url:
+      process.env.DATABASE_URL ?? `postgres://vacti:${process.env.POSTGRES_PASSWORD ?? 'vacti'}@localhost:5432/vacti`,
+  },
 });

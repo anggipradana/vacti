@@ -7,7 +7,8 @@ import { Pool } from 'pg';
  * uncontrolled-<select> bug where the dropdown kept showing "new" after a successful update.
  * Covers all four triaged entities: sector news, leaked credentials, brand monitoring, vulnerabilities.
  */
-const DB = process.env.DATABASE_URL ?? 'postgres://vacti:vacti@localhost:5432/vacti_e2e';
+const DB =
+  process.env.DATABASE_URL ?? `postgres://vacti:${process.env.POSTGRES_PASSWORD ?? 'vacti'}@localhost:5432/vacti_e2e`;
 const pool = new Pool({ connectionString: DB });
 const ids: { project?: string; scan?: string } = {};
 
