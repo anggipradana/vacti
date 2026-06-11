@@ -173,6 +173,9 @@ export async function refreshThreatIntel(deps: RefreshDeps): Promise<void> {
 
     let i = 0;
     const otxPulsesByValue = new Map<string, number>();
+    // Track LeakCheck's reported totals so the UI can flag truncation (the per-query 1000 cap).
+    let leakFoundTotal = 0;
+    let leakTruncated = false;
     for (const { value: domain, otxType, leak } of lookups) {
       const otx = await fetchOtxIndicator(domain, { apiKey: deps.otxKey, type: otxType });
       if (otx) otxPulsesByValue.set(domain, otx.pulses);
@@ -190,7 +193,12 @@ export async function refreshThreatIntel(deps: RefreshDeps): Promise<void> {
           urls: otx.urls,
         });
       }
-      for (const l of leak ? await fetchLeaks(domain, { apiKey: deps.leakKey }) : []) {
+      const leakResult = leak
+        ? await fetchLeaks(domain, { apiKey: deps.leakKey })
+        : { records: [], found: 0, truncated: false };
+      leakFoundTotal += leakResult.found;
+      leakTruncated = leakTruncated || leakResult.truncated;
+      for (const l of leakResult.records) {
         const ex = await db
           .select({ id: leakcheckData.id, password: leakcheckData.password })
           .from(leakcheckData)
@@ -329,6 +337,11 @@ export async function refreshThreatIntel(deps: RefreshDeps): Promise<void> {
       await capNews(db, NEWS_CAP, { projectId });
     }
 
+    // Persist LeakCheck truncation info alongside the completed status (best-effort).
+    await db
+      .update(threatIntelStatus)
+      .set({ leakFound: leakFoundTotal, leakTruncated })
+      .where(eq(threatIntelStatus.projectId, projectId));
     await setStatus('completed', 100, `${lookups.length} indicator(s)`);
   } catch (err) {
     await setStatus('failed', 0, err instanceof Error ? err.message : String(err));
