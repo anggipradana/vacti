@@ -35,6 +35,29 @@ export interface RefreshDeps {
 const KEEP_STATUSES = ['relevant', 'actioned'];
 
 /**
+ * A target/indicator value that is a loopback/private/reserved host (or localhost). OSINT lookups on
+ * these are meaningless and noisy (e.g. LeakCheck for "127.0.0.1" returns ~1000 unrelated stealer
+ * logs), so the refresh skips them. Public IPs (the monitored-asset use case) are NOT skipped.
+ */
+export function isPrivateOrLoopbackValue(value: string): boolean {
+  const v = (value ?? '').trim().toLowerCase();
+  if (!v) return true;
+  if (v === 'localhost' || v.endsWith('.localhost') || v.endsWith('.local') || v.endsWith('.internal')) return true;
+  const m = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(v);
+  if (m) {
+    const [a, b] = [Number(m[1]), Number(m[2])];
+    if (a === 10 || a === 127 || a === 0) return true;
+    if (a === 169 && b === 254) return true;
+    if (a === 172 && b >= 16 && b <= 31) return true;
+    if (a === 192 && b === 168) return true;
+    if (a === 100 && b >= 64 && b <= 127) return true;
+    if (a >= 224) return true;
+  }
+  if (v === '::1' || v.startsWith('fe80:') || v.startsWith('fc') || v.startsWith('fd')) return true;
+  return false;
+}
+
+/**
  * Delete news rows older than `days` (by published date, falling back to fetch date), keeping any
  * the analyst flagged as relevant/actioned. Best-effort: a prune failure must not fail the refresh.
  */
@@ -148,10 +171,14 @@ export async function refreshThreatIntel(deps: RefreshDeps): Promise<void> {
     const tgts = await db.select().from(targets).where(eq(targets.projectId, projectId));
     const inds = await db.select().from(manualIndicators).where(eq(manualIndicators.projectId, projectId));
     // OTX lookup set: domains (targets + domain/subdomain indicators) + IP indicators (IPv4 lookup).
+    // Private/loopback values are skipped: OSINT lookups on them return unrelated junk (LeakCheck
+    // for "127.0.0.1" returns ~1000 random stealer-log rows), and they're never a real public asset.
     const domainNames = [
       ...new Set([...tgts.map((t) => t.domain), ...inds.filter((i) => i.type !== 'ip').map((i) => i.value)]),
-    ];
-    const ipValues = [...new Set(inds.filter((i) => i.type === 'ip').map((i) => i.value))];
+    ].filter((v) => !isPrivateOrLoopbackValue(v));
+    const ipValues = [...new Set(inds.filter((i) => i.type === 'ip').map((i) => i.value))].filter(
+      (v) => !isPrivateOrLoopbackValue(v),
+    );
     const lookups: { value: string; otxType: 'domain' | 'IPv4'; leak: boolean }[] = [
       ...domainNames.map((value) => ({ value, otxType: 'domain' as const, leak: true })),
       ...ipValues.map((value) => ({ value, otxType: 'IPv4' as const, leak: false })),
