@@ -43,18 +43,18 @@ describe('OTX client', () => {
 });
 
 describe('LeakCheck client', () => {
-  it('returns [] without an API key', async () => {
-    expect(await fetchLeaks('example.com', {})).toEqual([]);
+  it('returns an empty result without an API key', async () => {
+    expect(await fetchLeaks('example.com', {})).toEqual({ records: [], found: 0, truncated: false });
   });
 
   it('maps results with stable md5 ids (over source:identifier:password:origin) and dedupes', async () => {
     // fetchLeaks queries both the domain and origin indexes; identical rows dedupe by hash.
     const fetchImpl = vi.fn(async () => jsonRes({ result: [{ source: { name: 'BreachX' }, email: 'a@example.com' }] }));
     const r = await fetchLeaks('example.com', { apiKey: 'k', fetchImpl: fetchImpl as unknown as typeof fetch });
-    expect(r).toHaveLength(1);
-    expect(r[0]!.source).toBe('BreachX');
-    expect(r[0]!.identifier).toBe('a@example.com');
-    expect(r[0]!.hashMd5).toBe(md5('BreachX:a@example.com::'));
+    expect(r.records).toHaveLength(1);
+    expect(r.records[0]!.source).toBe('BreachX');
+    expect(r.records[0]!.identifier).toBe('a@example.com');
+    expect(r.records[0]!.hashMd5).toBe(md5('BreachX:a@example.com::'));
   });
 
   it('keeps distinct credentials (same email, different password) and captures origin', async () => {
@@ -68,8 +68,20 @@ describe('LeakCheck client', () => {
     );
     const r = await fetchLeaks('example.com', { apiKey: 'k', fetchImpl: fetchImpl as unknown as typeof fetch });
     // Both passwords kept (not collapsed); origin captured.
-    expect(r).toHaveLength(2);
-    expect(new Set(r.map((x) => x.password))).toEqual(new Set(['p1', 'p2']));
-    expect(r[0]!.origin).toBe('x.test');
+    expect(r.records).toHaveLength(2);
+    expect(new Set(r.records.map((x) => x.password))).toEqual(new Set(['p1', 'p2']));
+    expect(r.records[0]!.origin).toBe('x.test');
+  });
+
+  it('reports the found total and flags truncation when a query hits the 1000-row cap', async () => {
+    const big = Array.from({ length: 1000 }, (_, i) => ({ source: { name: 'B' }, email: `u${i}@example.com` }));
+    const fetchImpl = vi.fn(async () => jsonRes({ found: 4200, result: big }));
+    const r = await fetchLeaks('example.com', { apiKey: 'k', fetchImpl: fetchImpl as unknown as typeof fetch });
+    expect(r.found).toBe(4200);
+    expect(r.truncated).toBe(true);
+    const small = vi.fn(async () => jsonRes({ found: 3, result: [{ source: { name: 'B' }, email: 'a@example.com' }] }));
+    const r2 = await fetchLeaks('example.com', { apiKey: 'k', fetchImpl: small as unknown as typeof fetch });
+    expect(r2.found).toBe(3);
+    expect(r2.truncated).toBe(false);
   });
 });

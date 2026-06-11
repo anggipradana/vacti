@@ -86,6 +86,10 @@ export const threatIntelStatus = pgTable(
     message: text('message'),
     // AI-generated risk-analysis narrative (G8), regenerated on demand.
     aiNarrative: text('ai_narrative'),
+    // LeakCheck reported total + whether the per-query 1000 cap was hit, so the UI can flag that
+    // the stored leak count may be truncated (more breached credentials exist than were ingested).
+    leakFound: integer('leak_found'),
+    leakTruncated: boolean('leak_truncated').notNull().default(false),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => ({ uniqProject: uniqueIndex('threat_intel_status_project_uniq').on(t.projectId) }),

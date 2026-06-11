@@ -159,10 +159,25 @@ export default async function ThreatPage({
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
           <StatCard label="OTX pulses" value={pulses} icon={<Activity />} />
           <StatCard label="Malware refs" value={malware} icon={<Bug />} />
-          <StatCard label="Leaked creds" value={leakTotal} icon={<ShieldCheck />} hint={`${unchecked} unchecked`} />
+          <StatCard
+            label="Leaked creds"
+            value={leakTotal}
+            icon={<ShieldCheck />}
+            hint={
+              status?.leakTruncated
+                ? `LeakCheck reports ${status.leakFound ?? leakTotal}+ - capped`
+                : `${unchecked} unchecked`
+            }
+          />
           <StatCard label="Indicators" value={indicators.length} icon={<Plus />} />
         </div>
       </div>
+      {status?.leakTruncated ? (
+        <p className="mt-2 text-xs text-fg-subtle">
+          LeakCheck found {status.leakFound ?? leakTotal} breached credential(s) for this project but returns at most
+          1000 per query, so the stored list is truncated. The newest 1000 are kept; treat the count as a floor.
+        </p>
+      ) : null}
 
       <Suspense
         fallback={<div className="mt-4 text-sm text-fg-subtle">Loading threat landscape (KEV, EPSS, ransomware)…</div>}
