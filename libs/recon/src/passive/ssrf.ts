@@ -57,6 +57,24 @@ export async function assertHostResolvesPublic(rawHost: string): Promise<void> {
   for (const a of addrs) assertIpAllowed(a.address.toLowerCase());
 }
 
+/**
+ * True if a hostname is a loopback/private/reserved address (literal check, no DNS). Used to keep
+ * such hosts OUT of the passive attack surface: archived indexes (Wayback/VT) return junk URLs like
+ * http://127.0.0.1/... that are noise at best and misleading at worst, even when the scan target is
+ * itself an internal host. Names that aren't IP literals are treated as public here (host-filtering
+ * by domain suffix is done separately).
+ */
+export function isPrivateOrLoopbackHost(rawHost: string): boolean {
+  const host = (rawHost ?? '').toLowerCase().replace(/^\[|\]$/g, '');
+  if (!host) return false;
+  if (host === 'localhost' || host.endsWith('.localhost') || host.endsWith('.local') || host.endsWith('.internal'))
+    return true;
+  if (net.isIPv4(host)) return isPrivateOrReservedIpv4(host);
+  if (net.isIPv6(host)) return isPrivateOrReservedIpv6(host);
+  if (/^[0-9]+$/.test(host)) return true; // bare numeric host (decimal IP encoding)
+  return false;
+}
+
 /** Convenience boolean wrapper. */
 export function isUrlSafeForServerFetch(rawUrl: string): boolean {
   try {

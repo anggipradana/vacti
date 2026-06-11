@@ -16,6 +16,7 @@ import { fetchUrlscan } from './urlscan';
 import { categorizeUrl, buildSuffixIndex } from './categorize';
 import { scanExposure } from './exposure';
 import { deepFetch } from './deepfetch';
+import { isPrivateOrLoopbackHost } from './ssrf';
 
 export interface PassiveScanInput {
   scanId: string;
@@ -57,6 +58,20 @@ const hostOf = (u: string): string | null => {
   } catch {
     return null;
   }
+};
+
+/**
+ * A discovered URL belongs to the attack surface only if its host is the target or a subdomain of
+ * it AND is not a private/loopback address. The loopback guard matters because archive indexes
+ * (Wayback/VT `matchType=domain`) return junk like http://127.0.0.1/... that would otherwise be
+ * accepted when the scan target is itself an internal host - noise at best, misleading at worst.
+ */
+const acceptUrl = (url: string, target: string): string | null => {
+  const h = hostOf(url);
+  if (!h) return null;
+  if (h !== target && !h.endsWith(`.${target}`)) return null;
+  if (isPrivateOrLoopbackHost(h)) return null;
+  return h;
 };
 
 /**
@@ -115,15 +130,15 @@ export async function runPassiveScan(
   const harvestVt = (data: NonNullable<Awaited<ReturnType<typeof vtFetch>>>, viaHost: string) => {
     for (const h of discoverSubdomains(data, target)) hostSet.add(h);
     for (const { url, date } of harvestUndetectedUrls(data)) {
-      const h = hostOf(url);
-      if (!h || (h !== target && !h.endsWith(`.${target}`))) continue;
+      if (!acceptUrl(url, target)) continue;
       const ex = urlMap.get(url) ?? { url, date, sources: new Set<string>() };
       if (!ex.date && date) ex.date = date;
       ex.sources.add('virustotal');
       urlMap.set(url, ex);
     }
     for (const res of harvestResolutions(data))
-      resolutions.push({ ip: res.ipAddress, host: viaHost, at: res.lastResolved });
+      if (!isPrivateOrLoopbackHost(res.ipAddress))
+        resolutions.push({ ip: res.ipAddress, host: viaHost, at: res.lastResolved });
   };
 
   let vtCalls = 0;
@@ -155,8 +170,8 @@ export async function runPassiveScan(
   await activity('wayback', 'running');
   const wb = await fetchWaybackUrls(target, { limit: waybackLimit, signal: input.signal });
   for (const url of wb) {
-    const h = hostOf(url);
-    if (!h || (h !== target && !h.endsWith(`.${target}`))) continue;
+    const h = acceptUrl(url, target);
+    if (!h) continue;
     hostSet.add(h);
     const ex = urlMap.get(url) ?? { url, date: null, sources: new Set<string>() };
     ex.sources.add('wayback');
@@ -170,8 +185,8 @@ export async function runPassiveScan(
   const us = await fetchUrlscan(target, { apiKey: input.urlscanApiKey });
   let usUrls = 0;
   for (const url of us.urls) {
-    const h = hostOf(url);
-    if (!h || (h !== target && !h.endsWith(`.${target}`))) continue;
+    const h = acceptUrl(url, target);
+    if (!h) continue;
     hostSet.add(h);
     const ex = urlMap.get(url) ?? { url, date: null, sources: new Set<string>() };
     ex.sources.add('urlscan');
@@ -179,7 +194,8 @@ export async function runPassiveScan(
     usUrls += 1;
   }
   for (const r of us.resolutions) {
-    if (r.host === target || r.host.endsWith(`.${target}`))
+    // Resolutions point at infrastructure IPs; drop private/loopback ones (noise, never public surface).
+    if ((r.host === target || r.host.endsWith(`.${target}`)) && !isPrivateOrLoopbackHost(r.ip))
       resolutions.push({ ip: r.ip, host: r.host, at: new Date() });
   }
   await activity('urlscan', 'completed', `${usUrls} URLs, ${us.resolutions.length} IP(s)`);

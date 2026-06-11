@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { scanExposure, EXPOSURE_RULES } from './exposure';
 import { pathnameExtension, categorizeUrl, buildSuffixIndex, DEFAULT_CATEGORIES } from './categorize';
-import { assertUrlSafeForServerFetch, isUrlSafeForServerFetch } from './ssrf';
+import { assertUrlSafeForServerFetch, isUrlSafeForServerFetch, isPrivateOrLoopbackHost } from './ssrf';
 import { deepFetch } from './deepfetch';
 import { analyzeEndpoints } from './endpoints';
 import { fetchUrlscan } from './urlscan';
@@ -91,6 +91,21 @@ describe('ssrf guard', () => {
     expect(isUrlSafeForServerFetch('ftp://example.com/')).toBe(false);
     expect(isUrlSafeForServerFetch('http://api.internal/')).toBe(false);
     expect(() => assertUrlSafeForServerFetch('not a url')).toThrow();
+  });
+  it('isPrivateOrLoopbackHost flags loopback/private/reserved hosts, allows public', () => {
+    for (const h of [
+      '127.0.0.1',
+      '10.0.0.5',
+      '192.168.1.1',
+      '169.254.169.254',
+      'localhost',
+      'foo.local',
+      '::1',
+      '2130706433',
+    ])
+      expect(isPrivateOrLoopbackHost(h)).toBe(true);
+    for (const h of ['hijra.id', 'api.hijra.id', '8.8.8.8', '203.0.113.10'])
+      expect(isPrivateOrLoopbackHost(h)).toBe(false);
   });
   it('blocks IPv4-mapped IPv6, numeric-host encodings, and extra reserved ranges', () => {
     expect(isUrlSafeForServerFetch('http://[::ffff:169.254.169.254]/')).toBe(false); // mapped metadata IP
