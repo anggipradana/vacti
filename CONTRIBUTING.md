@@ -5,7 +5,7 @@
 1. Branch from up-to-date `main` (`epic/<name>` for ccpm epic work).
 2. Make focused changes; follow [repo-governance/](repo-governance/).
 3. Commit with **Conventional Commits** (`feat(recon): ...`). commitlint enforces this.
-4. Push — Husky pre-push runs `nx affected` typecheck/lint/test + markdown lint.
+4. Push - Husky pre-push runs `nx affected` typecheck/lint/test + markdown lint.
 5. Open a PR; the **Quality Gate** workflow must pass (format, typecheck, lint, unit, integration, e2e).
 
 ## Local setup

@@ -83,15 +83,15 @@
 
 ## 5. Integrasi (WAJIB)
 
-| #   | Fitur ReNgGinaNg                                                    | Status | Epic  | Catatan                                                                                                                                   |
-| --- | ------------------------------------------------------------------- | ------ | ----- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| 5.1 | Notifications webhook (Discord, Slack, Telegram, Google Chat, Lark) | ✅     | AI    | Per-event; **Discord rich embed + Google Chat cardsV2** (2026-06-05)                                                                      |
-| 5.2 | AI enrichment vuln (description/impact/remediation)                 | ✅     | AI    | Hasil di-cache                                                                                                                            |
-| 5.3 | AI executive summary report                                         | ✅     | AI    |                                                                                                                                           |
-| 5.4 | AI threat analysis/ringkasan                                        | ✅     | AI    |                                                                                                                                           |
-| 5.5 | Provider AI                                                         | ➕     | AI    | **Vercel AI SDK**: Claude default + OpenAI + Ollama (abstraction); per-proyek **Base URL** opsional → gateway kompatibel OpenAI/Anthropic |
-| 5.6 | API Key Vault (OTX, LeakCheck, AI) terenkripsi                      | ✅     | AI/PF | Enkripsi at-rest                                                                                                                          |
-| 5.7 | HackerOne / Bug bounty sync-import-submit                           | ❌     | -     | Dibuang                                                                                                                                   |
+| #   | Fitur ReNgGinaNg                                                    | Status | Epic  | Catatan                                                                                                                                          |
+| --- | ------------------------------------------------------------------- | ------ | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 5.1 | Notifications webhook (Discord, Slack, Telegram, Google Chat, Lark) | ✅     | AI    | Per-event; **Discord rich embed + Google Chat cardsV2** (2026-06-05)                                                                             |
+| 5.2 | AI enrichment vuln (description/impact/remediation)                 | ✅     | AI    | Hasil di-cache                                                                                                                                   |
+| 5.3 | AI executive summary report                                         | ✅     | AI    |                                                                                                                                                  |
+| 5.4 | AI threat analysis/ringkasan                                        | ✅     | AI    |                                                                                                                                                  |
+| 5.5 | Provider AI                                                         | ➕     | AI    | **Vercel AI SDK**: Claude default + OpenAI + DeepSeek + Kimi (Moonshot) + Ollama; per-proyek **Base URL** opsional + system-default provider/key |
+| 5.6 | API Key Vault (OTX, LeakCheck, AI) terenkripsi                      | ✅     | AI/PF | Enkripsi at-rest                                                                                                                                 |
+| 5.7 | HackerOne / Bug bounty sync-import-submit                           | ❌     | -     | Dibuang                                                                                                                                          |
 
 ## 6. API (WAJIB - warga kelas satu)
 

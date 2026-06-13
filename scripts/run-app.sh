@@ -10,7 +10,7 @@
 # self-heals after a crash/host hiccup.
 #
 # Config is read from the environment (or a local, git-ignored .env) — never hard-code secrets here.
-#   Required: DATABASE_URL, ENCRYPTION_KEY, SESSION_SECRET
+#   Required: DATABASE_URL, ENCRYPTION_KEY
 #   Optional: PORT (default 3100), NEXT_DIST_DIR (default .next-prod), OTX_API_KEY, LEAKCHECK_API_KEY
 # Usage: scripts/run-app.sh
 set -u

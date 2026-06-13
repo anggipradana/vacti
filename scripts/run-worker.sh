@@ -9,7 +9,7 @@
 # keep flowing; the worker's own startup reaper + live watchdog then clean up anything that stalled.
 #
 # Config is read from the environment (or a local, git-ignored .env) — never hard-code secrets here.
-#   Required: DATABASE_URL, ENCRYPTION_KEY, SESSION_SECRET
+#   Required: DATABASE_URL, ENCRYPTION_KEY
 #   Optional: OTX_API_KEY, LEAKCHECK_API_KEY, SCAN_MAX_RUNTIME_MS
 # Usage: scripts/run-worker.sh
 set -u

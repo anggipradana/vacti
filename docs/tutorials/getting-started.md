@@ -13,9 +13,9 @@ Intelligence platform. For install/deploy see the [README](../../README.md) and
 
 ## 2. Projects (workspaces)
 
-Everything is scoped to a **Project**. At **Projects** you can create, rename (Edit), delete (cascades
-all its data), and mark one as **Default** (the workspace shown on login). The active project is shown
-in the top-bar switcher on most pages.
+Everything is scoped to a **Project**. At **Settings -> Projects** you can create, rename (Edit), delete
+(cascades all its data), and mark one as **Default** (the workspace shown on login). The active project
+is shown in the top-bar switcher on most pages.
 
 ## 3. Targets
 
@@ -24,7 +24,7 @@ headers). Use **Edit** to change the domain/headers later, or delete it.
 
 ## 4. Scans
 
-From **Scans** (or a target) start a scan. Profiles (**Settings → Scan Profiles**) control the tool
+From **Vulnerability Assessment** (or a target) start a scan. Profiles (**Settings → Scan Profiles**) control the tool
 set (subfinder / httpx / naabu / nuclei + wordfence), ports, severities and per-tool options - create
 and **Edit** them. A scan detail page streams live progress; you can cancel, re-scan (sub-scans),
 compare against an earlier scan (diff), and delete it.
@@ -57,14 +57,14 @@ signatories are configured at **Settings → Reports**.
 ## 9. Integrations
 
 **Settings → Integrations**: webhooks (Discord/Slack/Telegram/Google Chat/generic - add, **Edit**,
-test, remove), the AI provider for enrichment (Anthropic / OpenAI / Ollama, with an optional **Base
-URL** for a compatible gateway), and the per-project encrypted **key vault** (OTX, LeakCheck,
-VirusTotal, AI keys).
+test, remove), the AI provider for enrichment (Anthropic / OpenAI / DeepSeek / Kimi / Ollama, with an
+optional **Base URL** for a compatible gateway, plus a system-default provider + key), and the
+per-project encrypted **key vault** (OTX, LeakCheck, VirusTotal, URLScan, AI keys).
 
 ## 10. Schedules & automation
 
-**Schedules** runs recurring scans via a lightweight cron tick (create/Edit/pause/delete). News is
-refreshed automatically every day at 09:00 WIB.
+**Settings -> Schedules** runs recurring scans via a lightweight cron tick (create/Edit/pause/delete).
+News is refreshed automatically every day at 09:00 WIB.
 
 ## 11. API
 
