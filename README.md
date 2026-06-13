@@ -57,7 +57,7 @@ Three services (app, worker, Postgres). No Redis, no Celery, no Ruby. End-to-end
   server-side, encrypted **API-key vault** (AES-256-GCM), audit log, universal search.
 - **Integrations**: webhooks (Discord rich embed, Google Chat card, Slack, Telegram, generic),
   automatic alerts on high-severity findings and new leaks, **AI** enrichment + executive-summary /
-  threat-narrative generation (Claude / OpenAI / Ollama), and a first-class typed REST API with
+  threat-narrative generation (Claude / OpenAI / DeepSeek / Kimi / Ollama), and a first-class typed REST API with
   OpenAPI docs.
 
 ## Stack
@@ -119,9 +119,8 @@ npx playwright install chromium          # for PDF rendering + e2e
 
 # 2. Configure environment
 cp .env.example .env
-#    Generate the two required secrets and paste them into .env:
+#    Generate the encryption key and paste it into .env:
 openssl rand -base64 32                   # -> ENCRYPTION_KEY (32-byte base64)
-openssl rand -hex 32                      # -> SESSION_SECRET
 
 # 3. Create the database (example role vacti / vacti)
 createuser vacti --pwprompt              # or use an existing role
@@ -151,13 +150,13 @@ A five-minute walkthrough once the app is running at <http://localhost:3100>.
 
 1. **Create the admin.** On first load, fill the email + password form. You are now signed in as
    SysAdmin.
-2. **Create a project.** Go to **Projects**, enter a name (`Acme Corp`) and a slug (`acme`), and
-   click _Create project_. Projects are the workspaces that scope everything below, so you can run
+2. **Create a project.** Go to **Settings -> Projects**, enter a name (`Acme Corp`) and a slug (`acme`),
+   and click _Create project_. Projects are the workspaces that scope everything below, so you can run
    many engagements side by side (like rengginang).
 3. **Add a target.** Go to **Targets**, pick the active project in the top-right switcher, enter a
    domain (`example.com`). Optionally paste predefined subdomains (this skips subfinder) and custom
    request headers (sent by httpx and nuclei).
-4. **Run a scan.** Go to **Scans**, click _New scan_, choose the target and a profile
+4. **Run a scan.** Go to **Vulnerability Assessment**, click _New scan_, choose the target and a profile
    (Quick / Standard / Deep), and start it. The detail page streams live stage-by-stage progress and
    you can cancel at any time.
 5. **Triage findings.** Open the finished scan. The Vulnerabilities tab lists findings with severity,
@@ -173,16 +172,14 @@ A five-minute walkthrough once the app is running at <http://localhost:3100>.
 
 ## Using the platform
 
-| Area               | What you can do                                                                                                           |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------- |
-| **Projects**       | Create multiple workspaces; targets, scans, findings, and TI are all scoped per project.                                  |
-| **Targets**        | Add domains, predefined subdomains, and per-target custom request headers; recon notes.                                   |
-| **Scans**          | Start (active / passive / full mode), cancel, schedule (cron), sub-scan, and diff two scans.                              |
-| **Findings**       | Triage with statuses, one-click review toggle, filters, bulk review, and AI enrichment.                                   |
-| **Attack Surface** | Passive OSINT results: discovered URLs (file-category filter), exposure findings (masked snippet + triage), IP directory. |
-| **Threat Intel**   | OTX + LeakCheck + manual indicators + sector news + passive exposure, all feeding one risk score.                         |
-| **Reports**        | Branded EN/ID PDF for VA and TI, with signatories, classification, and executive summary.                                 |
-| **Settings**       | Scan profiles (advanced tool options), API tokens, webhooks, AI provider, key vault, RBAC.                                |
+| Area                         | What you can do                                                                                                                    |
+| ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| **Vulnerability Assessment** | Start (active / passive / full mode), cancel, sub-scan, diff two scans, and AI-enriched findings triage.                           |
+| **Targets**                  | Add domains, predefined subdomains, and per-target custom request headers; recon notes.                                            |
+| **Attack Surface**           | Passive OSINT results: discovered URLs (file-category filter), exposure findings (masked snippet + triage), IP directory.          |
+| **Cyber Threat Intel**       | OTX + LeakCheck + monitored-asset reputation (VT/OTX verdicts) + sector/brand news + passive exposure, all feeding one risk score. |
+| **Reports**                  | Branded EN/ID PDF for VA and TI, with signatories, classification, and executive summary.                                          |
+| **Settings**                 | Projects, scheduled scans (cron), scan profiles, API tokens, webhooks, AI provider + key vault, users/RBAC, audit log.             |
 
 RBAC: **SysAdmin** (full control), **PenetrationTester** (run scans, modify findings),
 **Auditor** (read-only). Enforced server-side on every mutation.
@@ -287,15 +284,17 @@ and the layout follows the BPRS-Hijra reference design.
 
 ## Configuration
 
-| Var                                                        | Required | Purpose                                                             |
-| ---------------------------------------------------------- | -------- | ------------------------------------------------------------------- |
-| `DATABASE_URL`                                             | yes      | Postgres connection string                                          |
-| `ENCRYPTION_KEY`                                           | yes      | 32-byte base64, AES-256-GCM vault key                               |
-| `SESSION_SECRET`                                           | yes      | session signing secret                                              |
-| `OTX_API_KEY`, `LEAKCHECK_API_KEY`                         | no       | threat-intel sources (degrade gracefully if unset)                  |
-| `VT_API_KEY`                                               | no       | VirusTotal passive DNS for passive recon (Wayback works without it) |
-| `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` / `OLLAMA_BASE_URL` | no       | AI provider (per-project keys can override via vault)               |
-| `NEWS_RETENTION_DAYS`                                      | no       | Auto-prune threat/brand news older than N days (default `90`)       |
+| Var                                                                                              | Required | Purpose                                                             |
+| ------------------------------------------------------------------------------------------------ | -------- | ------------------------------------------------------------------- |
+| `DATABASE_URL`                                                                                   | yes      | Postgres connection string                                          |
+| `ENCRYPTION_KEY`                                                                                 | yes      | 32-byte base64, AES-256-GCM vault key                               |
+| `POSTGRES_PASSWORD`                                                                              | docker   | Postgres password for the compose stack (set a strong value)        |
+| `OTX_API_KEY`, `LEAKCHECK_API_KEY`                                                               | no       | threat-intel sources (degrade gracefully if unset)                  |
+| `VT_API_KEY`, `URLSCAN_API_KEY`                                                                  | no       | VirusTotal + URLScan for passive recon (Wayback works without them) |
+| `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` / `DEEPSEEK_API_KEY` / `KIMI_API_KEY` / `OLLAMA_BASE_URL` | no       | AI provider (per-project / system-default keys override via vault)  |
+| `PROXY_URL`                                                                                      | no       | Route worker outbound OSINT/deep-fetch through a proxy              |
+| `SCHEDULE_TZ`                                                                                    | no       | Timezone for scan schedules + daily news (default `Asia/Jakarta`)   |
+| `NEWS_RETENTION_DAYS`                                                                            | no       | Auto-prune threat/brand news older than N days (default `90`)       |
 
 Per-project keys set in the encrypted vault (Settings -> Integrations) take precedence over these
 environment defaults.

@@ -88,7 +88,6 @@ jobs:
       NX_HEAD: ${{ github.sha }}
       DATABASE_URL: postgres://vacti:vacti@localhost:5432/vacti_test
       ENCRYPTION_KEY: dGVzdC1lbmNyeXB0aW9uLWtleS0zMmJ5dGVzLXRlc3Q=
-      SESSION_SECRET: dGVzdC1zZXNzaW9uLXNlY3JldC0zMmJ5dGVzLXRlc3Rf
     steps:
       - uses: actions/checkout@v4
         with:
@@ -117,7 +116,6 @@ jobs:
       NX_HEAD: ${{ github.sha }}
       DATABASE_URL: postgres://vacti:vacti@localhost:5432/vacti_e2e
       ENCRYPTION_KEY: dGVzdC1lbmNyeXB0aW9uLWtleS0zMmJ5dGVzLXRlc3Q=
-      SESSION_SECRET: dGVzdC1zZXNzaW9uLXNlY3JldC0zMmJ5dGVzLXRlc3Rf
     steps:
       - uses: actions/checkout@v4
         with:
