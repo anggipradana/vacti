@@ -1208,7 +1208,7 @@ export function openApiSpec(): Record<string, unknown> {
             }),
           },
           responses: {
-            '200': { description: 'Created', ...json(ref('User')) },
+            '201': { description: 'Created', ...json(ref('User')) },
             '400': badRequest,
             '403': forbidden,
             '409': conflict,

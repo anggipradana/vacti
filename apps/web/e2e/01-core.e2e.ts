@@ -42,8 +42,10 @@ test.describe.serial('core journey', () => {
   test('start a scan and reach the detail page', async ({ page }) => {
     await page.goto('/scans');
     await page.getByTestId('new-scan-trigger').click();
+    // Wait for the dialog's start button before clicking (the dialog mounts on open), then the
+    // plain-fetch dialog navigates via window.location once the scan is queued.
     await page.getByTestId('start-scan').click();
-    await expect(page).toHaveURL(/\/scans\/[0-9a-f-]{36}/);
+    await expect(page).toHaveURL(/\/scans\/[0-9a-f-]{36}/, { timeout: 20000 });
     await expect(page.getByTestId('scan-status')).toBeVisible();
     // A running/queued scan shows a Cancel button; cancel for determinism.
     const cancel = page.getByRole('button', { name: 'Cancel scan' });

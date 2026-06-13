@@ -10,7 +10,7 @@ import { NEWS_STATUS_LABEL } from '@vacti/core';
 import { brandNews } from '@vacti/db';
 import { getDb } from '../../../lib/db';
 import { bulkReviewBrandNewsAction, refreshBrandNewsAction } from '../../../lib/threat-actions';
-import { aiTriageNewsAction } from '../../../lib/ai-actions';
+import { NewsTriageButton } from './news-triage-button';
 import { BrandNewsList } from './brand-news-list';
 
 /**
@@ -101,16 +101,7 @@ export async function BrandNews({
                   Apply
                 </ActionSubmit>
               </ActionForm>
-              <ActionForm
-                action={aiTriageNewsAction}
-                title="Auto-mark off-topic headlines as Irrelevant (learns from your past triage)"
-              >
-                <input type="hidden" name="projectId" value={projectId} />
-                <input type="hidden" name="kind" value="brand" />
-                <ActionSubmit variant="ghost" size="sm" pendingText="Analyzing…">
-                  AI: filter irrelevant
-                </ActionSubmit>
-              </ActionForm>
+              <NewsTriageButton projectId={projectId} kind="brand" />
             </>
           ) : (
             <span className="text-xs text-fg-subtle">public news</span>

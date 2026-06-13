@@ -1,13 +1,12 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { and, desc, eq, inArray } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { Permission } from '@vacti/core';
 import {
   enrichVulnerability,
   enrichmentHash,
   generateThreatNarrative,
-  triageNewsRelevance,
   resolveAiModel,
   validateProviderKey,
 } from '@vacti/integrations';
@@ -23,8 +22,6 @@ import {
   otxThreatData,
   leakcheckData,
   projects,
-  threatNews,
-  brandNews,
 } from '@vacti/db';
 import { getDb, env } from './db';
 import { requirePermission } from './authz';
@@ -178,106 +175,5 @@ export async function generateThreatNarrativeAction(formData: FormData) {
     .insert(threatIntelStatus)
     .values({ projectId, aiNarrative: narrative })
     .onConflictDoUpdate({ target: threatIntelStatus.projectId, set: { aiNarrative: narrative } });
-  revalidatePath('/threat');
-}
-
-/**
- * AI relevance triage (opt-in). Looks at untriaged ("new") headlines and, learning from what the
- * analyst previously marked Irrelevant (and Relevant), auto-marks the noise as Irrelevant. Reversible
- * via the per-item dropdown. Degrades to a no-op when no AI provider is configured.
- */
-export async function aiTriageNewsAction(formData: FormData) {
-  await requirePermission(Permission.ModifyScanResults);
-  const projectId = String(formData.get('projectId') ?? '');
-  const kind = String(formData.get('kind') ?? 'brand') === 'sector' ? 'sector' : 'brand';
-  if (!projectId) return;
-  const db = getDb();
-  const provider = await providerFor(projectId);
-  if (!provider) {
-    revalidatePath('/threat');
-    return;
-  }
-  const [proj] = await db.select().from(projects).where(eq(projects.id, projectId));
-  if (!proj) return;
-
-  // Candidates = untriaged headlines; examples = the analyst's prior decisions (learning signal).
-  const CAND_LIMIT = 40;
-  let candidates: { id: string; title: string }[];
-  let irrelevantExamples: string[];
-  let relevantExamples: string[];
-  let context: string;
-  if (kind === 'sector') {
-    const sector = proj.sector;
-    const [cand, irr, rel] = await Promise.all([
-      db
-        .select({ id: threatNews.id, title: threatNews.title })
-        .from(threatNews)
-        .where(and(eq(threatNews.sector, sector), eq(threatNews.status, 'new')))
-        .orderBy(desc(threatNews.publishedAt))
-        .limit(CAND_LIMIT),
-      db
-        .select({ title: threatNews.title })
-        .from(threatNews)
-        .where(and(eq(threatNews.sector, sector), eq(threatNews.status, 'dismissed')))
-        .limit(15),
-      db
-        .select({ title: threatNews.title })
-        .from(threatNews)
-        .where(and(eq(threatNews.sector, sector), inArray(threatNews.status, ['relevant', 'actioned'])))
-        .limit(15),
-    ]);
-    candidates = cand;
-    irrelevantExamples = irr.map((r) => r.title);
-    relevantExamples = rel.map((r) => r.title);
-    context = `${sector} sector security news`;
-  } else {
-    const [cand, irr, rel] = await Promise.all([
-      db
-        .select({ id: brandNews.id, title: brandNews.title })
-        .from(brandNews)
-        .where(and(eq(brandNews.projectId, projectId), eq(brandNews.status, 'new')))
-        .orderBy(desc(brandNews.publishedAt))
-        .limit(CAND_LIMIT),
-      db
-        .select({ title: brandNews.title })
-        .from(brandNews)
-        .where(and(eq(brandNews.projectId, projectId), eq(brandNews.status, 'dismissed')))
-        .limit(15),
-      db
-        .select({ title: brandNews.title })
-        .from(brandNews)
-        .where(and(eq(brandNews.projectId, projectId), inArray(brandNews.status, ['relevant', 'actioned'])))
-        .limit(15),
-    ]);
-    candidates = cand;
-    irrelevantExamples = irr.map((r) => r.title);
-    relevantExamples = rel.map((r) => r.title);
-    context = `brand monitoring for "${proj.brandQuery || proj.name}"`;
-  }
-
-  if (!candidates.length) {
-    revalidatePath('/threat');
-    return;
-  }
-  const indices = await triageNewsRelevance(
-    { context, irrelevantExamples, relevantExamples, candidates: candidates.map((c) => c.title) },
-    provider,
-  );
-  const ids = indices.map((i) => candidates[i - 1]?.id).filter((x): x is string => Boolean(x));
-  if (ids.length) {
-    const actor = await requirePermission(Permission.ModifyScanResults);
-    if (kind === 'sector') {
-      await db.update(threatNews).set({ status: 'dismissed' }).where(inArray(threatNews.id, ids));
-    } else {
-      await db.update(brandNews).set({ status: 'dismissed' }).where(inArray(brandNews.id, ids));
-    }
-    await recordAudit({
-      actorId: actor.id,
-      action: 'news.ai_triage',
-      resource: `${kind}:${projectId}`,
-      projectId,
-      metadata: { dismissed: ids.length, candidates: candidates.length },
-    });
-  }
   revalidatePath('/threat');
 }

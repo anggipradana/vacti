@@ -12,17 +12,16 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../../../components
 import { Table, THead, TBody, TR, TH, TD } from '../../../../components/ui/table';
 import { Badge } from '../../../../components/ui/badge';
 import { Button } from '../../../../components/ui/button';
-import { SubmitButton } from '../../../../components/ui/submit-button';
 import { ActionForm, ActionSubmit } from '../../../../components/ui/action-form';
 import { Select } from '../../../../components/ui/select';
 import { userCan, Permission } from '@vacti/core';
 import { scans, targets, scanActivity, subdomains, endpoints, ports as portsTable, vulnerabilities } from '@vacti/db';
 import { getDb } from '../../../../lib/db';
 import { getCurrentUser } from '../../../../lib/session';
-import { cancelScanAction, rescanAction, deleteScanAction } from '../../../../lib/recon-actions';
-import { ConfirmButton } from '../../../../components/ui/confirm-button';
+import { cancelScanAction, deleteScanAction } from '../../../../lib/recon-actions';
 import AutoRefresh from './auto-refresh';
 import { VulnTable } from './vuln-table';
+import { RescanForm } from './rescan-form';
 
 export const dynamic = 'force-dynamic';
 const TERMINAL = ['completed', 'failed', 'cancelled'];
@@ -141,17 +140,23 @@ export default async function ScanDetail({
               </Button>
             )}
             {terminal && userCan(user, Permission.InitiateScans) ? (
-              <form action={deleteScanAction}>
+              // ActionForm (not a bare server-action form): on this heavy page the action's redirect
+              // response is dropped, so ActionForm awaits then navigates to /scans itself.
+              <ActionForm
+                action={deleteScanAction}
+                redirectTo="/scans"
+                confirm="Delete this scan and all its results? This cannot be undone."
+              >
                 <input type="hidden" name="id" value={scan.id} />
-                <ConfirmButton
+                <ActionSubmit
                   size="sm"
                   variant="ghost"
                   className="text-danger hover:bg-danger/10"
-                  confirm="Delete this scan and all its results? This cannot be undone."
+                  pendingText="Deleting..."
                 >
                   Delete scan
-                </ConfirmButton>
-              </form>
+                </ActionSubmit>
+              </ActionForm>
             ) : null}
           </div>
         </div>
@@ -203,7 +208,7 @@ export default async function ScanDetail({
                     <div className="text-xs font-medium text-fg-subtle">{label}</div>
                     <div className="mt-1 flex gap-3 text-sm">
                       <span className="text-success">+{d.added.length}</span>
-                      <span className="text-danger">−{d.removed.length}</span>
+                      <span className="text-danger">-{d.removed.length}</span>
                       <span className="text-fg-muted">={d.unchanged}</span>
                     </div>
                     {d.added.length ? (
@@ -217,27 +222,7 @@ export default async function ScanDetail({
               </div>
             ) : null}
 
-            {canScan ? (
-              <form action={rescanAction} className="flex flex-wrap items-center gap-3 border-t border-border pt-4">
-                <input type="hidden" name="id" value={scan.id} />
-                {scan.mode === 'passive' ? (
-                  // The tool checkboxes are active-pipeline stages; a passive rescan re-runs OSINT only.
-                  <span className="text-xs font-medium text-fg-subtle">Re-run passive recon for this target:</span>
-                ) : (
-                  <>
-                    <span className="text-xs font-medium text-fg-subtle">Rescan (uncheck tools for a sub-scan):</span>
-                    {STAGES.map((t) => (
-                      <label key={t} className="flex items-center gap-1 text-xs">
-                        <input type="checkbox" name="tools" value={t} defaultChecked /> {t}
-                      </label>
-                    ))}
-                  </>
-                )}
-                <SubmitButton size="sm" pendingText="Starting...">
-                  Rescan
-                </SubmitButton>
-              </form>
-            ) : null}
+            {canScan ? <RescanForm scanId={scan.id} passive={scan.mode === 'passive'} /> : null}
           </CardContent>
         </Card>
       ) : null}

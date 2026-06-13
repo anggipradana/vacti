@@ -2,16 +2,12 @@
 
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
-import { z } from 'zod';
 import { Permission, isValidCron, buildCron, type ScheduleFrequency } from '@vacti/core';
 import { targets, scans, scanSchedules, reconNotes, scanProfiles } from '@vacti/db';
 import { eq } from 'drizzle-orm';
 import { getDb } from './db';
-import { getQueue } from './queue';
 import { requirePermission } from './authz';
 import { recordAudit } from './audit';
-
-const scanJob = z.object({ scanId: z.string().uuid() });
 
 /** Split a textarea/CSV field into a trimmed string[] (空 → []). */
 function list(v: FormDataEntryValue | null): string[] {
@@ -247,37 +243,8 @@ export async function cancelScanAction(formData: FormData) {
   revalidatePath(`/scans/${id}`);
 }
 
-const ALL_TOOLS = ['subfinder', 'httpx', 'naabu', 'nuclei', 'wordfence'] as const;
-
-/** Re-run a target as a new scan; an optional tool subset becomes a sub-scan (toolsOverride). */
-export async function rescanAction(formData: FormData) {
-  await requirePermission(Permission.InitiateScans);
-  const id = String(formData.get('id') ?? '');
-  const db = getDb();
-  const [scan] = await db.select().from(scans).where(eq(scans.id, id));
-  if (!scan) redirect('/scans?error=notfound');
-  const picked = new Set(formData.getAll('tools').map(String));
-  // A subset (not all tools) → partial rescan; full selection reuses the profile as-is.
-  const isSubset = picked.size > 0 && picked.size < ALL_TOOLS.length;
-  const toolsOverride = isSubset ? Object.fromEntries(ALL_TOOLS.map((t) => [t, picked.has(t)])) : null;
-  // Carry mode + deepScan from the source scan: without this, rescanning a PASSIVE scan silently
-  // launched the full ACTIVE pipeline at the target (unintended traffic), and a deep scan lost
-  // its deep-fetch phase.
-  const [created] = await db
-    .insert(scans)
-    .values({
-      projectId: scan.projectId,
-      targetId: scan.targetId,
-      profileId: scan.profileId,
-      mode: scan.mode,
-      deepScan: scan.deepScan,
-      toolsOverride: scan.mode === 'passive' ? null : toolsOverride,
-    })
-    .returning();
-  const q = await getQueue();
-  await q.enqueue('scan', scanJob, { scanId: created!.id });
-  redirect(`/scans/${created!.id}`);
-}
+// Rescan moved to the plain-fetch route app/api/internal/rescan (the heavy scan-detail page drops
+// the server action's redirect response). Tool/mode/deepScan carry-over lives there.
 
 export async function createScheduleAction(formData: FormData) {
   await requirePermission(Permission.InitiateScans);
