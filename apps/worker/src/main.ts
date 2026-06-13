@@ -1,4 +1,4 @@
-import { and, count, eq, inArray, isNull, lt, or } from 'drizzle-orm';
+import { and, count, eq, inArray, isNull, lt, or, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { loadEnv } from '@vacti/config';
 import { cronMatches, Severity, SEVERITY_LABEL, type SeverityValue } from '@vacti/core';
@@ -96,19 +96,29 @@ async function main(): Promise<void> {
         console.log(`[worker] watchdog failed ${orphaned.length} stalled orphaned scan(s)`);
       })
       .catch((err) => console.error('[worker] watchdog error:', err));
-    // Queued scans whose pg-boss job was lost (enqueue failed, queue wiped) have startedAt=null and
-    // are invisible to the reaper + the running-watchdog above; fail them after a generous window.
+    // Queued scans whose pg-boss job was truly LOST (enqueue failed, queue wiped) have startedAt=null
+    // and are invisible to the running-watchdog above. Fail them after a window - but ONLY when no
+    // live pg-boss job references them: the worker processes scans serially, so a real backlog can
+    // sit 'queued' for hours legitimately, and a plain age check would wrongly fail those. The
+    // NOT EXISTS against pgboss.job distinguishes "job lost" from "still waiting in the queue". On
+    // any error (e.g. pgboss schema query fails) we skip reaping rather than risk a false failure.
     void db
-      .update(scans)
-      .set({
-        status: 'failed',
-        stage: 'interrupted',
-        error: 'Never picked up (queue job lost)',
-        finishedAt: new Date(),
+      .execute(
+        sql`update scans set status='failed', stage='interrupted',
+              error='Never picked up (queue job lost)', finished_at=now()
+            where status='queued' and created_at < now() - interval '2 hours'
+              and not exists (
+                select 1 from pgboss.job j
+                where j.name='scan' and j.data->>'scanId' = scans.id::text
+                  and j.state in ('created','active','retry')
+              )
+            returning id`,
+      )
+      .then((res) => {
+        const r = res as { rowCount?: number; length?: number };
+        const n = r.rowCount ?? r.length ?? 0;
+        if (n) console.log(`[worker] watchdog failed ${n} lost queued scan(s)`);
       })
-      .where(and(eq(scans.status, 'queued'), lt(scans.createdAt, new Date(Date.now() - 2 * 60 * 60 * 1000))))
-      .returning({ id: scans.id })
-      .then((rows) => rows.length && console.log(`[worker] watchdog failed ${rows.length} lost queued scan(s)`))
       .catch((err) => console.error('[worker] watchdog error (queued):', err));
   }, 60_000);
   watchdog.unref();
@@ -171,6 +181,8 @@ async function main(): Promise<void> {
     // child process group, so a hung tool cannot hold the run (and its job slot) forever.
     let stalled = false;
     const deadline = setTimeout(() => {
+      // If a user cancel already aborted, this is a cancel, not a stall - don't relabel it.
+      if (controller.signal.aborted) return;
       stalled = true;
       console.log(`[worker] scan ${scanId} exceeded max runtime, aborting`);
       controller.abort();
@@ -190,6 +202,10 @@ async function main(): Promise<void> {
         .catch((err) => console.error(`[worker] cancel-poll error (${scanId}):`, err));
     }, 2000);
     const mode = scan.mode ?? 'active';
+    // Catch (not propagate) the run error: the pipeline already persisted status='failed' before
+    // re-throwing, and swallowing it here lets the notification block below run for FAILED scans
+    // too (it previously only fired for completed/stalled). retryLimit is 0, so not re-throwing
+    // just means pg-boss marks the job done instead of failed - we don't rely on its retry.
     try {
       // Passive phase (mode passive|full): OSINT discovery + exposure, no binaries.
       let passiveHosts: string[] = [];
@@ -271,6 +287,9 @@ async function main(): Promise<void> {
           { db, onProgress: (stage, msg) => console.log(`[scan ${scanId}] ${stage}: ${msg}`) },
         );
       }
+    } catch (err) {
+      // Status already persisted by the pipeline; log and fall through to notify.
+      console.error(`[worker] scan ${scanId} failed:`, err instanceof Error ? err.message : err);
     } finally {
       clearInterval(poll);
       clearTimeout(deadline);

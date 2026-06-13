@@ -363,7 +363,7 @@ export function VulnTable({ vulns, scanId, canTriage }: { vulns: VulnRow[]; scan
                 </TD>
                 <TD>
                   {canTriage ? (
-                    <form action={setVulnStatusAction} className="flex items-center gap-1.5">
+                    <ActionForm action={setVulnStatusAction} className="flex items-center gap-1.5">
                       <input type="hidden" name="id" value={v.id} />
                       <input type="hidden" name="scanId" value={scanId} />
                       <AutoSubmitSelect
@@ -379,7 +379,7 @@ export function VulnTable({ vulns, scanId, canTriage }: { vulns: VulnRow[]; scan
                           </option>
                         ))}
                       </AutoSubmitSelect>
-                    </form>
+                    </ActionForm>
                   ) : (
                     <VulnStatusBadge status={v.status} />
                   )}

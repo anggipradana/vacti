@@ -58,7 +58,13 @@ export async function computeProjectRisk(db: Database, projectId: string): Promi
     })
     .from(otxThreatData)
     .where(eq(otxThreatData.projectId, projectId));
-  const [exp] = await db.select({ n: count() }).from(exposureFindings).where(eq(exposureFindings.projectId, projectId));
+  // Only UNRESOLVED exposure findings feed the score, mirroring the vuln + leak components: triaging
+  // a finding (false_positive/remediated/ignored) must lower the score like everywhere else.
+  // Exposure reuses the leak status set, so the unresolved set is the same.
+  const [exp] = await db
+    .select({ n: count() })
+    .from(exposureFindings)
+    .where(and(eq(exposureFindings.projectId, projectId), inArray(exposureFindings.status, [...unresolvedLeak])));
 
   return calculateRiskScore({
     hasVa: !!vaScan,

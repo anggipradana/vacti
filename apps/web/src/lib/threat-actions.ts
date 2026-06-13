@@ -256,14 +256,6 @@ export async function editIndicatorAction(formData: FormData) {
   revalidatePath('/threat');
 }
 
-export async function toggleLeakAction(formData: FormData) {
-  await requirePermission(Permission.ModifyScanResults);
-  const id = String(formData.get('id') ?? '');
-  const [row] = await getDb().select().from(leakcheckData).where(eq(leakcheckData.id, id));
-  if (row) await getDb().update(leakcheckData).set({ checked: !row.checked }).where(eq(leakcheckData.id, id));
-  revalidatePath('/threat');
-}
-
 /** Delete a manual indicator. ModifyScanResults + audit. */
 export async function deleteIndicatorAction(formData: FormData) {
   const actor = await requirePermission(Permission.ModifyScanResults);

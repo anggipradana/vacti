@@ -344,10 +344,10 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
           ) : (
             <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
               {[
-                { label: 'Open vulnerabilities', count: reviewVulns, href: '/scans' },
-                { label: 'New leaked creds', count: reviewLeaks, href: '/threat?leak=new' },
-                { label: 'New sector news', count: reviewNews, href: '/threat?news=new' },
-                { label: 'New brand news', count: reviewBrand, href: '/threat?bnews=new' },
+                { label: 'Open vulnerabilities', count: reviewVulns, href: `/scans?project=${projectId}` },
+                { label: 'New leaked creds', count: reviewLeaks, href: `/threat?project=${projectId}&leak=new` },
+                { label: 'New sector news', count: reviewNews, href: `/threat?project=${projectId}&news=new` },
+                { label: 'New brand news', count: reviewBrand, href: `/threat?project=${projectId}&bnews=new` },
               ].map((r) => (
                 <Link
                   key={r.label}

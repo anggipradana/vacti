@@ -100,6 +100,15 @@ export function buildApi(deps: ApiDeps): Hono<{ Variables: Vars }> {
   const { db } = deps;
   const app = new Hono<{ Variables: Vars }>().basePath('/api');
 
+  // Map a malformed-UUID path/query param (pg 22P02) to a 400 instead of a generic 500: callers
+  // passing a bad id should get a client error, not a server error.
+  app.onError((err, c) => {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (/invalid input syntax for type uuid/i.test(msg)) return c.json({ error: 'invalid id' }, 400);
+    console.error('[api] unhandled error:', msg);
+    return c.json({ error: 'internal error' }, 500);
+  });
+
   app.get('/health', (c) => c.json({ status: 'ok' }));
   app.get('/openapi.json', (c) => c.json(openApiSpec()));
   app.get('/docs', (c) => c.html(redocHtml()));
@@ -115,7 +124,16 @@ export function buildApi(deps: ApiDeps): Hono<{ Variables: Vars }> {
       .from(apiTokens)
       .where(eq(apiTokens.tokenHash, hashToken(token)));
     if (!row) return c.json({ error: 'invalid token' }, 401);
+    // Enforce token expiry: an expired token must stop working (time-boxing a leaked token).
+    if (row.expiresAt && row.expiresAt.getTime() <= Date.now()) return c.json({ error: 'invalid token' }, 401);
     const [user] = await db.select().from(users).where(eq(users.id, row.userId));
+    if (!user) return c.json({ error: 'invalid token' }, 401);
+    // Best-effort last-seen (never blocks the request).
+    void db
+      .update(apiTokens)
+      .set({ lastUsedAt: new Date() })
+      .where(eq(apiTokens.id, row.id))
+      .catch(() => {});
     c.set('userId', row.userId);
     c.set('role', roleFromUser(user));
     await next();
@@ -123,7 +141,8 @@ export function buildApi(deps: ApiDeps): Hono<{ Variables: Vars }> {
 
   // Universal search across projects/targets/scans/subdomains/endpoints/vulns.
   app.get('/search', async (c) => {
-    const q = c.req.query('q') ?? '';
+    // Bound the query: it fans out to 5 unindexed ILIKE scans, so cap length to limit cost.
+    const q = (c.req.query('q') ?? '').slice(0, 128);
     return c.json(await searchAll(db, q));
   });
 
@@ -393,7 +412,7 @@ export function buildApi(deps: ApiDeps): Hono<{ Variables: Vars }> {
         isSysAdmin: role === Role.SysAdmin,
       })
       .returning();
-    return c.json({ id: u!.id, email: u!.email, role });
+    return c.json({ id: u!.id, email: u!.email, role }, 201);
   });
   app.delete('/users/:id', async (c) => {
     const g = guard(c, Permission.ModifySystemConfig);

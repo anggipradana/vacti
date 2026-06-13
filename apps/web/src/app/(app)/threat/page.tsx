@@ -39,7 +39,7 @@ import {
   bulkReviewNewsAction,
   bulkReviewLeaksAction,
 } from '../../../lib/threat-actions';
-import { aiTriageNewsAction } from '../../../lib/ai-actions';
+import { NewsTriageButton } from './news-triage-button';
 import { NarrativeCard } from './narrative-card';
 import { CtiCards } from './cti-cards';
 import { BrandNews } from './brand-news';
@@ -84,7 +84,13 @@ export default async function ThreatPage({
     computeProjectRisk(db, projectId),
     db.select().from(otxThreatData).where(eq(otxThreatData.projectId, projectId)).limit(100),
     db
-      .select({ total: count(), unchecked: sql<number>`count(*) filter (where ${leakcheckData.checked} = false)` })
+      .select({
+        total: count(),
+        // "Unresolved" must match the statuses that actually feed the risk score (new/investigating/
+        // confirmed), not the legacy `checked` boolean which can disagree (a confirmed leak is
+        // checked=true yet still scored).
+        unchecked: sql<number>`count(*) filter (where ${leakcheckData.status} in ('new','investigating','confirmed'))`,
+      })
       .from(leakcheckData)
       .where(eq(leakcheckData.projectId, projectId)),
     db.select().from(leakcheckData).where(eq(leakcheckData.projectId, projectId)).orderBy(desc(leakcheckData.id)),
@@ -233,16 +239,7 @@ export default async function ThreatPage({
                     Apply sector
                   </ActionSubmit>
                 </ActionForm>
-                <ActionForm
-                  action={aiTriageNewsAction}
-                  title="Auto-mark off-topic headlines as Irrelevant (learns from your past triage)"
-                >
-                  <input type="hidden" name="projectId" value={projectId} />
-                  <input type="hidden" name="kind" value="sector" />
-                  <ActionSubmit variant="ghost" size="sm" pendingText="Analyzing…">
-                    AI: filter irrelevant
-                  </ActionSubmit>
-                </ActionForm>
+                <NewsTriageButton projectId={projectId} kind="sector" />
               </>
             ) : null}
           </div>
