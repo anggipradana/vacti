@@ -232,7 +232,9 @@ export function VulnTable({ vulns, scanId, canTriage }: { vulns: VulnRow[]; scan
                 </TD>
                 <TD>
                   <div className="font-medium">{v.name}</div>
-                  <div className="font-mono text-xs text-fg-subtle">{v.matchedAt}</div>
+                  <div className="max-w-md truncate font-mono text-xs text-fg-subtle" title={v.matchedAt ?? ''}>
+                    {v.matchedAt}
+                  </div>
                   {v.description ||
                   v.remediation ||
                   v.cvss != null ||

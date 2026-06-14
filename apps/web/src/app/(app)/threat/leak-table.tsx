@@ -152,9 +152,9 @@ export function LeakTable({
               ) : null}
               <TH>Identifier</TH>
               <TH>Password</TH>
-              <TH>Origin</TH>
-              <TH>Source</TH>
-              <TH>Type</TH>
+              <TH className="hidden md:table-cell">Origin</TH>
+              <TH className="hidden md:table-cell">Source</TH>
+              <TH className="hidden sm:table-cell">Type</TH>
               <TH className="text-right">Triage status</TH>
             </TR>
           </THead>
@@ -174,11 +174,14 @@ export function LeakTable({
                 <TD>
                   <Reveal value={l.password} />
                 </TD>
-                <TD className="max-w-[200px] truncate font-mono text-xs text-fg-subtle" title={l.origin ?? ''}>
+                <TD
+                  className="hidden max-w-[200px] truncate font-mono text-xs text-fg-subtle md:table-cell"
+                  title={l.origin ?? ''}
+                >
                   {l.origin ?? '-'}
                 </TD>
-                <TD>{l.source}</TD>
-                <TD>
+                <TD className="hidden md:table-cell">{l.source}</TD>
+                <TD className="hidden sm:table-cell">
                   <Badge variant="neutral">{l.type}</Badge>
                 </TD>
                 <TD>

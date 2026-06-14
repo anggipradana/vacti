@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { desc } from 'drizzle-orm';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../components/ui/card';
+import { FormBanner } from '../../../../components/ui/form-banner';
 import { Checkbox } from '../../../../components/ui/checkbox';
 import { Input } from '../../../../components/ui/input';
 import { Textarea } from '../../../../components/ui/textarea';
@@ -18,14 +19,20 @@ export const dynamic = 'force-dynamic';
 
 const SEVS = ['critical', 'high', 'medium', 'low', 'info'] as const;
 
-export default async function ProfilesPage() {
+export default async function ProfilesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string; ok?: string }>;
+}) {
   const user = await getCurrentUser();
   if (!user) redirect('/login');
   const canEdit = userCan(user, Permission.ModifyScanConfig);
   const rows = await getDb().select().from(scanProfiles).orderBy(desc(scanProfiles.createdAt));
+  const sp = await searchParams;
 
   return (
     <>
+      <FormBanner ok={sp.ok} error={sp.error} messages={{ invalid: 'A scan profile needs a name.' }} />
       <div className="grid gap-6 lg:grid-cols-[440px_1fr]">
         {canEdit ? (
           <Card>

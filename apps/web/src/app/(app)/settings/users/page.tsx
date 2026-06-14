@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { desc } from 'drizzle-orm';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../components/ui/card';
+import { FormBanner } from '../../../../components/ui/form-banner';
 import { Select } from '../../../../components/ui/select';
 import { SubmitButton } from '../../../../components/ui/submit-button';
 import { ConfirmButton } from '../../../../components/ui/confirm-button';
@@ -20,15 +21,29 @@ import {
 
 export const dynamic = 'force-dynamic';
 
-export default async function UsersSettingsPage() {
+export default async function UsersSettingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string; ok?: string }>;
+}) {
   const me = await getCurrentUser();
   if (!me) redirect('/login');
   // SysAdmin-only page (requires modify_system_config).
   if (!userCan(me, Permission.ModifySystemConfig)) redirect('/dashboard');
   const rows = await getDb().select().from(users).orderBy(desc(users.createdAt));
+  const sp = await searchParams;
 
   return (
     <>
+      <FormBanner
+        ok={sp.ok}
+        error={sp.error}
+        messages={{
+          invalid: 'Enter a valid email and a password of at least 8 characters.',
+          exists: 'A user with that email already exists.',
+          weak: 'Password must be at least 8 characters.',
+        }}
+      />
       <Card className="mb-4">
         <CardHeader>
           <CardTitle>Add user</CardTitle>
