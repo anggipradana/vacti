@@ -245,6 +245,16 @@ export function BrandNewsList({ items, canTriage }: { items: BrandNewsItem[]; ca
 
   const pendingCount = filtered.filter((n) => !verdicts[n.id]?.sentiment).length;
 
+  // Headlines the AI judged not about this brand and not already dismissed - one-click bulk dismiss.
+  const aiIrrelevantIds = filtered
+    .filter((n) => verdicts[n.id]?.relevance === 'irrelevant' && n.status !== 'dismissed')
+    .map((n) => n.id);
+
+  // Live AI accuracy from the analyst's correct/incorrect marks (updates as you click ✓/✗).
+  const rated = Object.values(verdicts).filter((v) => v.feedback === 'correct' || v.feedback === 'incorrect');
+  const correctCount = rated.filter((v) => v.feedback === 'correct').length;
+  const accuracy = rated.length ? Math.round((correctCount / rated.length) * 100) : null;
+
   const filteredIds = filtered.map((n) => n.id);
   const allFilteredSelected = filteredIds.length > 0 && filteredIds.every((id) => selected.has(id));
   const selectedIds = [...selected];
@@ -301,6 +311,14 @@ export function BrandNewsList({ items, canTriage }: { items: BrandNewsItem[]; ca
         <span className="text-xs text-fg-subtle">
           {filtered.length} of {items.length}
         </span>
+        {accuracy !== null ? (
+          <Badge
+            variant={accuracy >= 80 ? 'success' : accuracy >= 50 ? 'accent' : 'danger'}
+            title={`${correctCount} of ${rated.length} AI verdicts marked correct`}
+          >
+            AI accuracy {accuracy}% ({rated.length})
+          </Badge>
+        ) : null}
         {canTriage ? (
           <Button
             type="button"
@@ -317,6 +335,25 @@ export function BrandNewsList({ items, canTriage }: { items: BrandNewsItem[]; ca
           </Button>
         ) : null}
       </div>
+
+      {/* One-click: dismiss every headline the AI judged not about this brand. */}
+      {canTriage && aiIrrelevantIds.length > 0 ? (
+        <ActionForm
+          action={bulkSetBrandNewsStatusByIdsAction}
+          className="flex flex-wrap items-center gap-2 rounded-md border border-border bg-surface-2/50 px-3 py-2"
+        >
+          {aiIrrelevantIds.map((id) => (
+            <input key={id} type="hidden" name="ids" value={id} />
+          ))}
+          <input type="hidden" name="status" value="dismissed" />
+          <span className="text-xs text-fg-muted">
+            AI flagged {aiIrrelevantIds.length} headline(s) as not about this brand.
+          </span>
+          <ActionSubmit size="sm" variant="outline" className="text-xs">
+            Dismiss AI-irrelevant ({aiIrrelevantIds.length})
+          </ActionSubmit>
+        </ActionForm>
+      ) : null}
 
       {/* Bulk action bar - appears when rows are selected. */}
       {canTriage && selected.size > 0 ? (
