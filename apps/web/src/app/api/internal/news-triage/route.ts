@@ -1,6 +1,7 @@
 import { userCan, Permission } from '@vacti/core';
 import { getCurrentUser } from '../../../../lib/session';
 import { triageNewsForProject } from '../../../../lib/news-triage';
+import { isUuid } from '../../../../lib/uuid';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -20,5 +21,6 @@ export async function POST(req: Request): Promise<Response> {
   const projectId = body.projectId ?? '';
   const kind = body.kind === 'sector' ? 'sector' : 'brand';
   if (!projectId) return Response.json({ ok: false, error: 'missing projectId' }, { status: 400 });
+  if (!isUuid(projectId)) return Response.json({ ok: false, error: 'no_candidates' }, { status: 400 });
   return Response.json(await triageNewsForProject(projectId, kind, user.id));
 }

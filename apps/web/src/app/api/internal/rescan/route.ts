@@ -6,6 +6,7 @@ import { getDb } from '../../../../lib/db';
 import { getCurrentUser } from '../../../../lib/session';
 import { getQueue } from '../../../../lib/queue';
 import { recordAudit } from '../../../../lib/audit';
+import { isUuid } from '../../../../lib/uuid';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -27,6 +28,8 @@ export async function POST(req: Request): Promise<Response> {
   }
   const body = (await req.json().catch(() => ({}))) as { id?: string; tools?: string[] };
   const id = body.id ?? '';
+  // Validate the id is a UUID first: a malformed value would make pg throw (500) not return not_found.
+  if (!isUuid(id)) return Response.json({ ok: false, error: 'not_found' }, { status: 404 });
   const db = getDb();
   const [scan] = await db.select().from(scans).where(eq(scans.id, id));
   if (!scan) return Response.json({ ok: false, error: 'not_found' }, { status: 404 });
