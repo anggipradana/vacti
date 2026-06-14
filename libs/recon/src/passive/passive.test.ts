@@ -51,6 +51,30 @@ describe('exposure regex', () => {
     const hits = scanExposure('AKIAIOSFODNN7EXAMPLE ghp_' + 'b'.repeat(36), onlyAws);
     expect(hits.map((h) => h.type)).toEqual(['aws-key']);
   });
+
+  it('does not flag asset filenames (retina images, bundles) as emails', () => {
+    for (const f of [
+      'https://x.com/img/satinweave_@2X.png',
+      'https://x.com/logo@2x.png',
+      'https://x.com/sprite@3x.webp',
+      'https://cdn.x.com/bundle@v2.js',
+      'icon@2x.svg',
+    ]) {
+      expect(scanExposure(f).some((h) => h.type === 'email')).toBe(false);
+    }
+  });
+
+  it('still flags real emails', () => {
+    expect(scanExposure('contact analyst@bank.co.id today').some((h) => h.type === 'email')).toBe(true);
+    expect(scanExposure('user@example.com').some((h) => h.type === 'email')).toBe(true);
+  });
+
+  it('credit-card requires a valid Luhn checksum (no false positives on random ids)', () => {
+    expect(scanExposure('card 4111111111111111 ok').some((h) => h.type === 'credit-card')).toBe(true);
+    // Same prefix/length but Luhn-invalid (a tracking id / random number) - must not be flagged.
+    expect(scanExposure('id=4111111111111112').some((h) => h.type === 'credit-card')).toBe(false);
+    expect(scanExposure('seq 4408172906405551').some((h) => h.type === 'credit-card')).toBe(false);
+  });
 });
 
 describe('url categorization', () => {
