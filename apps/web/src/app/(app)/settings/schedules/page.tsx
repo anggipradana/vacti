@@ -5,6 +5,7 @@ import { Card, CardContent } from '../../../../components/ui/card';
 import { Input } from '../../../../components/ui/input';
 import { Label } from '../../../../components/ui/label';
 import { SubmitButton } from '../../../../components/ui/submit-button';
+import { ConfirmButton } from '../../../../components/ui/confirm-button';
 import { Select } from '../../../../components/ui/select';
 import { Badge } from '../../../../components/ui/badge';
 import { EmptyState } from '../../../../components/ui/empty-state';
@@ -156,9 +157,14 @@ export default async function SchedulesPage({ searchParams }: { searchParams: Pr
                         </form>
                         <form action={deleteScheduleAction}>
                           <input type="hidden" name="id" value={s.id} />
-                          <SubmitButton variant="ghost" size="sm" className="text-danger hover:bg-danger/10">
+                          <ConfirmButton
+                            confirm="Delete this schedule?"
+                            variant="ghost"
+                            size="sm"
+                            className="text-danger hover:bg-danger/10"
+                          >
                             Delete
-                          </SubmitButton>
+                          </ConfirmButton>
                         </form>
                       </>
                     ) : null}

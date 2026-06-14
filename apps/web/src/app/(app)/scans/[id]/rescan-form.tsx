@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import { Button } from '../../../../components/ui/button';
+import { Checkbox } from '../../../../components/ui/checkbox';
 
 const STAGES = ['subfinder', 'httpx', 'naabu', 'nuclei', 'wordfence'];
 
@@ -48,7 +49,7 @@ export function RescanForm({ scanId, passive }: { scanId: string; passive: boole
           <span className="text-xs font-medium text-fg-subtle">Rescan (uncheck tools for a sub-scan):</span>
           {STAGES.map((t) => (
             <label key={t} className="flex items-center gap-1 text-xs">
-              <input type="checkbox" name="tools" value={t} defaultChecked /> {t}
+              <Checkbox name="tools" value={t} defaultChecked /> {t}
             </label>
           ))}
         </>

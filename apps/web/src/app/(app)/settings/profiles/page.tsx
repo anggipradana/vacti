@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { desc } from 'drizzle-orm';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../components/ui/card';
+import { Checkbox } from '../../../../components/ui/checkbox';
 import { Input } from '../../../../components/ui/input';
 import { Textarea } from '../../../../components/ui/textarea';
 import { Label } from '../../../../components/ui/label';
@@ -45,7 +46,7 @@ export default async function ProfilesPage() {
                 {/* subfinder - subdomain discovery */}
                 <fieldset className="space-y-2 rounded-md border border-border p-3">
                   <legend className="flex items-center gap-2 px-1 text-sm font-medium">
-                    <input type="checkbox" name="tools" value="subfinder" defaultChecked /> subfinder
+                    <Checkbox name="tools" value="subfinder" defaultChecked /> subfinder
                   </legend>
                   <p className="text-xs text-fg-subtle">
                     Subdomain discovery. Untick to skip and use the target&apos;s predefined subdomains.
@@ -55,7 +56,7 @@ export default async function ProfilesPage() {
                 {/* httpx - HTTP probe */}
                 <fieldset className="space-y-2 rounded-md border border-border p-3">
                   <legend className="flex items-center gap-2 px-1 text-sm font-medium">
-                    <input type="checkbox" name="tools" value="httpx" defaultChecked /> httpx
+                    <Checkbox name="tools" value="httpx" defaultChecked /> httpx
                   </legend>
                   <div className="space-y-1.5">
                     <Label htmlFor="httpxUserAgent">User-Agent</Label>
@@ -76,7 +77,7 @@ export default async function ProfilesPage() {
                 {/* naabu - port scan */}
                 <fieldset className="space-y-2 rounded-md border border-border p-3">
                   <legend className="flex items-center gap-2 px-1 text-sm font-medium">
-                    <input type="checkbox" name="tools" value="naabu" defaultChecked /> naabu
+                    <Checkbox name="tools" value="naabu" defaultChecked /> naabu
                   </legend>
                   <div className="space-y-1.5">
                     <Label htmlFor="ports">Ports</Label>
@@ -87,14 +88,14 @@ export default async function ProfilesPage() {
                 {/* nuclei - vulnerability templates */}
                 <fieldset className="space-y-2 rounded-md border border-border p-3">
                   <legend className="flex items-center gap-2 px-1 text-sm font-medium">
-                    <input type="checkbox" name="tools" value="nuclei" defaultChecked /> nuclei
+                    <Checkbox name="tools" value="nuclei" defaultChecked /> nuclei
                   </legend>
                   <div className="space-y-1.5">
                     <Label>Severities</Label>
                     <div className="flex flex-wrap gap-2 text-xs">
                       {SEVS.map((s) => (
                         <label key={s} className="flex items-center gap-1 rounded-md border border-border px-2 py-1">
-                          <input type="checkbox" name="severities" value={s} defaultChecked={s !== 'info'} /> {s}
+                          <Checkbox name="severities" value={s} defaultChecked={s !== 'info'} /> {s}
                         </label>
                       ))}
                     </div>
@@ -141,7 +142,7 @@ export default async function ProfilesPage() {
                 {/* wordfence - WordPress templates (auto-runs on detected WP hosts) */}
                 <fieldset className="space-y-2 rounded-md border border-border p-3">
                   <legend className="flex items-center gap-2 px-1 text-sm font-medium">
-                    <input type="checkbox" name="tools" value="wordfence" /> wordfence
+                    <Checkbox name="tools" value="wordfence" /> wordfence
                   </legend>
                   <p className="text-xs text-fg-subtle">
                     WordPress-focused nuclei templates, run automatically on hosts detected as WordPress.
@@ -229,7 +230,7 @@ export default async function ProfilesPage() {
                             <div className="flex flex-wrap gap-3 text-sm">
                               {(['subfinder', 'httpx', 'naabu', 'nuclei', 'wordfence'] as const).map((tk) => (
                                 <label key={tk} className="flex items-center gap-1.5">
-                                  <input type="checkbox" name="tools" value={tk} defaultChecked={!!tools[tk]} /> {tk}
+                                  <Checkbox name="tools" value={tk} defaultChecked={!!tools[tk]} /> {tk}
                                 </label>
                               ))}
                             </div>
@@ -253,8 +254,7 @@ export default async function ProfilesPage() {
                                   key={s}
                                   className="flex items-center gap-1 rounded-md border border-border px-2 py-1"
                                 >
-                                  <input type="checkbox" name="severities" value={s} defaultChecked={sevSet.has(s)} />{' '}
-                                  {s}
+                                  <Checkbox name="severities" value={s} defaultChecked={sevSet.has(s)} /> {s}
                                 </label>
                               ))}
                             </div>

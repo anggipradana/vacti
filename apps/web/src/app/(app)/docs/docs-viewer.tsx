@@ -90,7 +90,7 @@ const makeComponents = (docPath: string, repoBase: string) => ({
   pre: (p: React.HTMLAttributes<HTMLPreElement>) => (
     <pre
       {...p}
-      className="my-3 overflow-auto rounded-md border border-border bg-bg-subtle p-3 text-[12px] leading-snug"
+      className="my-3 overflow-auto rounded-md border border-border bg-surface-2 p-3 text-[12px] leading-snug"
     />
   ),
   table: (p: React.HTMLAttributes<HTMLTableElement>) => (

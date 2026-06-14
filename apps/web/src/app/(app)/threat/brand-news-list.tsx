@@ -4,6 +4,7 @@ import * as React from 'react';
 import { Sparkles } from 'lucide-react';
 import { NEWS_STATUS_LABEL } from '@vacti/core';
 import { Input } from '../../../components/ui/input';
+import { Checkbox } from '../../../components/ui/checkbox';
 import { Select } from '../../../components/ui/select';
 import { Button } from '../../../components/ui/button';
 import { ActionForm, ActionSubmit } from '../../../components/ui/action-form';
@@ -279,8 +280,7 @@ export function BrandNewsList({ items, canTriage }: { items: BrandNewsItem[]; ca
       <div className="flex flex-wrap items-center gap-2">
         {canTriage ? (
           <label className="flex items-center gap-1.5 text-xs text-fg-subtle">
-            <input
-              type="checkbox"
+            <Checkbox
               checked={allFilteredSelected}
               onChange={toggleAllFiltered}
               aria-label="Select all shown headlines"
@@ -389,8 +389,7 @@ export function BrandNewsList({ items, canTriage }: { items: BrandNewsItem[]; ca
             <li key={n.id} className="flex items-start justify-between gap-3 py-2.5">
               <div className="flex min-w-0 items-start gap-2">
                 {canTriage ? (
-                  <input
-                    type="checkbox"
+                  <Checkbox
                     checked={selected.has(n.id)}
                     onChange={() => toggle(n.id)}
                     className="mt-0.5"

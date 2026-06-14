@@ -29,6 +29,8 @@ test.describe.serial('threat / schedules / search', () => {
     await expect(page.getByTestId('schedule-row').getByText('paused', { exact: true })).toBeVisible();
     await page.getByRole('button', { name: 'Enable' }).first().click();
     await expect(page.getByTestId('schedule-row').getByText('enabled', { exact: true })).toBeVisible();
+    // Delete is a destructive ConfirmButton (window.confirm); accept the dialog so the action runs.
+    page.once('dialog', (dialog) => dialog.accept());
     await page.getByRole('button', { name: 'Delete' }).first().click();
     await expect(page.getByTestId('schedule-row')).toHaveCount(0);
   });
@@ -39,6 +41,7 @@ test.describe.serial('threat / schedules / search', () => {
     await page.locator('select[name="freq"]').selectOption('weekly');
     await page.getByRole('button', { name: 'Add schedule' }).click();
     await expect(page.getByTestId('schedule-row')).toHaveCount(1);
+    page.once('dialog', (dialog) => dialog.accept());
     await page.getByRole('button', { name: 'Delete' }).first().click();
     await expect(page.getByTestId('schedule-row')).toHaveCount(0);
   });

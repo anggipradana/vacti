@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { NEWS_STATUS_LABEL } from '@vacti/core';
 import { Button } from '../../../components/ui/button';
+import { Checkbox } from '../../../components/ui/checkbox';
 import { ActionForm, ActionSubmit } from '../../../components/ui/action-form';
 import { Input } from '../../../components/ui/input';
 import { Select } from '../../../components/ui/select';
@@ -78,7 +79,7 @@ export function SectorNewsList({
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
         {canTriage ? (
-          <input type="checkbox" checked={allShownSelected} onChange={toggleAllShown} aria-label="Select all shown" />
+          <Checkbox checked={allShownSelected} onChange={toggleAllShown} aria-label="Select all shown" />
         ) : null}
         <Input
           value={query}
@@ -145,8 +146,7 @@ export function SectorNewsList({
             <li key={n.id} className="flex items-start justify-between gap-3 py-2.5">
               <div className="flex min-w-0 items-start gap-2">
                 {canTriage ? (
-                  <input
-                    type="checkbox"
+                  <Checkbox
                     checked={selected.has(n.id)}
                     onChange={() => toggle(n.id)}
                     aria-label={`Select ${n.title}`}

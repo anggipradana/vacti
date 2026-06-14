@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { desc, eq } from 'drizzle-orm';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../components/ui/card';
+import { Checkbox } from '../../../../components/ui/checkbox';
 import { Input } from '../../../../components/ui/input';
 import { Label } from '../../../../components/ui/label';
 import { Select } from '../../../../components/ui/select';
@@ -120,7 +121,7 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
                   <div className="flex flex-wrap gap-2 text-xs">
                     {ALL_EVENT_TYPES.map((e) => (
                       <label key={e} className="flex items-center gap-1 rounded-md border border-border px-2 py-1">
-                        <input type="checkbox" name="events" value={e} /> {e}
+                        <Checkbox name="events" value={e} /> {e}
                       </label>
                     ))}
                   </div>
@@ -154,7 +155,7 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
                             Test
                           </ActionSubmit>
                         </ActionForm>
-                        <ActionForm action={deleteWebhookAction}>
+                        <ActionForm action={deleteWebhookAction} confirm="Remove this webhook? This cannot be undone.">
                           <input type="hidden" name="id" value={w.id} />
                           <ActionSubmit variant="ghost" size="sm" className="text-danger hover:bg-danger/10">
                             Remove
@@ -221,14 +222,13 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
                                 key={e}
                                 className="flex items-center gap-1 rounded-md border border-border px-2 py-1"
                               >
-                                <input type="checkbox" name="events" value={e} defaultChecked={w.events.includes(e)} />{' '}
-                                {e}
+                                <Checkbox name="events" value={e} defaultChecked={w.events.includes(e)} /> {e}
                               </label>
                             ))}
                           </div>
                         </div>
                         <label className="flex items-center gap-2 text-sm">
-                          <input type="checkbox" name="enabled" defaultChecked={w.enabled} /> Enabled
+                          <Checkbox name="enabled" defaultChecked={w.enabled} /> Enabled
                         </label>
                         <ActionSubmit size="sm" data-testid={`webhook-edit-save-${w.id}`}>
                           Save changes
@@ -330,7 +330,7 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
                 />
                 {aiDefault?.apiKeyCiphertext ? (
                   <label className="flex items-center gap-2 pt-1 text-xs text-fg-subtle">
-                    <input type="checkbox" name="clearKey" className="size-3.5" /> Remove the stored system key
+                    <Checkbox name="clearKey" className="size-3.5" /> Remove the stored system key
                   </label>
                 ) : null}
               </div>

@@ -93,9 +93,11 @@ export function AppShell({
   return (
     <div className="min-h-screen">
       <header className="sticky top-0 z-40 border-b border-border bg-bg/85 backdrop-blur">
-        <div className="mx-auto flex h-14 w-full max-w-screen-2xl items-center gap-6 px-5 sm:px-6 lg:px-8">
+        <div className="mx-auto flex h-14 w-full max-w-screen-2xl items-center gap-3 px-5 sm:px-6 lg:px-8">
           <Brand />
-          <nav className="hidden h-14 items-center gap-1 md:flex">
+          {/* Full horizontal nav only at xl+: the descriptive labels (Vulnerability Assessment, Cyber
+              Threat Intel) need the width. Below xl the hamburger drawer carries every item. */}
+          <nav className="hidden h-14 items-center gap-0.5 xl:flex">
             {nav.map((item) => {
               const active = isActive(pathname, item.href);
               return (
@@ -104,26 +106,31 @@ export function AppShell({
                   href={item.href}
                   prefetch={false}
                   className={cn(
-                    'relative flex h-14 items-center px-3 text-sm font-medium transition-colors',
+                    'relative flex h-14 items-center whitespace-nowrap px-2.5 text-sm font-medium transition-colors',
                     active ? 'text-fg' : 'text-fg-muted hover:text-fg',
                   )}
                 >
                   {item.label}
-                  {active ? <span className="absolute inset-x-3 bottom-0 h-0.5 rounded-full bg-accent" /> : null}
+                  {active ? <span className="absolute inset-x-2.5 bottom-0 h-0.5 rounded-full bg-accent" /> : null}
                 </Link>
               );
             })}
           </nav>
           <div className="ml-auto flex items-center gap-1.5">
-            <div className="hidden md:block">
+            {/* The full search box needs room; show it at 2xl, keep the icon-trigger at xl so the
+                nav fits comfortably between 1280-1536. ⌘K works at any width. */}
+            <div className="hidden 2xl:block">
               <CommandPalette />
+            </div>
+            <div className="hidden xl:block 2xl:hidden">
+              <CommandPalette iconOnly />
             </div>
             <ThemeToggle />
             <UserMenu email={user.email} isSysAdmin={user.isSysAdmin} />
             <Button
               variant="ghost"
               size="icon"
-              className="md:hidden"
+              className="xl:hidden"
               onClick={() => setMobileOpen((o) => !o)}
               aria-label="Menu"
             >

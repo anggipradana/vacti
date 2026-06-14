@@ -352,7 +352,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
                 <Link
                   key={r.label}
                   href={r.href}
-                  className="rounded-lg border border-border p-3 transition-colors hover:border-accent hover:bg-bg-subtle"
+                  className="rounded-lg border border-border p-3 transition-colors hover:border-accent hover:bg-surface-2"
                 >
                   <div className={`text-2xl font-semibold ${r.count > 0 ? 'text-fg' : 'text-fg-subtle'}`}>
                     {r.count}

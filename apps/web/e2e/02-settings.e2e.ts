@@ -31,6 +31,8 @@ test.describe.serial('settings', () => {
     // Test just needs to not error (the probe needs outbound network, blocked in CI).
     await page.getByRole('button', { name: 'Test' }).first().click();
     await gotoIntegrations();
+    // Remove is a destructive ConfirmButton (window.confirm); accept the dialog so the action runs.
+    page.once('dialog', (dialog) => dialog.accept());
     await page.getByRole('button', { name: 'Remove' }).first().click();
     await expect(page.getByText('QA hook')).toHaveCount(0, { timeout: 15_000 });
   });
