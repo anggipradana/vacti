@@ -19,6 +19,125 @@ export interface BrandNewsItem {
   publishedAt: string | null;
   security: boolean;
   status: string;
+  aiSentiment: string | null;
+  aiSentimentReason: string | null;
+  sentimentFeedback: string | null;
+}
+
+const SENTIMENT_BADGE: Record<string, 'danger' | 'success' | 'neutral'> = {
+  negative: 'danger',
+  positive: 'success',
+  neutral: 'neutral',
+};
+
+/**
+ * Per-headline AI sentiment toward the brand (reputation lens): click to get a verdict
+ * (negative/positive/neutral + reason) via plain fetch, then mark whether the AI was right (a
+ * feedback signal). All in-place, no page reload (the threat page is a heavy page).
+ */
+function BrandSentiment({ item, canTriage }: { item: BrandNewsItem; canTriage: boolean }) {
+  const [sentiment, setSentiment] = React.useState<string | null>(item.aiSentiment);
+  const [reason, setReason] = React.useState<string | null>(item.aiSentimentReason);
+  const [feedback, setFeedback] = React.useState<string | null>(item.sentimentFeedback);
+  const [loading, setLoading] = React.useState(false);
+  const [err, setErr] = React.useState('');
+
+  const generate = async () => {
+    if (loading) return;
+    setLoading(true);
+    setErr('');
+    try {
+      const res = await fetch('/api/internal/brand-sentiment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: item.id }),
+      });
+      const data = (await res.json()) as { ok?: boolean; sentiment?: string; reason?: string; error?: string };
+      if (data.ok && data.sentiment) {
+        setSentiment(data.sentiment);
+        setReason(data.reason ?? null);
+        setFeedback(null);
+      } else {
+        setErr(data.error === 'no_ai_provider' ? 'Set an AI provider first' : 'AI failed');
+      }
+    } catch {
+      setErr('Request failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const mark = async (value: 'correct' | 'incorrect') => {
+    const next = feedback === value ? null : value; // toggle off if re-clicked
+    setFeedback(next);
+    try {
+      await fetch('/api/internal/brand-sentiment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: item.id, feedback: next ?? 'clear' }),
+      });
+    } catch {
+      /* best-effort; the local state already reflects the click */
+    }
+  };
+
+  if (!sentiment) {
+    if (!canTriage) return null;
+    return (
+      <div className="mt-1 flex items-center gap-2">
+        <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          className="h-6 px-2 text-xs"
+          loading={loading}
+          onClick={generate}
+        >
+          {loading ? 'Analyzing…' : 'AI sentiment'}
+        </Button>
+        {err ? <span className="text-xs text-danger">{err}</span> : null}
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-1 flex flex-wrap items-center gap-2">
+      <Badge variant={SENTIMENT_BADGE[sentiment] ?? 'neutral'} title={reason ?? undefined}>
+        {sentiment}
+      </Badge>
+      {reason ? <span className="max-w-[28rem] truncate text-xs text-fg-subtle">{reason}</span> : null}
+      {canTriage ? (
+        <span className="flex items-center gap-1 text-xs text-fg-subtle">
+          <span>Correct?</span>
+          <button
+            type="button"
+            onClick={() => mark('correct')}
+            aria-label="AI sentiment is correct"
+            className={`rounded px-1.5 py-0.5 ${feedback === 'correct' ? 'bg-success/20 text-success' : 'hover:bg-surface-2'}`}
+          >
+            ✓
+          </button>
+          <button
+            type="button"
+            onClick={() => mark('incorrect')}
+            aria-label="AI sentiment is wrong"
+            className={`rounded px-1.5 py-0.5 ${feedback === 'incorrect' ? 'bg-danger/20 text-danger' : 'hover:bg-surface-2'}`}
+          >
+            ✗
+          </button>
+          <button
+            type="button"
+            onClick={generate}
+            disabled={loading}
+            className="ml-1 hover:text-fg-muted"
+            aria-label="Regenerate sentiment"
+          >
+            {loading ? '…' : '↻'}
+          </button>
+        </span>
+      ) : null}
+    </div>
+  );
 }
 
 const STATUS_OPTIONS = Object.entries(NEWS_STATUS_LABEL);
@@ -156,6 +275,7 @@ export function BrandNewsList({ items, canTriage }: { items: BrandNewsItem[]; ca
                     {n.publishedAt ? ` · ${new Date(n.publishedAt).toISOString().slice(0, 10)}` : ''}
                     {n.security ? ' · security' : ''}
                   </div>
+                  <BrandSentiment item={n} canTriage={canTriage} />
                 </div>
               </div>
               {canTriage ? (

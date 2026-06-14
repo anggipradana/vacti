@@ -93,6 +93,12 @@ export const brandNews = pgTable(
     security: boolean('security').notNull().default(false),
     // Triage status (NewsStatus from @vacti/core) - preserved across feed refreshes.
     status: text('status').notNull().default('new'),
+    // AI reputation-sentiment verdict toward the brand (on-demand): positive | negative | neutral.
+    aiSentiment: text('ai_sentiment'),
+    aiSentimentReason: text('ai_sentiment_reason'),
+    sentimentCheckedAt: timestamp('sentiment_checked_at', { withTimezone: true }),
+    // Analyst feedback on the AI verdict (a learning signal): correct | incorrect.
+    sentimentFeedback: text('sentiment_feedback'),
     fetchedAt: createdAt(),
   },
   (t) => ({ uniqProjectLink: uniqueIndex('brand_news_project_link_uniq').on(t.projectId, t.link) }),

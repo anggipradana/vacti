@@ -253,6 +253,13 @@
       "when": 1781157900760,
       "tag": "0035_shallow_blur",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1781416832780,
+      "tag": "0036_foamy_doctor_octopus",
+      "breakpoints": true
     }
   ]
 }
