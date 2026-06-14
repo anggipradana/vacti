@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { VULN_STATUS_LABEL, type SeverityValue } from '@vacti/core';
 import { Table, THead, TBody, TR, TH, TD } from '../../../../components/ui/table';
+import { Checkbox } from '../../../../components/ui/checkbox';
 import { Button } from '../../../../components/ui/button';
 import { ActionForm, ActionSubmit } from '../../../../components/ui/action-form';
 import { Input } from '../../../../components/ui/input';
@@ -205,12 +206,7 @@ export function VulnTable({ vulns, scanId, canTriage }: { vulns: VulnRow[]; scan
             <TR>
               {canTriage ? (
                 <TH className="w-8">
-                  <input
-                    type="checkbox"
-                    checked={allShownSelected}
-                    onChange={toggleAllShown}
-                    aria-label="Select all shown"
-                  />
+                  <Checkbox checked={allShownSelected} onChange={toggleAllShown} aria-label="Select all shown" />
                 </TH>
               ) : null}
               <TH>Severity</TH>
@@ -224,8 +220,7 @@ export function VulnTable({ vulns, scanId, canTriage }: { vulns: VulnRow[]; scan
               <TR key={v.id}>
                 {canTriage ? (
                   <TD>
-                    <input
-                      type="checkbox"
+                    <Checkbox
                       checked={selected.has(v.id)}
                       onChange={() => toggle(v.id)}
                       aria-label={`Select ${v.name}`}
@@ -318,7 +313,7 @@ export function VulnTable({ vulns, scanId, canTriage }: { vulns: VulnRow[]; scan
                       {v.request ? (
                         <div className="mt-1">
                           <div className="font-semibold text-fg-subtle">Request</div>
-                          <pre className="mt-0.5 max-h-64 overflow-auto whitespace-pre-wrap rounded-md bg-bg-subtle p-2 font-mono text-[11px] leading-snug">
+                          <pre className="mt-0.5 max-h-64 overflow-auto whitespace-pre-wrap rounded-md bg-surface-2 p-2 font-mono text-[11px] leading-snug">
                             {v.request}
                           </pre>
                         </div>
@@ -326,7 +321,7 @@ export function VulnTable({ vulns, scanId, canTriage }: { vulns: VulnRow[]; scan
                       {v.response ? (
                         <div className="mt-1">
                           <div className="font-semibold text-fg-subtle">Response</div>
-                          <pre className="mt-0.5 max-h-64 overflow-auto whitespace-pre-wrap rounded-md bg-bg-subtle p-2 font-mono text-[11px] leading-snug">
+                          <pre className="mt-0.5 max-h-64 overflow-auto whitespace-pre-wrap rounded-md bg-surface-2 p-2 font-mono text-[11px] leading-snug">
                             {v.response}
                           </pre>
                         </div>

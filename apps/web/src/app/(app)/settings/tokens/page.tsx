@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation';
 import { desc, eq } from 'drizzle-orm';
 import { KeyRound } from 'lucide-react';
 import { Table, THead, TBody, TR, TH, TD } from '../../../../components/ui/table';
-import { SubmitButton } from '../../../../components/ui/submit-button';
+import { ConfirmButton } from '../../../../components/ui/confirm-button';
 import { EmptyState } from '../../../../components/ui/empty-state';
 import { apiTokens } from '@vacti/db';
 import { getDb } from '../../../../lib/db';
@@ -58,9 +58,14 @@ export default async function TokensPage() {
                     <TD className="text-right">
                       <form action={revokeTokenAction} className="inline">
                         <input type="hidden" name="id" value={t.id} />
-                        <SubmitButton variant="ghost" size="sm" className="text-danger hover:bg-danger/10">
+                        <ConfirmButton
+                          confirm="Revoke this API token? Any client using it will stop working."
+                          variant="ghost"
+                          size="sm"
+                          className="text-danger hover:bg-danger/10"
+                        >
                           Revoke
-                        </SubmitButton>
+                        </ConfirmButton>
                       </form>
                     </TD>
                   </TR>

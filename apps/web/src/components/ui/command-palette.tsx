@@ -25,7 +25,7 @@ const items = [
   { label: 'API Tokens', href: '/settings/tokens', icon: KeyRound },
 ];
 
-export function CommandPalette() {
+export function CommandPalette({ iconOnly = false }: { iconOnly?: boolean }) {
   const [open, setOpen] = React.useState(false);
   const router = useRouter();
   React.useEffect(() => {
@@ -41,16 +41,27 @@ export function CommandPalette() {
 
   return (
     <>
-      <button
-        onClick={() => setOpen(true)}
-        className="flex h-9 w-full max-w-72 items-center gap-2 rounded-md border border-border bg-surface-2 px-3 text-sm text-fg-subtle transition-colors hover:border-border-strong"
-      >
-        <Search className="size-4" />
-        <span>Search…</span>
-        <kbd className="ml-auto rounded border border-border bg-surface px-1.5 py-0.5 text-[10px] text-fg-muted">
-          ⌘K
-        </kbd>
-      </button>
+      {iconOnly ? (
+        <button
+          onClick={() => setOpen(true)}
+          aria-label="Search (Ctrl/Cmd K)"
+          className="flex size-9 items-center justify-center rounded-md text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg"
+        >
+          <Search className="size-4" />
+        </button>
+      ) : (
+        <button
+          onClick={() => setOpen(true)}
+          aria-label="Search"
+          className="flex h-9 w-full max-w-72 items-center gap-2 rounded-md border border-border bg-surface-2 px-3 text-sm text-fg-subtle transition-colors hover:border-border-strong"
+        >
+          <Search className="size-4" />
+          <span>Search…</span>
+          <kbd className="ml-auto rounded border border-border bg-surface px-1.5 py-0.5 text-[10px] text-fg-muted">
+            ⌘K
+          </kbd>
+        </button>
+      )}
       <DialogPrimitive.Root open={open} onOpenChange={setOpen}>
         <DialogPrimitive.Portal>
           <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm data-[state=open]:animate-fade-in" />

@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { LEAK_STATUS_LABEL } from '@vacti/core';
 import { Table, THead, TBody, TR, TH, TD } from '../../../components/ui/table';
+import { Checkbox } from '../../../components/ui/checkbox';
 import { Button } from '../../../components/ui/button';
 import { ActionForm, ActionSubmit } from '../../../components/ui/action-form';
 import { Input } from '../../../components/ui/input';
@@ -174,12 +175,7 @@ export function ExposureTable({ findings, canTriage }: { findings: ExposureRow[]
             <TR>
               {canTriage ? (
                 <TH className="w-8">
-                  <input
-                    type="checkbox"
-                    checked={allShownSelected}
-                    onChange={toggleAllShown}
-                    aria-label="Select all shown"
-                  />
+                  <Checkbox checked={allShownSelected} onChange={toggleAllShown} aria-label="Select all shown" />
                 </TH>
               ) : null}
               <TH>Type</TH>
@@ -193,8 +189,7 @@ export function ExposureTable({ findings, canTriage }: { findings: ExposureRow[]
               <TR key={f.id}>
                 {canTriage ? (
                   <TD>
-                    <input
-                      type="checkbox"
+                    <Checkbox
                       checked={selected.has(f.id)}
                       onChange={() => toggle(f.id)}
                       aria-label={`Select ${f.findingType} finding`}

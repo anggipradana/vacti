@@ -2,6 +2,7 @@
 import * as React from 'react';
 import { Plus } from 'lucide-react';
 import { Button } from './ui/button';
+import { Checkbox } from './ui/checkbox';
 import { Select } from './ui/select';
 import { Label } from './ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from './ui/dialog';
@@ -84,7 +85,7 @@ export function NewScanDialog({
             </Select>
           </div>
           <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" name="deepScan" value="1" data-testid="scan-deep" />
+            <Checkbox name="deepScan" value="1" data-testid="scan-deep" />
             Deep-fetch discovered URLs (passive/full) - fetches bodies (SSRF-guarded) to scan for secrets
           </label>
           {profiles.length ? (

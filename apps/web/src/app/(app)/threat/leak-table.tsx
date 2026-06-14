@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { LEAK_STATUS_LABEL } from '@vacti/core';
 import { Table, THead, TBody, TR, TH, TD } from '../../../components/ui/table';
+import { Checkbox } from '../../../components/ui/checkbox';
 import { Button } from '../../../components/ui/button';
 import { ActionForm, ActionSubmit } from '../../../components/ui/action-form';
 import { Input } from '../../../components/ui/input';
@@ -146,12 +147,7 @@ export function LeakTable({
             <TR>
               {canTriage ? (
                 <TH className="w-8">
-                  <input
-                    type="checkbox"
-                    checked={allShownSelected}
-                    onChange={toggleAllShown}
-                    aria-label="Select all shown"
-                  />
+                  <Checkbox checked={allShownSelected} onChange={toggleAllShown} aria-label="Select all shown" />
                 </TH>
               ) : null}
               <TH>Identifier</TH>
@@ -167,8 +163,7 @@ export function LeakTable({
               <TR key={l.id}>
                 {canTriage ? (
                   <TD>
-                    <input
-                      type="checkbox"
+                    <Checkbox
                       checked={selected.has(l.id)}
                       onChange={() => toggle(l.id)}
                       aria-label={`Select ${l.identifier ?? l.id}`}

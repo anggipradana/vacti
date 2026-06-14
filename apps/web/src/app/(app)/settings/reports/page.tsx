@@ -1,11 +1,13 @@
 import { redirect } from 'next/navigation';
 import { desc, eq } from 'drizzle-orm';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../components/ui/card';
+import { Checkbox } from '../../../../components/ui/checkbox';
 import { Input } from '../../../../components/ui/input';
 import { Textarea } from '../../../../components/ui/textarea';
 import { Label } from '../../../../components/ui/label';
 import { Select } from '../../../../components/ui/select';
 import { SubmitButton } from '../../../../components/ui/submit-button';
+import { ConfirmButton } from '../../../../components/ui/confirm-button';
 import { Badge } from '../../../../components/ui/badge';
 import { projects, reportSettings, reportSignatories } from '@vacti/db';
 import { getDb } from '../../../../lib/db';
@@ -122,7 +124,7 @@ export default async function ReportSettingsPage({ searchParams }: { searchParam
                     className="h-9 max-w-[120px] rounded border border-border object-contain"
                   />
                   <label className="flex items-center gap-1.5 text-xs text-fg-muted">
-                    <input type="checkbox" name="removeLogo" /> Remove
+                    <Checkbox name="removeLogo" /> Remove
                   </label>
                 </div>
               ) : null}
@@ -132,8 +134,7 @@ export default async function ReportSettingsPage({ searchParams }: { searchParam
             {kind === 'va' ? (
               <div className="space-y-2 rounded-md border border-border p-3">
                 <label className="flex items-center gap-2 text-sm font-medium">
-                  <input
-                    type="checkbox"
+                  <Checkbox
                     id="va-exec-show"
                     name="showExecutiveSummary"
                     defaultChecked={s?.showExecutiveSummary ?? false}
@@ -239,9 +240,14 @@ export default async function ReportSettingsPage({ searchParams }: { searchParam
                         <Badge variant="accent">{s.role}</Badge>
                         <form action={deleteSignatoryAction}>
                           <input type="hidden" name="id" value={s.id} />
-                          <SubmitButton variant="ghost" size="sm" className="text-danger hover:bg-danger/10">
+                          <ConfirmButton
+                            confirm="Remove this signatory?"
+                            variant="ghost"
+                            size="sm"
+                            className="text-danger hover:bg-danger/10"
+                          >
                             Remove
-                          </SubmitButton>
+                          </ConfirmButton>
                         </form>
                       </div>
                     </div>

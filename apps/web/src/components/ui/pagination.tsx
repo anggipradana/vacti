@@ -19,22 +19,34 @@ export function Pagination({
   makeHref: (page: number) => string;
 }) {
   if (totalPages <= 1) return null;
+  const atFirst = page <= 1;
+  const atLast = page >= totalPages;
   return (
     <div className="mt-4 flex items-center justify-between text-sm">
       <span className="text-fg-subtle">
         Page {page} of {totalPages} · {total} {label}
       </span>
       <div className="flex gap-2">
-        <Button asChild variant="outline" size="sm" disabled={page <= 1}>
-          <Link href={makeHref(Math.max(1, page - 1))} aria-disabled={page <= 1}>
+        {/* A disabled link still navigates on Enter/middle-click, so render a plain disabled Button
+            at the boundaries instead of an anchor. */}
+        {atFirst ? (
+          <Button variant="outline" size="sm" disabled>
             Previous
-          </Link>
-        </Button>
-        <Button asChild variant="outline" size="sm" disabled={page >= totalPages}>
-          <Link href={makeHref(Math.min(totalPages, page + 1))} aria-disabled={page >= totalPages}>
+          </Button>
+        ) : (
+          <Button asChild variant="outline" size="sm">
+            <Link href={makeHref(page - 1)}>Previous</Link>
+          </Button>
+        )}
+        {atLast ? (
+          <Button variant="outline" size="sm" disabled>
             Next
-          </Link>
-        </Button>
+          </Button>
+        ) : (
+          <Button asChild variant="outline" size="sm">
+            <Link href={makeHref(page + 1)}>Next</Link>
+          </Button>
+        )}
       </div>
     </div>
   );

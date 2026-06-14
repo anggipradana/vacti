@@ -133,7 +133,7 @@ export default async function ScanDetail({
                 <Link href="/surface">View on Attack Surface</Link>
               </Button>
             ) : (
-              <Button asChild variant="secondary" size="sm">
+              <Button asChild size="sm">
                 <a href={`/reports/va/${scan.id}?type=full`} target="_blank" rel="noopener noreferrer">
                   Generate report
                 </a>

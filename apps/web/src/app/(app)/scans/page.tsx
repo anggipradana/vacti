@@ -7,6 +7,7 @@ import { Table, THead, TBody, TR, TH, TD } from '../../../components/ui/table';
 import { StatusPill } from '../../../components/ui/status-pill';
 import { EmptyState } from '../../../components/ui/empty-state';
 import { Button } from '../../../components/ui/button';
+import { Pagination } from '../../../components/ui/pagination';
 import { NewScanDialog } from '../../../components/new-scan-dialog';
 import { ProjectSwitcher } from '../../../components/project-switcher';
 import { getActiveProjectId } from '../../../lib/active-project';
@@ -117,25 +118,13 @@ export default async function ScansPage({
               })}
             </TBody>
           </Table>
-          {totalPages > 1 ? (
-            <div className="mt-4 flex items-center justify-between text-sm">
-              <span className="text-fg-subtle">
-                Page {page} of {totalPages} · {totalScans} scans
-              </span>
-              <div className="flex gap-2">
-                <Button asChild variant="outline" size="sm" disabled={page <= 1}>
-                  <Link href={`/scans?project=${projectId}&page=${page - 1}`} aria-disabled={page <= 1}>
-                    Previous
-                  </Link>
-                </Button>
-                <Button asChild variant="outline" size="sm" disabled={page >= totalPages}>
-                  <Link href={`/scans?project=${projectId}&page=${page + 1}`} aria-disabled={page >= totalPages}>
-                    Next
-                  </Link>
-                </Button>
-              </div>
-            </div>
-          ) : null}
+          <Pagination
+            page={page}
+            totalPages={totalPages}
+            total={totalScans}
+            label="scans"
+            makeHref={(p) => `/scans?project=${projectId}&page=${p}`}
+          />
         </div>
       )}
     </>
