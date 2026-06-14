@@ -25,6 +25,12 @@ export interface BrandNewsItem {
   sentimentFeedback: string | null;
 }
 
+interface Verdict {
+  sentiment: string | null;
+  reason: string | null;
+  feedback: string | null;
+}
+
 const SENTIMENT_BADGE: Record<string, 'danger' | 'success' | 'neutral'> = {
   negative: 'danger',
   positive: 'success',
@@ -32,55 +38,25 @@ const SENTIMENT_BADGE: Record<string, 'danger' | 'success' | 'neutral'> = {
 };
 
 /**
- * Per-headline AI sentiment toward the brand (reputation lens): click to get a verdict
- * (negative/positive/neutral + reason) via plain fetch, then mark whether the AI was right (a
- * feedback signal). All in-place, no page reload (the threat page is a heavy page).
+ * Per-headline AI sentiment toward the brand - presentational. State lives in the parent so a single
+ * "Analyze all" action and the per-row buttons share it (both update in place, no page reload).
  */
-function BrandSentiment({ item, canTriage }: { item: BrandNewsItem; canTriage: boolean }) {
-  const [sentiment, setSentiment] = React.useState<string | null>(item.aiSentiment);
-  const [reason, setReason] = React.useState<string | null>(item.aiSentimentReason);
-  const [feedback, setFeedback] = React.useState<string | null>(item.sentimentFeedback);
-  const [loading, setLoading] = React.useState(false);
-  const [err, setErr] = React.useState('');
-
-  const generate = async () => {
-    if (loading) return;
-    setLoading(true);
-    setErr('');
-    try {
-      const res = await fetch('/api/internal/brand-sentiment', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: item.id }),
-      });
-      const data = (await res.json()) as { ok?: boolean; sentiment?: string; reason?: string; error?: string };
-      if (data.ok && data.sentiment) {
-        setSentiment(data.sentiment);
-        setReason(data.reason ?? null);
-        setFeedback(null);
-      } else {
-        setErr(data.error === 'no_ai_provider' ? 'Set an AI provider first' : 'AI failed');
-      }
-    } catch {
-      setErr('Request failed');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const mark = async (value: 'correct' | 'incorrect') => {
-    const next = feedback === value ? null : value; // toggle off if re-clicked
-    setFeedback(next);
-    try {
-      await fetch('/api/internal/brand-sentiment', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: item.id, feedback: next ?? 'clear' }),
-      });
-    } catch {
-      /* best-effort; the local state already reflects the click */
-    }
-  };
+function BrandSentiment({
+  verdict,
+  loading,
+  err,
+  canTriage,
+  onGenerate,
+  onMark,
+}: {
+  verdict: Verdict;
+  loading: boolean;
+  err: string;
+  canTriage: boolean;
+  onGenerate: () => void;
+  onMark: (value: 'correct' | 'incorrect') => void;
+}) {
+  const { sentiment, reason, feedback } = verdict;
 
   if (!sentiment) {
     if (!canTriage) return null;
@@ -92,7 +68,7 @@ function BrandSentiment({ item, canTriage }: { item: BrandNewsItem; canTriage: b
           variant="outline"
           className="h-7 gap-1 px-2 text-xs text-accent"
           loading={loading}
-          onClick={generate}
+          onClick={onGenerate}
         >
           {loading ? null : <Sparkles className="size-3.5" />}
           {loading ? 'Analyzing sentiment…' : 'AI sentiment'}
@@ -113,7 +89,7 @@ function BrandSentiment({ item, canTriage }: { item: BrandNewsItem; canTriage: b
           <span>Correct?</span>
           <button
             type="button"
-            onClick={() => mark('correct')}
+            onClick={() => onMark('correct')}
             aria-label="AI sentiment is correct"
             className={`rounded px-1.5 py-0.5 ${feedback === 'correct' ? 'bg-success/20 text-success' : 'hover:bg-surface-2'}`}
           >
@@ -121,7 +97,7 @@ function BrandSentiment({ item, canTriage }: { item: BrandNewsItem; canTriage: b
           </button>
           <button
             type="button"
-            onClick={() => mark('incorrect')}
+            onClick={() => onMark('incorrect')}
             aria-label="AI sentiment is wrong"
             className={`rounded px-1.5 py-0.5 ${feedback === 'incorrect' ? 'bg-danger/20 text-danger' : 'hover:bg-surface-2'}`}
           >
@@ -129,7 +105,7 @@ function BrandSentiment({ item, canTriage }: { item: BrandNewsItem; canTriage: b
           </button>
           <button
             type="button"
-            onClick={generate}
+            onClick={onGenerate}
             disabled={loading}
             className="ml-1 hover:text-fg-muted"
             aria-label="Regenerate sentiment"
@@ -145,14 +121,28 @@ function BrandSentiment({ item, canTriage }: { item: BrandNewsItem; canTriage: b
 const STATUS_OPTIONS = Object.entries(NEWS_STATUS_LABEL);
 
 /**
- * Brand monitoring headline list with a text search, client status filter, and checkbox multi-select
- * for bulk status changes (canTriage only) - plus per-row instant status change (AutoSubmitSelect).
- * Header controls (server-side filter, Search now, bulk-by-filter, AI triage) live in the page.
+ * Brand monitoring headline list: text search, client status filter, checkbox multi-select for bulk
+ * status, per-row instant status change, and AI sentiment (per-row + an "analyze all" bulk button).
  */
 export function BrandNewsList({ items, canTriage }: { items: BrandNewsItem[]; canTriage: boolean }) {
   const [query, setQuery] = React.useState('');
   const [statusFilter, setStatusFilter] = React.useState('all');
   const [selected, setSelected] = React.useState<Set<string>>(new Set());
+
+  // AI sentiment state lifted here so the per-row buttons and the "analyze all" bulk action share it.
+  const [verdicts, setVerdicts] = React.useState<Record<string, Verdict>>(() => {
+    const m: Record<string, Verdict> = {};
+    for (const it of items)
+      m[it.id] = { sentiment: it.aiSentiment, reason: it.aiSentimentReason, feedback: it.sentimentFeedback };
+    return m;
+  });
+  const [loadingIds, setLoadingIds] = React.useState<Set<string>>(new Set());
+  const [errIds, setErrIds] = React.useState<Record<string, string>>({});
+  const [bulk, setBulk] = React.useState<{ running: boolean; done: number; total: number }>({
+    running: false,
+    done: 0,
+    total: 0,
+  });
 
   const filtered = React.useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -162,6 +152,72 @@ export function BrandNewsList({ items, canTriage }: { items: BrandNewsItem[]; ca
       return `${n.title} ${n.source ?? ''}`.toLowerCase().includes(q);
     });
   }, [items, query, statusFilter]);
+
+  const setLoading = (id: string, on: boolean) =>
+    setLoadingIds((prev) => {
+      const next = new Set(prev);
+      if (on) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+
+  const generateOne = async (id: string): Promise<boolean> => {
+    setLoading(id, true);
+    setErrIds((p) => ({ ...p, [id]: '' }));
+    try {
+      const res = await fetch('/api/internal/brand-sentiment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      });
+      const data = (await res.json()) as { ok?: boolean; sentiment?: string; reason?: string; error?: string };
+      if (data.ok && data.sentiment) {
+        setVerdicts((p) => ({
+          ...p,
+          [id]: { sentiment: data.sentiment!, reason: data.reason ?? null, feedback: null },
+        }));
+        return true;
+      }
+      setErrIds((p) => ({ ...p, [id]: data.error === 'no_ai_provider' ? 'Set an AI provider first' : 'AI failed' }));
+      return false;
+    } catch {
+      setErrIds((p) => ({ ...p, [id]: 'Request failed' }));
+      return false;
+    } finally {
+      setLoading(id, false);
+    }
+  };
+
+  const markOne = async (id: string, value: 'correct' | 'incorrect') => {
+    const cur = verdicts[id]?.feedback;
+    const next = cur === value ? null : value;
+    setVerdicts((p) => ({ ...p, [id]: { ...p[id]!, feedback: next } }));
+    try {
+      await fetch('/api/internal/brand-sentiment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, feedback: next ?? 'clear' }),
+      });
+    } catch {
+      /* best-effort; local state already reflects the click */
+    }
+  };
+
+  // Analyze sentiment for every shown headline that doesn't have one yet (sequential, one provider
+  // call each, with progress). Re-running won't re-bill already-analyzed rows.
+  const generateAll = async () => {
+    if (bulk.running) return;
+    const targets = filtered.filter((n) => !verdicts[n.id]?.sentiment).map((n) => n.id);
+    if (!targets.length) return;
+    setBulk({ running: true, done: 0, total: targets.length });
+    for (let i = 0; i < targets.length; i++) {
+      await generateOne(targets[i]!).catch(() => {});
+      setBulk((b) => ({ ...b, done: i + 1 }));
+    }
+    setBulk((b) => ({ ...b, running: false }));
+  };
+
+  const pendingCount = filtered.filter((n) => !verdicts[n.id]?.sentiment).length;
 
   const filteredIds = filtered.map((n) => n.id);
   const allFilteredSelected = filteredIds.length > 0 && filteredIds.every((id) => selected.has(id));
@@ -219,6 +275,21 @@ export function BrandNewsList({ items, canTriage }: { items: BrandNewsItem[]; ca
         <span className="text-xs text-fg-subtle">
           {filtered.length} of {items.length}
         </span>
+        {canTriage ? (
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="ml-auto h-8 gap-1 text-xs text-accent"
+            loading={bulk.running}
+            disabled={pendingCount === 0}
+            onClick={generateAll}
+            title="Run AI sentiment for every shown headline that doesn't have one yet"
+          >
+            {bulk.running ? null : <Sparkles className="size-3.5" />}
+            {bulk.running ? `Analyzing ${bulk.done}/${bulk.total}…` : `AI sentiment: all (${pendingCount})`}
+          </Button>
+        ) : null}
       </div>
 
       {/* Bulk action bar - appears when rows are selected. */}
@@ -277,7 +348,14 @@ export function BrandNewsList({ items, canTriage }: { items: BrandNewsItem[]; ca
                     {n.publishedAt ? ` · ${new Date(n.publishedAt).toISOString().slice(0, 10)}` : ''}
                     {n.security ? ' · security' : ''}
                   </div>
-                  <BrandSentiment item={n} canTriage={canTriage} />
+                  <BrandSentiment
+                    verdict={verdicts[n.id] ?? { sentiment: null, reason: null, feedback: null }}
+                    loading={loadingIds.has(n.id)}
+                    err={errIds[n.id] ?? ''}
+                    canTriage={canTriage}
+                    onGenerate={() => void generateOne(n.id)}
+                    onMark={(v) => void markOne(n.id, v)}
+                  />
                 </div>
               </div>
               {canTriage ? (
