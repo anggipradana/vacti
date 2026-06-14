@@ -14,6 +14,76 @@ export interface ExposureRule {
   re: RegExp;
   /** If set, text must contain at least one of these (case-insensitive when the regex is) to run. */
   prefilters?: string[];
+  /**
+   * Optional post-match validator: return true to REJECT a regex match as a false positive (the
+   * span is not claimed and not reported). Lets a loose pattern stay fast while a precise check
+   * (Luhn for cards, file-extension denylist for emails) removes the noise. `full` is the whole
+   * match, `captured` is group 1 when present.
+   */
+  reject?: (full: string, captured: string | undefined) => boolean;
+}
+
+// File/asset extensions that masquerade as an email TLD: e.g. retina images `logo@2x.png`,
+// `sprite@3x.webp`, or `bundle@v2.js` get matched by a naive email regex (`@2x.png` looks like
+// `@domain.tld`). A real email never ends in one of these, so reject them.
+const ASSET_TLDS = new Set([
+  'png',
+  'jpg',
+  'jpeg',
+  'gif',
+  'svg',
+  'webp',
+  'avif',
+  'ico',
+  'bmp',
+  'tiff',
+  'css',
+  'js',
+  'mjs',
+  'cjs',
+  'map',
+  'json',
+  'xml',
+  'woff',
+  'woff2',
+  'ttf',
+  'eot',
+  'otf',
+  'mp4',
+  'webm',
+  'mp3',
+  'wav',
+  'ogg',
+  'pdf',
+]);
+
+/** Reject email matches that are really asset filenames (retina `@2x.png`, etc.). */
+function isAssetFilenameEmail(full: string): boolean {
+  const at = full.lastIndexOf('@');
+  if (at < 0) return false;
+  const domain = full.slice(at + 1).toLowerCase();
+  const tld = domain.slice(domain.lastIndexOf('.') + 1);
+  if (ASSET_TLDS.has(tld)) return true;
+  // Retina markers `@2x.` / `@3x.` (the label right after @ is digits followed by 'x').
+  if (/^\d+x(?:\.|$)/.test(domain)) return true;
+  return false;
+}
+
+/** Luhn checksum - real payment-card numbers pass it; random 13-16 digit ids almost never do. */
+function passesLuhn(digits: string): boolean {
+  let sum = 0;
+  let alt = false;
+  for (let i = digits.length - 1; i >= 0; i--) {
+    let d = digits.charCodeAt(i) - 48;
+    if (d < 0 || d > 9) return false;
+    if (alt) {
+      d *= 2;
+      if (d > 9) d -= 9;
+    }
+    sum += d;
+    alt = !alt;
+  }
+  return sum % 10 === 0;
 }
 
 /** Built-in rules, alphabetical by type. All use the global flag so every match is found. */
@@ -49,14 +119,28 @@ export const EXPOSURE_RULES: ExposureRule[] = [
     priority: 100,
     re: /(?:password|passwd|pwd|secret|token|api[_-]?key)\s*[=:]\s*([^\s&"']{8,80})/gi,
   },
-  { type: 'credit-card', priority: 60, re: /\b(?:4[0-9]{12}(?:[0-9]{3})?|5[1-5][0-9]{14}|3[47][0-9]{13})\b/g },
+  {
+    type: 'credit-card',
+    priority: 60,
+    re: /\b(?:4[0-9]{12}(?:[0-9]{3})?|5[1-5][0-9]{14}|3[47][0-9]{13})\b/g,
+    // A 13-16 digit number in the right prefix range is not a card unless it passes Luhn; this
+    // kills the bulk of false positives (numeric ids, timestamps, tracking codes).
+    reject: (full) => !passesLuhn(full),
+  },
   {
     type: 'db-connection',
     priority: 20,
     re: /(?:mysql|postgres(?:ql)?|mongodb(?:\+srv)?|redis|mssql):\/\/[^\s'"]{10,}/gi,
     prefilters: ['mysql://', 'postgres://', 'postgresql://', 'mongodb://', 'mongodb+srv://', 'redis://', 'mssql://'],
   },
-  { type: 'email', priority: 90, re: /[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/gi, prefilters: ['@'] },
+  {
+    type: 'email',
+    priority: 90,
+    re: /[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/gi,
+    prefilters: ['@'],
+    // Reject asset filenames that look like emails (logo@2x.png, sprite@3x.webp, bundle@v2.js).
+    reject: (full) => isAssetFilenameEmail(full),
+  },
   {
     type: 'gcp-service-account',
     priority: 10,
@@ -141,6 +225,9 @@ export function scanExposure(text: string, rules: ExposureRule[] = EXPOSURE_RULE
         r.re.lastIndex += 1;
         continue;
       }
+      // Post-match validation (Luhn, asset-filename email, ...): a rejected match is a false
+      // positive - skip it without claiming the span so a different rule may still match.
+      if (r.reject?.(m[0], m[1])) continue;
       const start = m.index;
       const end = m.index + m[0].length;
       const overlap = claimed.some((c) => start < c.end && end > c.start);
