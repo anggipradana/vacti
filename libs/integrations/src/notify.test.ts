@@ -123,21 +123,22 @@ describe('AI enrichment', () => {
 
 describe('generateBrandSentiment', () => {
   const provider = (reply: string) => ({ generate: async () => reply });
-  it('parses "SENTIMENT | reason" replies', async () => {
+  it('parses "SENTIMENT | RELEVANCE | reason" replies', async () => {
     const neg = await generateBrandSentiment(
       { brand: 'Acme', title: 'Acme hit by data breach' },
-      provider('negative | customer data leaked'),
+      provider('negative | relevant | customer data leaked'),
     );
-    expect(neg).toEqual({ sentiment: 'negative', reason: 'customer data leaked' });
-    const pos = await generateBrandSentiment(
-      { brand: 'Acme', title: 'Acme wins award' },
-      provider('Positive | industry recognition'),
+    expect(neg).toEqual({ sentiment: 'negative', relevance: 'relevant', reason: 'customer data leaked' });
+    const irr = await generateBrandSentiment(
+      { brand: 'Acme', title: 'Acme is a Looney Tunes brand' },
+      provider('neutral | irrelevant | cartoon, not the company'),
     );
-    expect(pos.sentiment).toBe('positive');
+    expect(irr.relevance).toBe('irrelevant');
   });
-  it('falls back to neutral on an unparseable reply', async () => {
+  it('falls back to neutral/relevant on an unparseable reply', async () => {
     const r = await generateBrandSentiment({ brand: 'Acme', title: 'x' }, provider('I am not sure about this one'));
     expect(r.sentiment).toBe('neutral');
+    expect(r.relevance).toBe('relevant');
     expect(r.reason.length).toBeGreaterThan(0);
   });
 });

@@ -21,12 +21,14 @@ export interface BrandNewsItem {
   security: boolean;
   status: string;
   aiSentiment: string | null;
+  aiRelevance: string | null;
   aiSentimentReason: string | null;
   sentimentFeedback: string | null;
 }
 
 interface Verdict {
   sentiment: string | null;
+  relevance: string | null;
   reason: string | null;
   feedback: string | null;
 }
@@ -56,7 +58,7 @@ function BrandSentiment({
   onGenerate: () => void;
   onMark: (value: 'correct' | 'incorrect') => void;
 }) {
-  const { sentiment, reason, feedback } = verdict;
+  const { sentiment, relevance, reason, feedback } = verdict;
 
   if (!sentiment) {
     if (!canTriage) return null;
@@ -83,7 +85,15 @@ function BrandSentiment({
       <Badge variant={SENTIMENT_BADGE[sentiment] ?? 'neutral'} title={reason ?? undefined}>
         {sentiment}
       </Badge>
-      {reason ? <span className="max-w-[28rem] truncate text-xs text-fg-subtle">{reason}</span> : null}
+      {relevance ? (
+        <Badge
+          variant={relevance === 'irrelevant' ? 'neutral' : 'accent'}
+          title="Is this headline actually about the brand?"
+        >
+          {relevance}
+        </Badge>
+      ) : null}
+      {reason ? <span className="max-w-[26rem] truncate text-xs text-fg-subtle">{reason}</span> : null}
       {canTriage ? (
         <span className="flex items-center gap-1 text-xs text-fg-subtle">
           <span>Correct?</span>
@@ -133,7 +143,12 @@ export function BrandNewsList({ items, canTriage }: { items: BrandNewsItem[]; ca
   const [verdicts, setVerdicts] = React.useState<Record<string, Verdict>>(() => {
     const m: Record<string, Verdict> = {};
     for (const it of items)
-      m[it.id] = { sentiment: it.aiSentiment, reason: it.aiSentimentReason, feedback: it.sentimentFeedback };
+      m[it.id] = {
+        sentiment: it.aiSentiment,
+        relevance: it.aiRelevance,
+        reason: it.aiSentimentReason,
+        feedback: it.sentimentFeedback,
+      };
     return m;
   });
   const [loadingIds, setLoadingIds] = React.useState<Set<string>>(new Set());
@@ -170,11 +185,22 @@ export function BrandNewsList({ items, canTriage }: { items: BrandNewsItem[]; ca
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id }),
       });
-      const data = (await res.json()) as { ok?: boolean; sentiment?: string; reason?: string; error?: string };
+      const data = (await res.json()) as {
+        ok?: boolean;
+        sentiment?: string;
+        relevance?: string;
+        reason?: string;
+        error?: string;
+      };
       if (data.ok && data.sentiment) {
         setVerdicts((p) => ({
           ...p,
-          [id]: { sentiment: data.sentiment!, reason: data.reason ?? null, feedback: null },
+          [id]: {
+            sentiment: data.sentiment!,
+            relevance: data.relevance ?? null,
+            reason: data.reason ?? null,
+            feedback: null,
+          },
         }));
         return true;
       }
@@ -349,7 +375,7 @@ export function BrandNewsList({ items, canTriage }: { items: BrandNewsItem[]; ca
                     {n.security ? ' · security' : ''}
                   </div>
                   <BrandSentiment
-                    verdict={verdicts[n.id] ?? { sentiment: null, reason: null, feedback: null }}
+                    verdict={verdicts[n.id] ?? { sentiment: null, relevance: null, reason: null, feedback: null }}
                     loading={loadingIds.has(n.id)}
                     err={errIds[n.id] ?? ''}
                     canTriage={canTriage}

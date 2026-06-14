@@ -93,8 +93,10 @@ export const brandNews = pgTable(
     security: boolean('security').notNull().default(false),
     // Triage status (NewsStatus from @vacti/core) - preserved across feed refreshes.
     status: text('status').notNull().default('new'),
-    // AI reputation-sentiment verdict toward the brand (on-demand): positive | negative | neutral.
+    // AI reputation verdict toward the brand (on-demand): sentiment (positive|negative|neutral) +
+    // relevance (relevant|irrelevant: is it actually about this company vs a name-match).
     aiSentiment: text('ai_sentiment'),
+    aiRelevance: text('ai_relevance'),
     aiSentimentReason: text('ai_sentiment_reason'),
     sentimentCheckedAt: timestamp('sentiment_checked_at', { withTimezone: true }),
     // Analyst feedback on the AI verdict (a learning signal): correct | incorrect.

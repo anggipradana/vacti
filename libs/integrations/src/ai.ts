@@ -265,15 +265,19 @@ export async function generateExecutiveSummary(input: ExecSummaryInput, provider
 // ---- Brand-monitoring sentiment (per headline) ----
 
 export type BrandSentiment = 'positive' | 'negative' | 'neutral';
+export type BrandRelevance = 'relevant' | 'irrelevant';
 export interface BrandSentimentResult {
   sentiment: BrandSentiment;
+  /** Whether the headline is actually about THIS brand/company (vs a coincidental name match). */
+  relevance: BrandRelevance;
   reason: string;
 }
 
 /**
- * Classify a brand-monitoring headline's sentiment TOWARD THE BRAND (reputation lens, not generic
- * tone): a breach/lawsuit/outage is negative, an award/partnership/growth is positive, routine
- * coverage is neutral. Returns a one-line reason. Falls back to neutral on an unparseable reply.
+ * Classify a brand-monitoring headline along two axes TOWARD THE BRAND: (1) sentiment - negative
+ * (breach/lawsuit/outage), positive (award/partnership/growth), neutral (routine); (2) relevance -
+ * whether it is genuinely about this company vs a coincidental name match / generic industry news.
+ * Returns a one-line reason. Falls back to neutral/relevant on an unparseable reply.
  */
 export async function generateBrandSentiment(
   input: { brand: string; title: string; summary?: string | null; lang?: 'en' | 'id' },
@@ -281,21 +285,24 @@ export async function generateBrandSentiment(
 ): Promise<BrandSentimentResult> {
   const system =
     input.lang === 'id'
-      ? 'Anda analis pemantauan reputasi merek. Nilai sentimen sebuah berita TERHADAP MEREK: negative (kabar buruk: kebocoran data, gugatan, gangguan, penipuan, skandal), positive (kabar baik: penghargaan, kemitraan, pertumbuhan), neutral (liputan rutin/tidak berdampak). Balas TEPAT satu baris: "SENTIMENT | alasan singkat" dengan SENTIMENT salah satu dari positive/negative/neutral. Tanpa markdown, tanpa tanda em dash.'
-      : 'You are a brand reputation-monitoring analyst. Judge a news headline\'s sentiment TOWARD THE BRAND: negative (bad news: breach, lawsuit, outage, fraud, scandal), positive (good news: award, partnership, growth), neutral (routine/no-impact coverage). Reply EXACTLY one line: "SENTIMENT | short reason" where SENTIMENT is one of positive/negative/neutral. No markdown, no em dashes.';
+      ? 'Anda analis pemantauan reputasi merek. Nilai sebuah berita pada DUA sumbu TERHADAP MEREK ini: (1) SENTIMENT: negative (kabar buruk: kebocoran data, gugatan, gangguan, penipuan, skandal), positive (kabar baik: penghargaan, kemitraan, pertumbuhan), neutral (liputan rutin/tidak berdampak); (2) RELEVANCE: relevant (memang tentang perusahaan ini) atau irrelevant (kebetulan nama mirip / berita industri umum yang tidak menyangkut perusahaan ini). Balas TEPAT satu baris: "SENTIMENT | RELEVANCE | alasan singkat". Tanpa markdown, tanpa tanda em dash.'
+      : 'You are a brand reputation-monitoring analyst. Judge a headline on TWO axes TOWARD THIS BRAND: (1) SENTIMENT: negative (breach, lawsuit, outage, fraud, scandal), positive (award, partnership, growth), neutral (routine/no-impact); (2) RELEVANCE: relevant (genuinely about this company) or irrelevant (coincidental name match / generic industry news not about this company). Reply EXACTLY one line: "SENTIMENT | RELEVANCE | short reason". No markdown, no em dashes.';
   const prompt = [`Brand: ${input.brand}`, `Headline: ${input.title}`, input.summary ? `Summary: ${input.summary}` : '']
     .filter(Boolean)
     .join('\n');
   const raw = stripEmDash((await provider.generate(system, prompt)).trim());
-  const [head, ...rest] = raw.split('|');
-  const token = (head ?? '').toLowerCase();
-  const sentiment: BrandSentiment = token.includes('negative')
+  const parts = raw.split('|');
+  const sentToken = (parts[0] ?? '').toLowerCase();
+  const relToken = (parts[1] ?? '').toLowerCase();
+  const sentiment: BrandSentiment = sentToken.includes('negative')
     ? 'negative'
-    : token.includes('positive')
+    : sentToken.includes('positive')
       ? 'positive'
       : 'neutral';
-  const reason = (rest.join('|').trim() || raw).slice(0, 280);
-  return { sentiment, reason };
+  // Default to relevant unless the model clearly says irrelevant (avoid hiding real hits).
+  const relevance: BrandRelevance = relToken.includes('irrelevant') ? 'irrelevant' : 'relevant';
+  const reason = (parts.slice(2).join('|').trim() || parts.slice(1).join('|').trim() || raw).slice(0, 280);
+  return { sentiment, relevance, reason };
 }
 
 // ---- Threat-intelligence narrative (TI report / page) ----
