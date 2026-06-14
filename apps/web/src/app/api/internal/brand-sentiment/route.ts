@@ -56,12 +56,13 @@ export async function POST(req: Request): Promise<Response> {
       .update(brandNews)
       .set({
         aiSentiment: result.sentiment,
+        aiRelevance: result.relevance,
         aiSentimentReason: result.reason,
         sentimentCheckedAt: new Date(),
         sentimentFeedback: null, // a fresh verdict resets prior feedback
       })
       .where(eq(brandNews.id, id));
-    return Response.json({ ok: true, sentiment: result.sentiment, reason: result.reason });
+    return Response.json({ ok: true, sentiment: result.sentiment, relevance: result.relevance, reason: result.reason });
   } catch (e) {
     console.error('[brand-sentiment] AI call failed:', e);
     return Response.json({ ok: false, error: 'ai_failed' });

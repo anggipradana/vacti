@@ -122,6 +122,7 @@ export async function BrandNews({
               security: Boolean(n.security),
               status: n.status,
               aiSentiment: n.aiSentiment,
+              aiRelevance: n.aiRelevance,
               aiSentimentReason: n.aiSentimentReason,
               sentimentFeedback: n.sentimentFeedback,
             }))}

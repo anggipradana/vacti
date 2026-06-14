@@ -1,0 +1,1 @@
+ALTER TABLE "brand_news" ADD COLUMN "ai_relevance" text;
