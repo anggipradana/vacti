@@ -31,8 +31,13 @@ export interface RefreshDeps {
   onProgress?: (progress: number, message: string) => void;
 }
 
-/** Statuses an analyst has explicitly flagged to keep - never auto-pruned regardless of age. */
-const KEEP_STATUSES = ['relevant', 'actioned'];
+/**
+ * Statuses an analyst has explicitly triaged - never auto-pruned/capped regardless of age. Includes
+ * 'dismissed' (Irrelevant) on purpose: if a dismissed row were pruned, the upsert-by-link would no
+ * longer find it and the SAME headline would be re-fetched as 'new' (reappearing), AND it would
+ * vanish from the few-shot examples the AI triage learns from. Keeping it suppresses both.
+ */
+const KEEP_STATUSES = ['relevant', 'actioned', 'dismissed'];
 
 /**
  * A target/indicator value that is a loopback/private/reserved host (or localhost). OSINT lookups on
