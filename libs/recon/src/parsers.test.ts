@@ -100,7 +100,14 @@ describe('wordpress detection', () => {
   it('detects via tech, url, or manual flag', () => {
     expect(isWordPress({ tech: ['WordPress:6.4'], url: 'http://x' })).toBe(true);
     expect(isWordPress({ tech: [], url: 'http://x/wp-login.php' })).toBe(true);
+    expect(isWordPress({ tech: [], url: 'http://x/wp-content/themes/a.css' })).toBe(true);
+    expect(isWordPress({ tech: [], url: 'http://x/wp-json/wp/v2' })).toBe(true);
     expect(isWordPress({ tech: [], url: 'http://x' }, { manual: true })).toBe(true);
     expect(isWordPress({ tech: ['nginx'], url: 'http://x' })).toBe(false);
+  });
+  it('does not false-flag unrelated path words containing wp-*', () => {
+    expect(isWordPress({ tech: [], url: 'http://x/help/wp-json-guide' })).toBe(false);
+    expect(isWordPress({ tech: [], url: 'http://x/my-wp-content-tips' })).toBe(false);
+    expect(isWordPress({ tech: [], url: 'http://x/swp-content' })).toBe(false);
   });
 });

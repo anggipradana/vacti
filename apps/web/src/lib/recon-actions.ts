@@ -8,6 +8,7 @@ import { eq } from 'drizzle-orm';
 import { getDb } from './db';
 import { requirePermission } from './authz';
 import { recordAudit } from './audit';
+import { normalizeDomain } from './validate';
 
 /** Split a textarea/CSV field into a trimmed string[] (空 → []). */
 function list(v: FormDataEntryValue | null): string[] {
@@ -168,7 +169,9 @@ function parseHeaders(raw: string): Record<string, string> | null {
 export async function createTargetAction(formData: FormData) {
   await requirePermission(Permission.ModifyTargets);
   const projectId = String(formData.get('projectId') ?? '');
-  const domain = String(formData.get('domain') ?? '').trim();
+  // Normalize + validate: a pasted URL/garbage ("http://x.com:8080/p", "not a domain") would
+  // otherwise be fed verbatim to subfinder/httpx and silently yield zero results.
+  const domain = normalizeDomain(String(formData.get('domain') ?? ''));
   const subsRaw = String(formData.get('predefinedSubdomains') ?? '').trim();
   const headersRaw = String(formData.get('customHeaders') ?? '').trim();
   if (!projectId || !domain) redirect('/targets?error=invalid');
@@ -187,7 +190,7 @@ export async function createTargetAction(formData: FormData) {
 export async function editTargetAction(formData: FormData) {
   const actor = await requirePermission(Permission.ModifyTargets);
   const id = String(formData.get('id') ?? '');
-  const domain = String(formData.get('domain') ?? '').trim();
+  const domain = normalizeDomain(String(formData.get('domain') ?? ''));
   const subsRaw = String(formData.get('predefinedSubdomains') ?? '').trim();
   const headersRaw = String(formData.get('customHeaders') ?? '').trim();
   if (!id || !domain) redirect('/targets?error=invalid');

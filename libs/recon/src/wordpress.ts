@@ -1,6 +1,12 @@
 import type { HttpxResult } from './adapters/httpx';
 
-const WP_URL_PATTERNS = [/wp-content/i, /wp-includes/i, /wp-login\.php/i, /wp-json/i];
+// Anchored to a path segment so `/help/wp-json-guide` or `/my-wp-content-tips` (unrelated words
+// that merely contain "wp-content") don't trigger a false WordPress flag.
+const WP_URL_PATTERNS = [
+  /(?:^|\/)wp-(?:content|includes)(?:\/|$)/i,
+  /(?:^|\/)wp-login\.php(?:[?#]|$)/i,
+  /(?:^|\/)wp-json(?:\/|[?#]|$)/i,
+];
 
 /**
  * Layered WordPress detection: httpx tech fingerprint → URL patterns → manual flag.

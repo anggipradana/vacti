@@ -118,6 +118,15 @@ export const EXPOSURE_RULES: ExposureRule[] = [
     type: 'credential-like',
     priority: 100,
     re: /(?:password|passwd|pwd|secret|token|api[_-]?key)\s*[=:]\s*([^\s&"']{8,80})/gi,
+    // Drop obvious non-secrets: template placeholders (${VAR}, {{var}}, <value>) and documentation
+    // stand-ins (changeme, your_password, example, redacted, ...). These are not real credentials.
+    reject: (_full, captured) => {
+      const v = (captured ?? '').toLowerCase();
+      if (/[${}<>]|\{\{|%[a-z_]+%/.test(v)) return true;
+      return /^(?:changeme|change_me|password|passw0rd|your[_-]?\w+|example|placeholder|redacted|xxx+|none|null|true|false|secret|test\w*)$/.test(
+        v,
+      );
+    },
   },
   {
     type: 'credit-card',

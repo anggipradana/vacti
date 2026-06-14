@@ -22,12 +22,26 @@ export const INTERESTING_KEYWORDS = [
   'api',
 ];
 
-/** Does an endpoint match any interesting keyword (case-insensitive, in url or title)? */
+/**
+ * Does an endpoint match any interesting keyword? Matches on token boundaries, NOT raw substring:
+ * a plain `includes()` flagged `digital-marketing` (git), `mydevice-store` (dev), `contestants`
+ * (test), `grapism` (api) as interesting, drowning the real signal. The url + title are split into
+ * alphanumeric tokens and each keyword must equal a whole token (case-insensitive).
+ */
 export function isInterestingEndpoint(
   url: string,
   title: string | null | undefined,
   keywords: string[] = INTERESTING_KEYWORDS,
 ): boolean {
-  const hay = `${url} ${title ?? ''}`.toLowerCase();
-  return keywords.some((k) => hay.includes(k.toLowerCase()));
+  const tokens = new Set(
+    `${url} ${title ?? ''}`
+      .toLowerCase()
+      .split(/[^a-z0-9]+/)
+      .filter(Boolean),
+  );
+  return keywords.some((k) => {
+    const kw = k.toLowerCase().trim();
+    // Multi-word keywords (rare/custom) keep substring semantics on the normalized string.
+    return /[^a-z0-9]/.test(kw) ? `${url} ${title ?? ''}`.toLowerCase().includes(kw) : tokens.has(kw);
+  });
 }

@@ -1,5 +1,6 @@
 'use server';
 
+import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { and, eq, inArray, sql } from 'drizzle-orm';
 import { z } from 'zod';
@@ -8,6 +9,7 @@ import { isSector, fetchSectorNews, fetchBrandNews, capNews, NEWS_CAP } from '@v
 import { manualIndicators, leakcheckData, projects, threatNews, brandNews } from '@vacti/db';
 import { getDb } from './db';
 import { getQueue } from './queue';
+import { isHostname, isIpAddress } from './validate';
 import { requirePermission } from './authz';
 import { recordAudit } from './audit';
 
@@ -227,7 +229,10 @@ export async function addIndicatorAction(formData: FormData) {
   const type = String(formData.get('type') ?? 'domain');
   const note = String(formData.get('note') ?? '').trim() || null;
   if (!projectId || !['domain', 'subdomain', 'ip'].includes(type)) return;
-  // Bulk: accept many values, one per line or comma/space separated. Dedupe within the batch.
+  // Bulk: accept many values, one per line or comma/space separated. Dedupe within the batch, then
+  // keep only values valid for the chosen type - an "ip" indicator that isn't an IP (or a "domain"
+  // that isn't a hostname) would drive meaningless OSINT lookups (LeakCheck on "127.0.0.1" returns
+  // ~1000 unrelated stealer logs). Invalid values are dropped rather than stored as garbage.
   const values = [
     ...new Set(
       String(formData.get('value') ?? '')
@@ -235,12 +240,19 @@ export async function addIndicatorAction(formData: FormData) {
         .map((v) => v.trim())
         .filter(Boolean),
     ),
-  ];
-  if (!values.length) return;
+  ].filter((v) => isValidIndicator(type, v));
+  if (!values.length) {
+    redirect('/threat?error=invalid-indicator');
+  }
   await getDb()
     .insert(manualIndicators)
     .values(values.map((value) => ({ projectId, type, value, note })));
   revalidatePath('/threat');
+}
+
+/** A value is valid for its indicator type: `ip` must be an IP literal; domain/subdomain a hostname. */
+function isValidIndicator(type: string, value: string): boolean {
+  return type === 'ip' ? isIpAddress(value) : isHostname(value);
 }
 
 /** Edit a manual indicator. ModifyScanResults + audit. */
@@ -251,6 +263,7 @@ export async function editIndicatorAction(formData: FormData) {
   const value = String(formData.get('value') ?? '').trim();
   const note = String(formData.get('note') ?? '').trim() || null;
   if (!id || !value || !['domain', 'subdomain', 'ip'].includes(type)) return;
+  if (!isValidIndicator(type, value)) redirect('/threat?error=invalid-indicator');
   await getDb().update(manualIndicators).set({ type, value, note }).where(eq(manualIndicators.id, id));
   await recordAudit({ actorId: actor.id, action: 'indicator.update', resource: `indicator:${id}` });
   revalidatePath('/threat');

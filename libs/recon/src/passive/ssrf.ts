@@ -94,7 +94,10 @@ function isPrivateOrReservedIpv4(ip: string): boolean {
   if (a === 172 && b >= 16 && b <= 31) return true;
   if (a === 192 && b === 168) return true;
   if (a === 192 && b === 0 && (c === 0 || c === 2)) return true; // IETF reserved + TEST-NET-1
+  if (a === 192 && b === 88 && c === 99) return true; // deprecated 6to4 anycast
   if (a === 198 && (b === 18 || b === 19)) return true; // benchmarking
+  if (a === 198 && b === 51 && c === 100) return true; // TEST-NET-2 (documentation)
+  if (a === 203 && b === 0 && c === 113) return true; // TEST-NET-3 (documentation)
   if (a === 100 && b >= 64 && b <= 127) return true; // CGNAT
   if (a >= 224) return true; // multicast + reserved + broadcast
   return false;
