@@ -128,8 +128,7 @@ describe('ssrf guard', () => {
       '2130706433',
     ])
       expect(isPrivateOrLoopbackHost(h)).toBe(true);
-    for (const h of ['hijra.id', 'api.hijra.id', '8.8.8.8', '203.0.113.10'])
-      expect(isPrivateOrLoopbackHost(h)).toBe(false);
+    for (const h of ['hijra.id', 'api.hijra.id', '8.8.8.8', '1.1.1.1']) expect(isPrivateOrLoopbackHost(h)).toBe(false);
   });
   it('blocks IPv4-mapped IPv6, numeric-host encodings, and extra reserved ranges', () => {
     expect(isUrlSafeForServerFetch('http://[::ffff:169.254.169.254]/')).toBe(false); // mapped metadata IP

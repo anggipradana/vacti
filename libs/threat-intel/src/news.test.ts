@@ -47,6 +47,15 @@ describe('matchesSector', () => {
     expect(idItems).toHaveLength(1);
     expect(matchesSector(idItems[0]!, 'banking')).toBe(true);
   });
+  it('does not mis-bucket on substring keywords (word boundary)', () => {
+    const mk = (title: string) => ({ title, link: 'https://x/1', source: 's', summary: '', publishedAt: null });
+    // "oil" must not match "turmoil", "gas" must not match "Vegas", "ics" must not match "politics".
+    expect(matchesSector(mk('Market turmoil hits stocks'), 'energy')).toBe(false);
+    expect(matchesSector(mk('Las Vegas casino reopens'), 'energy')).toBe(false);
+    expect(matchesSector(mk('Politics and economics roundup'), 'energy')).toBe(false);
+    // a real whole-word keyword still matches
+    expect(matchesSector(mk('Oil prices climb today'), 'energy')).toBe(true);
+  });
 });
 
 describe('fetchSectorNews', () => {

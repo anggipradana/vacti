@@ -180,10 +180,25 @@ const SECURITY_TERMS = [
   'penipuan',
 ];
 
+/**
+ * Match a keyword against text on WORD boundaries, not raw substring. A plain `includes()`
+ * mis-bucketed news: "turmoil" matched `oil`, "vegas" matched `gas`, "politics" matched `ics`.
+ * Single alphanumeric keywords must equal a whole token; multi-word/hyphenated keywords (e.g.
+ * "wire transfer", "cve-") are specific enough to keep substring semantics.
+ */
+function keywordMatches(haystackLower: string, tokens: Set<string>, keyword: string): boolean {
+  const kw = keyword.toLowerCase().trim();
+  if (!kw) return false;
+  return /^[a-z0-9]+$/.test(kw) ? tokens.has(kw) : haystackLower.includes(kw);
+}
+
+const tokenize = (s: string): Set<string> => new Set(s.split(/[^a-z0-9]+/).filter(Boolean));
+
 /** Is this item actually about cyber security (vs generic sector/lifestyle news)? */
 export function isSecurityRelated(item: NewsItem): boolean {
   const hay = `${item.title} ${item.summary}`.toLowerCase();
-  return SECURITY_TERMS.some((t) => hay.includes(t));
+  const tokens = tokenize(hay);
+  return SECURITY_TERMS.some((t) => keywordMatches(hay, tokens, t));
 }
 
 /**
@@ -255,12 +270,13 @@ export function parseFeed(xml: string, source: string): NewsItem[] {
   return items;
 }
 
-/** Does an item match the sector's keywords? `general` matches everything. */
+/** Does an item match the sector's keywords? `general` matches everything. Word-boundary aware. */
 export function matchesSector(item: NewsItem, sector: string): boolean {
   const kws = SECTORS[sector] ?? [];
   if (!kws.length) return true;
   const hay = `${item.title} ${item.summary}`.toLowerCase();
-  return kws.some((k) => hay.includes(k));
+  const tokens = tokenize(hay);
+  return kws.some((k) => keywordMatches(hay, tokens, k));
 }
 
 export interface FetchNewsOptions {
