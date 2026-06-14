@@ -121,6 +121,9 @@ export async function BrandNews({
               publishedAt: n.publishedAt ? new Date(n.publishedAt).toISOString() : null,
               security: Boolean(n.security),
               status: n.status,
+              aiSentiment: n.aiSentiment,
+              aiSentimentReason: n.aiSentimentReason,
+              sentimentFeedback: n.sentimentFeedback,
             }))}
             canTriage={canTriage}
           />

@@ -101,7 +101,7 @@ describe('dispatchWebhook', () => {
   });
 });
 
-import { parseEnrichment, enrichVulnerability, buildVulnPrompt, enrichmentHash } from './ai';
+import { parseEnrichment, enrichVulnerability, buildVulnPrompt, enrichmentHash, generateBrandSentiment } from './ai';
 
 describe('AI enrichment', () => {
   it('parses three sections', () => {
@@ -118,5 +118,26 @@ describe('AI enrichment', () => {
   it('builds a prompt and a stable hash', () => {
     expect(buildVulnPrompt({ name: 'XSS', type: 'xss', severity: 3 })).toContain('Finding: XSS');
     expect(enrichmentHash({ name: 'XSS', type: 'xss' })).toBe(enrichmentHash({ name: 'XSS', type: 'xss' }));
+  });
+});
+
+describe('generateBrandSentiment', () => {
+  const provider = (reply: string) => ({ generate: async () => reply });
+  it('parses "SENTIMENT | reason" replies', async () => {
+    const neg = await generateBrandSentiment(
+      { brand: 'Acme', title: 'Acme hit by data breach' },
+      provider('negative | customer data leaked'),
+    );
+    expect(neg).toEqual({ sentiment: 'negative', reason: 'customer data leaked' });
+    const pos = await generateBrandSentiment(
+      { brand: 'Acme', title: 'Acme wins award' },
+      provider('Positive | industry recognition'),
+    );
+    expect(pos.sentiment).toBe('positive');
+  });
+  it('falls back to neutral on an unparseable reply', async () => {
+    const r = await generateBrandSentiment({ brand: 'Acme', title: 'x' }, provider('I am not sure about this one'));
+    expect(r.sentiment).toBe('neutral');
+    expect(r.reason.length).toBeGreaterThan(0);
   });
 });

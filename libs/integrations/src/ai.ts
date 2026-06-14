@@ -262,6 +262,42 @@ export async function generateExecutiveSummary(input: ExecSummaryInput, provider
   return stripEmDash((await provider.generate(system, prompt)).trim());
 }
 
+// ---- Brand-monitoring sentiment (per headline) ----
+
+export type BrandSentiment = 'positive' | 'negative' | 'neutral';
+export interface BrandSentimentResult {
+  sentiment: BrandSentiment;
+  reason: string;
+}
+
+/**
+ * Classify a brand-monitoring headline's sentiment TOWARD THE BRAND (reputation lens, not generic
+ * tone): a breach/lawsuit/outage is negative, an award/partnership/growth is positive, routine
+ * coverage is neutral. Returns a one-line reason. Falls back to neutral on an unparseable reply.
+ */
+export async function generateBrandSentiment(
+  input: { brand: string; title: string; summary?: string | null; lang?: 'en' | 'id' },
+  provider: AiProvider,
+): Promise<BrandSentimentResult> {
+  const system =
+    input.lang === 'id'
+      ? 'Anda analis pemantauan reputasi merek. Nilai sentimen sebuah berita TERHADAP MEREK: negative (kabar buruk: kebocoran data, gugatan, gangguan, penipuan, skandal), positive (kabar baik: penghargaan, kemitraan, pertumbuhan), neutral (liputan rutin/tidak berdampak). Balas TEPAT satu baris: "SENTIMENT | alasan singkat" dengan SENTIMENT salah satu dari positive/negative/neutral. Tanpa markdown, tanpa tanda em dash.'
+      : 'You are a brand reputation-monitoring analyst. Judge a news headline\'s sentiment TOWARD THE BRAND: negative (bad news: breach, lawsuit, outage, fraud, scandal), positive (good news: award, partnership, growth), neutral (routine/no-impact coverage). Reply EXACTLY one line: "SENTIMENT | short reason" where SENTIMENT is one of positive/negative/neutral. No markdown, no em dashes.';
+  const prompt = [`Brand: ${input.brand}`, `Headline: ${input.title}`, input.summary ? `Summary: ${input.summary}` : '']
+    .filter(Boolean)
+    .join('\n');
+  const raw = stripEmDash((await provider.generate(system, prompt)).trim());
+  const [head, ...rest] = raw.split('|');
+  const token = (head ?? '').toLowerCase();
+  const sentiment: BrandSentiment = token.includes('negative')
+    ? 'negative'
+    : token.includes('positive')
+      ? 'positive'
+      : 'neutral';
+  const reason = (rest.join('|').trim() || raw).slice(0, 280);
+  return { sentiment, reason };
+}
+
 // ---- Threat-intelligence narrative (TI report / page) ----
 
 export interface ThreatNarrativeInput {
