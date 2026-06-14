@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { desc, eq, getTableColumns } from 'drizzle-orm';
 import { CalendarClock } from 'lucide-react';
 import { Card, CardContent } from '../../../../components/ui/card';
+import { FormBanner } from '../../../../components/ui/form-banner';
 import { Input } from '../../../../components/ui/input';
 import { Label } from '../../../../components/ui/label';
 import { SubmitButton } from '../../../../components/ui/submit-button';
@@ -24,13 +25,18 @@ import { getActiveProjectId } from '../../../../lib/active-project';
 
 export const dynamic = 'force-dynamic';
 
-export default async function SchedulesPage({ searchParams }: { searchParams: Promise<{ project?: string }> }) {
+export default async function SchedulesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ project?: string; error?: string; ok?: string }>;
+}) {
   const user = await getCurrentUser();
   if (!user) redirect('/login');
   const canManage = userCan(user, Permission.InitiateScans);
   const db = getDb();
   const projectRows = await db.select().from(projects).orderBy(desc(projects.createdAt));
-  const projectId = await getActiveProjectId((await searchParams).project, projectRows);
+  const sp = await searchParams;
+  const projectId = await getActiveProjectId(sp.project, projectRows);
   // Schedules have no projectId of their own, so scope them via the active project's targets with an
   // inner join - only this project's schedules are fetched (no load-all + JS filter), and the join also
   // gives us each schedule's target domain for display.
@@ -52,6 +58,11 @@ export default async function SchedulesPage({ searchParams }: { searchParams: Pr
 
   return (
     <>
+      <FormBanner
+        ok={sp.ok}
+        error={sp.error}
+        messages={{ invalid: 'Pick a target and a valid frequency before adding a schedule.' }}
+      />
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-fg-muted">
           Recurring scans via a lightweight cron tick. Times are WIB (Asia/Jakarta).

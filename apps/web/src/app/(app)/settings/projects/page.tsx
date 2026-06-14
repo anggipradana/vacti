@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { count, desc } from 'drizzle-orm';
 import { FolderKanban } from 'lucide-react';
 import { Card, CardContent } from '../../../../components/ui/card';
+import { FormBanner } from '../../../../components/ui/form-banner';
 import { Input } from '../../../../components/ui/input';
 import { Label } from '../../../../components/ui/label';
 import { SubmitButton } from '../../../../components/ui/submit-button';
@@ -26,11 +27,16 @@ export const dynamic = 'force-dynamic';
 
 const PAGE = 20;
 
-export default async function ProjectsPage({ searchParams }: { searchParams: Promise<{ ppage?: string }> }) {
+export default async function ProjectsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ ppage?: string; error?: string; ok?: string }>;
+}) {
   const user = await getCurrentUser();
   if (!user) redirect('/login');
   const canManage = userCan(user, Permission.ModifyTargets);
-  const page = Math.max(1, Number((await searchParams).ppage ?? 1) || 1);
+  const sp = await searchParams;
+  const page = Math.max(1, Number(sp.ppage ?? 1) || 1);
   const db = getDb();
   const [rows, countRows] = await Promise.all([
     db
@@ -45,6 +51,11 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Pro
   const totalPages = Math.max(1, Math.ceil(total / PAGE));
   return (
     <>
+      <FormBanner
+        ok={sp.ok}
+        error={sp.error}
+        messages={{ invalid: 'Enter a name and a slug (lowercase letters, numbers, hyphens).' }}
+      />
       <p className="mb-4 text-sm text-fg-muted">Workspaces that scope your targets, scans, and findings.</p>
       <div className="grid gap-6 lg:grid-cols-[360px_1fr]">
         <Card>

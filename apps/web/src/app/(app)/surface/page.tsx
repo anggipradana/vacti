@@ -315,7 +315,11 @@ export default async function SurfacePage({
                           <span className="text-fg-subtle">-</span>
                         )}
                       </TD>
-                      <TD className="text-xs text-fg-subtle">{(u.sources ?? []).join(', ')}</TD>
+                      <TD className="max-w-[10rem] text-xs text-fg-subtle">
+                        <div className="truncate" title={(u.sources ?? []).join(', ')}>
+                          {(u.sources ?? []).join(', ')}
+                        </div>
+                      </TD>
                     </TR>
                   ))}
                 </TBody>
@@ -411,7 +415,11 @@ export default async function SurfacePage({
                 {ips.map((r) => (
                   <TR key={r.ip}>
                     <TD className="font-mono text-sm">{r.ip}</TD>
-                    <TD className="text-xs text-fg-muted">{r.hosts ?? '-'}</TD>
+                    <TD className="max-w-xs text-xs text-fg-muted">
+                      <div className="truncate" title={r.hosts ?? ''}>
+                        {r.hosts ?? '-'}
+                      </div>
+                    </TD>
                     <TD className="text-xs text-fg-subtle">
                       {r.latest ? new Date(r.latest).toISOString().slice(0, 10) : '-'}
                     </TD>

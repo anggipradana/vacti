@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { count, desc, eq } from 'drizzle-orm';
 import { Crosshair } from 'lucide-react';
 import { PageHeader } from '../../../components/ui/page-header';
+import { FormBanner } from '../../../components/ui/form-banner';
 import { Card, CardContent } from '../../../components/ui/card';
 import { Input } from '../../../components/ui/input';
 import { Textarea } from '../../../components/ui/textarea';
@@ -28,7 +29,7 @@ const PAGE = 20;
 export default async function TargetsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ project?: string; tpage?: string }>;
+  searchParams: Promise<{ project?: string; tpage?: string; error?: string; ok?: string }>;
 }) {
   const user = await getCurrentUser();
   if (!user) redirect('/login');
@@ -58,6 +59,11 @@ export default async function TargetsPage({
         title="Targets"
         description="Domains and organisations to assess. Predefined subdomains skip discovery."
         actions={<ProjectSwitcher projects={projectRows} current={projectId} basePath="/targets" />}
+      />
+      <FormBanner
+        ok={sp.ok}
+        error={sp.error}
+        messages={{ invalid: 'Enter a valid domain (and select a project) before adding a target.' }}
       />
       <div className="grid gap-6 lg:grid-cols-[360px_1fr]">
         <Card>
