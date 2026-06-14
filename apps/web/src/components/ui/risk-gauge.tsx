@@ -56,7 +56,10 @@ export function RiskGauge({ score }: { score: number }) {
         />
       </svg>
       <div className="-mt-4 text-center">
-        <div className={cn('text-2xl font-semibold tabular', band)}>{clamped}</div>
+        <div className={cn('font-semibold tabular', band)}>
+          <span className="text-2xl">{clamped}</span>
+          <span className="text-sm text-fg-subtle">/100</span>
+        </div>
         <div className="text-xs text-fg-subtle">
           risk score · <span className={cn('font-medium uppercase', band)}>{label}</span>
         </div>
