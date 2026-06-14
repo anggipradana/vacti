@@ -174,6 +174,15 @@ async function main(): Promise<void> {
       profile = { ...profile, tools: scan.toolsOverride as ScanProfile['tools'] };
     }
     console.log(`[worker] scan ${scanId} starting (${target.domain})`);
+    // scan.started is a subscribable webhook event, so actually emit it (best-effort) - otherwise a
+    // webhook subscribed only to scan.started would silently never fire.
+    await sendProjectNotifications(db, scan.projectId, {
+      type: 'scan.started',
+      title: `Scan started: ${target.domain}`,
+      message: `${scan.mode ?? 'active'} scan queued and now running.`,
+      severity: 'info',
+      fields: { Target: target.domain, Mode: scan.mode ?? 'active' },
+    }).catch((e) => console.error(`[worker] scan.started notify failed (${scanId}):`, e));
     // Poll the cancel flag and abort the in-flight run (kills child processes).
     const controller = new AbortController();
     liveRuns.set(scanId, controller);

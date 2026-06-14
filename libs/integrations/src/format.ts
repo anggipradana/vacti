@@ -64,11 +64,16 @@ export function formatPayload(
         },
       };
     }
-    case 'telegram':
+    case 'telegram': {
+      // Plain text, NO parse_mode: notification content (vuln names, URLs with `_`, unbalanced `*`)
+      // routinely breaks Telegram's legacy Markdown parser, which 400s the whole message. The
+      // title/fields are sent unformatted instead so delivery is reliable.
+      const tgText = `${ev.title}\n${ev.message}${fieldsText ? `\n${fieldsText}` : ''}${ev.url ? `\n${ev.url}` : ''}`;
       return {
         overrideUrl: telegram ? `https://api.telegram.org/bot${telegram.botToken}/sendMessage` : undefined,
-        body: { chat_id: telegram?.chatId, text, parse_mode: 'Markdown' },
+        body: { chat_id: telegram?.chatId, text: tgText },
       };
+    }
     default:
       return {
         body: {

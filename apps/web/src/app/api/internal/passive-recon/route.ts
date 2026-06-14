@@ -5,6 +5,7 @@ import { targets, scans } from '@vacti/db';
 import { getDb } from '../../../../lib/db';
 import { getQueue } from '../../../../lib/queue';
 import { getCurrentUser } from '../../../../lib/session';
+import { isUuid } from '../../../../lib/uuid';
 import { recordAudit } from '../../../../lib/audit';
 
 export const runtime = 'nodejs';
@@ -26,6 +27,7 @@ export async function POST(req: Request): Promise<Response> {
   }
   const { projectId } = (await req.json().catch(() => ({}))) as { projectId?: string };
   if (!projectId) return Response.json({ ok: false, error: 'missing projectId' }, { status: 400 });
+  if (!isUuid(projectId)) return Response.json({ ok: false, error: 'missing projectId' }, { status: 400 });
 
   const db = getDb();
   const projTargets = await db.select().from(targets).where(eq(targets.projectId, projectId));

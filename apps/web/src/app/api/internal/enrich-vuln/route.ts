@@ -5,6 +5,7 @@ import { vulnerabilities, scans, aiCache } from '@vacti/db';
 import { getDb } from '../../../../lib/db';
 import { getCurrentUser } from '../../../../lib/session';
 import { providerFor } from '../../../../lib/ai-provider';
+import { isUuid } from '../../../../lib/uuid';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -23,6 +24,7 @@ export async function POST(req: Request): Promise<Response> {
   }
   const { id } = (await req.json().catch(() => ({}))) as { id?: string };
   if (!id) return Response.json({ ok: false, error: 'missing id' }, { status: 400 });
+  if (!isUuid(id)) return Response.json({ ok: false, error: 'not found' }, { status: 404 });
 
   const db = getDb();
   const [vuln] = await db.select().from(vulnerabilities).where(eq(vulnerabilities.id, id));

@@ -1,6 +1,7 @@
 import { userCan, Permission } from '@vacti/core';
 import { getCurrentUser } from '../../../../lib/session';
 import { generateAndStoreExecSummary } from '../../../../lib/exec-summary';
+import { isUuid } from '../../../../lib/uuid';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -20,5 +21,6 @@ export async function POST(req: Request): Promise<Response> {
   const body = (await req.json().catch(() => ({}))) as { projectId?: string };
   const projectId = body.projectId ?? '';
   if (!projectId) return Response.json({ ok: false, error: 'missing projectId' }, { status: 400 });
+  if (!isUuid(projectId)) return Response.json({ ok: false, error: 'no_completed_scan' }, { status: 400 });
   return Response.json(await generateAndStoreExecSummary(projectId));
 }

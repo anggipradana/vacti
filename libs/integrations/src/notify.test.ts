@@ -29,10 +29,14 @@ describe('formatPayload', () => {
     expect(card.header.title).toContain('Scan done');
     expect(card.sections[0]!.widgets.length).toBeGreaterThan(0);
   });
-  it('routes Telegram to the bot API with chat_id', () => {
+  it('routes Telegram to the bot API with chat_id, plain text (no parse_mode)', () => {
     const p = formatPayload('telegram', ev, { botToken: 'T', chatId: 'C' });
     expect(p.overrideUrl).toContain('/botT/sendMessage');
-    expect((p.body as { chat_id: string }).chat_id).toBe('C');
+    const body = p.body as { chat_id: string; text: string; parse_mode?: string };
+    expect(body.chat_id).toBe('C');
+    // No parse_mode: unescaped Markdown in notification content would otherwise 400 the message.
+    expect(body.parse_mode).toBeUndefined();
+    expect(body.text).not.toContain('*');
   });
 });
 

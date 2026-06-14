@@ -6,6 +6,7 @@ import { getDb } from '../../../../lib/db';
 import { getCurrentUser } from '../../../../lib/session';
 import { getQueue } from '../../../../lib/queue';
 import { recordAudit } from '../../../../lib/audit';
+import { isUuid } from '../../../../lib/uuid';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -31,7 +32,11 @@ export async function POST(req: Request): Promise<Response> {
     deepScan?: boolean;
   };
   const targetId = body.targetId ?? '';
-  const profileId = (body.profileId ?? '').trim() || null;
+  // Validate the id is a UUID before querying: an empty/malformed value would otherwise make the
+  // pg driver throw (invalid uuid syntax) and surface as a 500 instead of a clean 400.
+  if (!isUuid(targetId)) return Response.json({ ok: false, error: 'no_target' }, { status: 400 });
+  const rawProfile = (body.profileId ?? '').trim();
+  const profileId = isUuid(rawProfile) ? rawProfile : null; // ignore '' / malformed
   const mode = body.mode === 'passive' || body.mode === 'full' ? body.mode : 'active';
   const deepScan = body.deepScan === true;
   const db = getDb();
