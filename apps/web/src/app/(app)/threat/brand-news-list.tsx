@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { Sparkles } from 'lucide-react';
 import { NEWS_STATUS_LABEL } from '@vacti/core';
 import { Input } from '../../../components/ui/input';
 import { Select } from '../../../components/ui/select';
@@ -84,16 +85,17 @@ function BrandSentiment({ item, canTriage }: { item: BrandNewsItem; canTriage: b
   if (!sentiment) {
     if (!canTriage) return null;
     return (
-      <div className="mt-1 flex items-center gap-2">
+      <div className="mt-1.5 flex items-center gap-2">
         <Button
           type="button"
           size="sm"
-          variant="ghost"
-          className="h-6 px-2 text-xs"
+          variant="outline"
+          className="h-7 gap-1 px-2 text-xs text-accent"
           loading={loading}
           onClick={generate}
         >
-          {loading ? 'Analyzing…' : 'AI sentiment'}
+          {loading ? null : <Sparkles className="size-3.5" />}
+          {loading ? 'Analyzing sentiment…' : 'AI sentiment'}
         </Button>
         {err ? <span className="text-xs text-danger">{err}</span> : null}
       </div>
