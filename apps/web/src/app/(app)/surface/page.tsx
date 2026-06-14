@@ -22,6 +22,7 @@ import { getActiveProjectId } from '../../../lib/active-project';
 import { bulkReviewExposureAction } from '../../../lib/surface-actions';
 import { ExposureTable } from './exposure-table';
 import { PassiveReconRunner } from './passive-recon-runner';
+import { SurfaceExportMenu } from './export-menu';
 
 export const dynamic = 'force-dynamic';
 const PAGE = 25;
@@ -149,21 +150,7 @@ export default async function SurfacePage({
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <PassiveReconRunner projectId={projectId} />
-            <a href={`/surface/export?project=${projectId}&format=zip`}>
-              <Button variant="secondary" size="sm">
-                Export ZIP
-              </Button>
-            </a>
-            <a href={`/surface/export?project=${projectId}&format=csv&resource=urls`}>
-              <Button variant="ghost" size="sm">
-                URLs CSV
-              </Button>
-            </a>
-            <a href={`/surface/export?project=${projectId}&format=csv&resource=findings`}>
-              <Button variant="ghost" size="sm">
-                Findings CSV
-              </Button>
-            </a>
+            <SurfaceExportMenu projectId={projectId} />
           </div>
         }
       />
