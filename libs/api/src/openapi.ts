@@ -1519,6 +1519,20 @@ function pentestPaths(): Record<string, unknown> {
         },
       },
     },
+    '/api/pentest/engine-config': {
+      get: {
+        summary: 'Pull the operator-managed Claude credential (engine startup)',
+        description:
+          'Scope: `pentest:dispatch`. Returns the decrypted Anthropic credential the engine injects into Claude Code.',
+        tags,
+        security: bearer,
+        responses: {
+          '200': { description: 'Engine config', ...json(obj({ auth_type: { type: 'string' } })) },
+          '401': unauthorized,
+          '403': forbidden,
+        },
+      },
+    },
     '/api/pentest/runners/heartbeat': {
       post: {
         summary: 'Engine heartbeat (liveness + progress); returns the cancel flag',
