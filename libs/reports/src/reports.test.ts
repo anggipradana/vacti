@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { renderVaReport } from './va-report';
 import { renderTiReport } from './ti-report';
+import { renderPentestReport, type PentestReportFinding } from './pentest-report';
 import { DEFAULT_VA_SETTINGS, DEFAULT_TI_SETTINGS } from './types';
 
 describe('VA report html', () => {
@@ -76,5 +77,63 @@ describe('TI report html', () => {
     expect(html).toContain('Indicators of Compromise');
     expect(html).toContain('a@acme.com');
     expect(html).toContain('CONFIDENTIAL');
+  });
+});
+
+describe('Pentest report html', () => {
+  const finding: PentestReportFinding = {
+    title: 'Horizontal IDOR on /api/orders',
+    severity: 'high',
+    cvssVector: 'CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:H/VI:N/VA:N/SC:N/SI:N/SA:N',
+    skill: 'idor-testing',
+    description: { en: 'Cross-user order access.', id: 'Akses order lintas pengguna.' },
+    businessImpact: { en: 'PII exposure.', id: 'Paparan PII.' },
+    reproSteps: { en: 'Replay as peer.', id: 'Replay sebagai peer.' },
+    remediation: { en: 'Enforce object-level authz.', id: 'Terapkan otorisasi objek.' },
+    affected: { url: 'https://app.test/api/orders', parameter: 'id', method: 'GET' },
+    evidence: [
+      {
+        kind: 'request_response',
+        sha256: 'a'.repeat(64),
+        frameRole: 'attacker',
+        account: 'bob',
+        capturedAt: '2026-06-16T00:00:00.000Z',
+        text: 'GET /api/orders?id=2 HTTP/1.1',
+      },
+    ],
+  };
+  const data = {
+    lang: 'en' as const,
+    type: 'full' as const,
+    settings: DEFAULT_VA_SETTINGS,
+    signatories: [{ role: 'prepared' as const, name: 'A', position: 'Pentester' }],
+    engagement: {
+      name: 'Acme web',
+      kind: 'web',
+      scopeIn: ['10.0.0.0/24'],
+      scopeOut: [],
+      startedAt: new Date(),
+      finishedAt: new Date(),
+    },
+    findings: [finding],
+    generatedAt: '2026-06-16T00:00:00.000Z',
+  };
+
+  it('renders cover, CVSS 4.0 vector, bilingual content, manifest, and methodology', () => {
+    const html = renderPentestReport(data);
+    expect(html).toContain('Penetration Test Report');
+    expect(html).toContain('CVSS:4.0/AV:N');
+    expect(html).toContain('Horizontal IDOR on /api/orders');
+    expect(html).toContain('Cross-user order access.');
+    expect(html).toContain('Akses order lintas pengguna.'); // bilingual secondary
+    expect(html).toContain('Evidence Manifest'); // chain-of-custody section
+    expect(html).toContain('a'.repeat(64)); // hash in the manifest
+    expect(html).not.toMatch(/[—–]/); // no em/en dashes (house style)
+  });
+
+  it('summary type omits the evidence manifest', () => {
+    const html = renderPentestReport({ ...data, type: 'summary' });
+    expect(html).not.toContain('Evidence Manifest');
+    expect(html).toContain('Horizontal IDOR on /api/orders');
   });
 });
