@@ -39,4 +39,4 @@ ada di image worker. Tidak ada Celery, Redis, Ollama-wajib, Nginx berat.
 
 - Go + Next.js (Opsi 2) - engine compiled super-andal tapi backend 2 bahasa; keunggulan konkurensi
   belum terpakai untuk scope yang sudah diramping.
-- Mempertahankan stack ReNgGinaNg (Django/Celery/Redis/WeasyPrint/30+ tool) - terlalu berat.
+- Mempertahankan stack berat (Django/Celery/Redis/WeasyPrint/30+ tool) - terlalu berat.

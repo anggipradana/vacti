@@ -1,6 +1,7 @@
 # Architecture & Design Rationale (Explanation)
 
-vacti is a lightweight rewrite of ReNgGinaNg focused on VA + Threat Intelligence.
+vacti is a lightweight, self-hosted platform focused on Vulnerability Assessment + Threat
+Intelligence.
 
 ## Shape
 

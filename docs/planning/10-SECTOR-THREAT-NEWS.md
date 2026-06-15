@@ -7,7 +7,7 @@
 ## A. Why RSS + keyword filtering
 
 Easiest, free, reliable: RSS/Atom feeds are stable and key-less; sector relevance = a curated keyword
-set per sector (the reNgine `banking_keywords` pattern, generalised). A paid News API can be added
+set per sector (a per-sector keyword pattern, generalised). A paid News API can be added
 later behind the same interface for richer/region-specific coverage.
 
 ## B. Data model

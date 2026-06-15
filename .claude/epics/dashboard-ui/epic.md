@@ -24,7 +24,7 @@ Menutup baris Feature Parity Checklist: **7.1–7.7, 6.6 (tabel), 4.6/4.7/4.9/4.
 
 - **shadcn/ui + Radix + Tailwind**; design tokens dari `@vacti/ui` (severity/risk colors, radius, type).
 - **Server-side data tables** (filter/sort/paginate) reusable, dialiri tRPC; mendekati operator
-  query reNgine tapi disederhanakan.
+  query yang umum tapi disederhanakan.
 - **Charts**: Recharts (default) / Visx (kompleks). **Dark mode** first-class; **WCAG AA**.
 - **Realtime** progress via SSE (subscribe dari komponen scan).
 - **Konsistensi risk score** dengan modul pure threat-intel (tanpa hitung ulang di UI).

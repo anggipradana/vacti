@@ -1,5 +1,5 @@
 /**
- * Role-based access control for vacti, derived from ReNgGinaNg roles.py and the
+ * Role-based access control for vacti: a standard three-role model defined in the
  * platform-foundation epic (task 005). Enforcement happens server-side.
  */
 export const Role = {

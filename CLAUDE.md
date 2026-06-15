@@ -4,8 +4,8 @@
 
 ## What vacti is
 
-A lightweight VA + Threat Intelligence platform (rewrite of ReNgGinaNg). Full-stack TypeScript,
-Nx monorepo, Next.js + worker + Postgres. See [README.md](README.md) and
+A lightweight, self-hosted Vulnerability Assessment + Threat Intelligence platform. Full-stack
+TypeScript, Nx monorepo, Next.js + worker + Postgres. See [README.md](README.md) and
 [docs/explanation/architecture.md](docs/explanation/architecture.md).
 
 ## Ground rules (from repo-governance)

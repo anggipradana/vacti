@@ -1,6 +1,6 @@
-# vacti - Feature Parity Checklist (dari analisis ReNgGinaNg)
+# vacti - Feature Scope Checklist
 
-> Sumber: pembacaan menyeluruh ReNgGinaNg (416 file, ~22.7K baris). Setiap fitur **esensial**
+> Cakupan fitur yang ditetapkan untuk VA + Threat Intel. Setiap fitur **esensial**
 > dipetakan ke epic vacti + status keputusan (IKUT / SEDERHANAKAN / BUANG). Checklist ini adalah
 > "kontrak cakupan" - tiap item IKUT/SEDERHANAKAN wajib punya task di epic terkait sebelum dianggap selesai.
 >
@@ -11,7 +11,7 @@
 
 ## 1. Recon / Vulnerability Assessment
 
-| #    | Fitur ReNgGinaNg                                                        | Status | Epic | Catatan                                                                                |
+| #    | Fitur                                                                   | Status | Epic | Catatan                                                                                |
 | ---- | ----------------------------------------------------------------------- | ------ | ---- | -------------------------------------------------------------------------------------- |
 | 1.1  | Subdomain enum (subfinder)                                              | ✅     | RE   | Skippable bila predefined subs ada                                                     |
 | 1.2  | Subdomain enum (amass, sublist3r, oneforall, ctfr, tlsx, netlas, chaos) | ❌     | -    | Berlebih → cukup subfinder                                                             |
@@ -29,14 +29,14 @@
 | 1.14 | OSINT (theHarvester, GooFuzz, h8mail, metafinder)                       | ❌     | -    | Dibuang                                                                                |
 | 1.15 | Pipeline orchestration (chain/group, paralel tahap)                     | 🟡     | RE   | pg-boss linear 5-tahap, bukan Celery chain/group berat                                 |
 | 1.16 | Scan cancellation (revoke celery_ids)                                   | ✅➕   | RE   | AbortController + kill child-process                                                   |
-| 1.17 | Idempotent completion (anti scan "stuck")                               | ✅     | RE   | Hardening reNgine ditiru → visibility timeout + idempoten                              |
+| 1.17 | Idempotent completion (anti scan "stuck")                               | ✅     | RE   | Hardening anti-stuck → visibility timeout + idempoten                                  |
 | 1.18 | Per-tool command + output capture (Command model)                       | ✅     | RE   | Audit tiap perintah                                                                    |
 | 1.19 | Scan activity timeline (ScanActivity)                                   | ✅     | RE   | Progress granular                                                                      |
 | 1.20 | Sub-scan (rescan sebagian)                                              | 🟡     | RE   | Versi ringkas                                                                          |
 
 ## 2. Threat Intelligence (DIPERTAHANKAN PENUH)
 
-| #   | Fitur ReNgGinaNg                                                       | Status | Epic     | Catatan                                                                            |
+| #   | Fitur                                                                  | Status | Epic     | Catatan                                                                            |
 | --- | ---------------------------------------------------------------------- | ------ | -------- | ---------------------------------------------------------------------------------- |
 | 2.1 | OTX AlienVault (pulses, reputation, malware, passive DNS, URL list)    | ✅     | TI       | Per domain + indikator                                                             |
 | 2.2 | LeakCheck (tipe `domain` & `origin`/stealer-log)                       | ✅     | TI       | Kredensial bocor                                                                   |
@@ -49,7 +49,7 @@
 
 ## 3. Reports (DIDESAIN ULANG)
 
-| #    | Fitur ReNgGinaNg                                                             | Status | Epic | Catatan                                                                       |
+| #    | Fitur                                                                        | Status | Epic | Catatan                                                                       |
 | ---- | ---------------------------------------------------------------------------- | ------ | ---- | ----------------------------------------------------------------------------- |
 | 3.1  | VA Report PDF                                                                | ✅➕   | RP   | Desain baru, ringkasan vuln + severity + temuan                               |
 | 3.2  | Threat Intel Report PDF (cover, exec summary, IoC, CVE, breach, rekomendasi) | ✅➕   | RP   | Desain baru                                                                   |
@@ -66,13 +66,13 @@
 
 ## 4. Manajemen Project & Target
 
-| #    | Fitur ReNgGinaNg                                            | Status | Epic  | Catatan                                                                                                                     |
+| #    | Fitur                                                       | Status | Epic  | Catatan                                                                                                                     |
 | ---- | ----------------------------------------------------------- | ------ | ----- | --------------------------------------------------------------------------------------------------------------------------- |
 | 4.1  | Project / workspace (multi-project, scoping `/<slug>/`)     | ✅     | PF    | Multi-project, single-tenant org v1                                                                                         |
 | 4.2  | Target domain/organisasi                                    | ✅     | RE    |                                                                                                                             |
 | 4.3  | Predefined subdomains                                       | ✅     | RE    | Memungkinkan skip subfinder                                                                                                 |
 | 4.4  | Custom request headers                                      | ✅     | RE    |                                                                                                                             |
-| 4.5  | Scan Engine/Config (YAML reNgine, lusinan opsi)             | 🟡➕   | RE    | Profil + **config jsonb** (UA/tags/templates/rate/exclude-subs/extra-args); recon #010, [09-SCAN-CONFIG](09-SCAN-CONFIG.md) |
+| 4.5  | Scan Engine/Config (YAML scan-profile, lusinan opsi)        | 🟡➕   | RE    | Profil + **config jsonb** (UA/tags/templates/rate/exclude-subs/extra-args); recon #010, [09-SCAN-CONFIG](09-SCAN-CONFIG.md) |
 | 4.6  | Scan History (status, hasil per-scan)                       | ✅     | RE/UI |                                                                                                                             |
 | 4.7  | Perbandingan antar-scan (diff)                              | 🟡     | RE/UI | Versi ringkas                                                                                                               |
 | 4.8  | Scheduled Scans (Celery Beat)                               | 🟡     | RE    | Cron ringan via pg-boss, bukan celery-beat                                                                                  |
@@ -83,7 +83,7 @@
 
 ## 5. Integrasi (WAJIB)
 
-| #   | Fitur ReNgGinaNg                                                    | Status | Epic  | Catatan                                                                                                                                          |
+| #   | Fitur                                                               | Status | Epic  | Catatan                                                                                                                                          |
 | --- | ------------------------------------------------------------------- | ------ | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
 | 5.1 | Notifications webhook (Discord, Slack, Telegram, Google Chat, Lark) | ✅     | AI    | Per-event; **Discord rich embed + Google Chat cardsV2** (2026-06-05)                                                                             |
 | 5.2 | AI enrichment vuln (description/impact/remediation)                 | ✅     | AI    | Hasil di-cache                                                                                                                                   |
@@ -95,7 +95,7 @@
 
 ## 6. API (WAJIB - warga kelas satu)
 
-| #   | Fitur ReNgGinaNg                                                                              | Status | Epic  | Catatan                                                                                                                                                  |
+| #   | Fitur                                                                                         | Status | Epic  | Catatan                                                                                                                                                  |
 | --- | --------------------------------------------------------------------------------------------- | ------ | ----- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 6.1 | REST API semua resource (project/target/scan/subdomain/endpoint/port/vuln/TI/report/settings) | ✅➕   | AI    | typed                                                                                                                                                    |
 | 6.2 | OpenAPI terdokumentasi                                                                        | ✅➕   | AI    | Redoc `/api/docs` + `/api/openapi.json`; **ditaut in-app** (Settings → API Tokens). API-first: parity REST penuh + schema req/resp lengkap (in progress) |
@@ -107,7 +107,7 @@
 
 ## 7. Dashboard & UI
 
-| #   | Fitur ReNgGinaNg                                            | Status | Epic | Catatan                           |
+| #   | Fitur                                                       | Status | Epic | Catatan                           |
 | --- | ----------------------------------------------------------- | ------ | ---- | --------------------------------- |
 | 7.1 | Dashboard ringkasan (counts target/subdomain/endpoint/vuln) | ✅     | UI   |                                   |
 | 7.2 | Severity breakdown + tren 7 hari                            | ✅     | UI   |                                   |
@@ -119,7 +119,7 @@
 
 ## 8. Platform / Infra / Governance (fondasi)
 
-| #    | Aspek ReNgGinaNg                                          | Status | Epic  | Catatan                                                                               |
+| #    | Aspek                                                     | Status | Epic  | Catatan                                                                               |
 | ---- | --------------------------------------------------------- | ------ | ----- | ------------------------------------------------------------------------------------- |
 | 8.1  | Multi-service (Nginx/Django/Redis/Celery/Ollama/certs)    | 🟡     | PF    | Diringkas → app + worker + Postgres                                                   |
 | 8.2  | Queue/broker (Redis + Celery 5 worker autoscale)          | ➕     | PF/RE | **pg-boss** di Postgres, TANPA Redis                                                  |
@@ -237,9 +237,8 @@ leaked credentials, sector news, brand news, exposure**.
 
 ## Addendum - Report parity selesai (2026-06-04)
 
-Hasil audit ulang menyeluruh template/model/form report ReNgGinaNg (`templates/report/default.html`,
-`modern.html`, `threatIntel/report_banking.html`, `VulnerabilityReportSetting`,
-`ThreatIntelReportSetting`, `ReportSignatory`). Semua komponen sudah ada di vacti:
+Hasil audit ulang menyeluruh template/model/form report vacti (cover, TOC, lembar pengesahan,
+ringkasan kerentanan, branding per-proyek, signatory). Semua komponen sudah ada di vacti:
 
 - ➕ Cover navy bertekstur + **logo** (data URL, fallback monogram) + klasifikasi di pill.
 - ➕ **Daftar isi** dwibahasa; eyebrow + section bernomor; **dwibahasa (ID/EN)** di semua

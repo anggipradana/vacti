@@ -1,6 +1,6 @@
 # vacti - Cakupan Fitur Esensial & Kecocokan Teknologi
 
-> Hasil pengecekan ulang SELURUH fitur ReNgGinaNg, lalu disaring ke yang benar-benar penting.
+> Hasil pemetaan menyeluruh kebutuhan VA + Threat Intel, lalu disaring ke yang benar-benar penting.
 > Tujuan: simpel tapi lengkap untuk VA + Threat Intel, dengan API & integrasi sebagai warga kelas satu.
 
 ## A. MASUK (esensial)
@@ -49,7 +49,7 @@ subfinder (opsional, skip bila predefined subs)
 - **Project** (workspace, multi-tenant, scoping `/<slug>/`).
 - **Target**: domain / organisasi, predefined subdomains, custom request headers.
 - **Scan Engine / Config**: profil scan ringkas (pilih tool aktif, ports, severity, rate/threads,
-  timeout) - versi sederhana dari YAML reNgine, tanpa lusinan opsi.
+  timeout) - versi sederhana dari YAML scan-profile yang berkelebihan opsi, tanpa lusinan opsi.
 - **Scan History**: status, progres real-time, hasil per-scan, perbandingan antar-scan.
 - **Scheduled Scans**: terjadwal (cron) - ringan, bukan celery-beat berat.
 - **Recon Notes / Todo** (opsional ringan).
@@ -69,7 +69,7 @@ subfinder (opsional, skip bila predefined subs)
   endpoint, port, vuln, threat-intel, report, settings.
 - **OpenAPI** terdokumentasi otomatis.
 - **Auth**: session + **API token** (untuk otomasi/CI eksternal).
-- **RBAC**: peran (mengacu reNgine) - SysAdmin / PenetrationTester / Auditor, dengan permission:
+- **RBAC**: model tiga-peran standar - SysAdmin / PenetrationTester / Auditor, dengan permission:
   modify_system_config, modify_scan_config, modify_scan_results, modify_report,
   initiate_scans, modify_targets (auditor = read + report saja).
 - **Realtime**: progres scan via SSE/WebSocket.
@@ -142,7 +142,7 @@ type-sharing. Untuk cakupan vacti yang sudah disederhanakan, keunggulan ini **be
 
 Footprint sangat ringan: **4 binary ProjectDiscovery murni Go** (subfinder/httpx/naabu/nuclei) +
 set template nuclei (termasuk WordPress/wordfence) + (untuk PDF) Chromium via Playwright **atau**
-Typst. **Tanpa Ruby** (WordPress scan kini lewat nuclei). Jauh lebih kecil dari 30+ tool ReNgGinaNg.
+Typst. **Tanpa Ruby** (WordPress scan kini lewat nuclei). Jauh lebih kecil dari suite recon berat 30+ tool.
 
 ## Rekomendasi akhir
 

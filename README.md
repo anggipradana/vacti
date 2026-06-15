@@ -152,7 +152,7 @@ A five-minute walkthrough once the app is running at <http://localhost:3100>.
    SysAdmin.
 2. **Create a project.** Go to **Settings -> Projects**, enter a name (`Acme Corp`) and a slug (`acme`),
    and click _Create project_. Projects are the workspaces that scope everything below, so you can run
-   many engagements side by side (like rengginang).
+   many engagements side by side.
 3. **Add a target.** Go to **Targets**, pick the active project in the top-right switcher, enter a
    domain (`example.com`). Optionally paste predefined subdomains (this skips subfinder) and custom
    request headers (sent by httpx and nuclei).

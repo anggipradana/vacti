@@ -1,4 +1,4 @@
-/** Vulnerability severity, mirrors ReNgGinaNg's -1..4 scale. */
+/** Vulnerability severity on a -1..4 scale (informational through critical). */
 export const Severity = {
   Unknown: -1,
   Info: 0,

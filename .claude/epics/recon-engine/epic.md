@@ -17,7 +17,7 @@ Mesin recon/VA inti vacti: pipeline tunggal lurus **subfinder (opsional) → htt
 penangkapan perintah/output, progress real-time (SSE), cancellation, idempotent completion (anti
 scan "stuck"), retry, dan penjadwalan ringan (cron). Termasuk manajemen target, profil scan ringkas,
 penyimpanan & dedup hasil, serta perbandingan antar-scan. Mengganti orkestrasi Celery chain/group
-reNgine yang berat dengan antrian Postgres-backed + 1 worker.
+yang berat dengan antrian Postgres-backed + 1 worker.
 
 Menutup baris Feature Parity Checklist: **1.1, 1.3, 1.4, 1.6, 1.7, 1.8, 1.15–1.20, 4.2–4.9, 4.12.**
 

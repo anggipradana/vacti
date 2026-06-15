@@ -10,10 +10,10 @@ created: 2026-06-03T19:04:06Z
 ## Executive Summary
 
 **vacti** is a lightweight, modern, self-hosted **Vulnerability Assessment + Threat Intelligence**
-platform — a focused successor to ReNgGinaNg/reNgine. It keeps the high-value capabilities
-(a clean recon pipeline, the full Threat Intelligence module, bilingual PDF reporting, AI
-enrichment, a first-class API, and webhook integrations) while shedding the heavy infrastructure
-(Celery/Redis/Beat, Ollama-required, Nginx multi-stage, 30+ tools, WeasyPrint/Django).
+platform. It delivers the high-value capabilities (a clean recon pipeline, a full Threat Intelligence
+module, bilingual PDF reporting, AI enrichment, a first-class API, and webhook integrations) without
+the heavy infrastructure of legacy recon suites (Celery/Redis/Beat, Ollama-required, Nginx
+multi-stage, 30+ tools, WeasyPrint/Django).
 
 The product is delivered as a **full-stack TypeScript** application (Next.js + tRPC/Hono + Drizzle +
 PostgreSQL + pg-boss), with a **pure-Go recon toolset executed by a worker** (subfinder, httpx,
@@ -22,8 +22,9 @@ HTML/CSS rendered to PDF via Playwright. Infra footprint is minimal: app + worke
 
 ## Problem Statement
 
-ReNgGinaNg is powerful but **heavy and complex**: dozens of overlapping scanning tools, a
-multi-container Celery/Redis/Ollama/Nginx stack, Django 3.2 (aging), and Python WeasyPrint reports.
+Traditional recon suites are powerful but **heavy and complex**: dozens of overlapping scanning
+tools, a multi-container Celery/Redis/Ollama/Nginx stack, an aging Django backend, and Python
+WeasyPrint reports.
 For teams that need **VA + Threat Intel** specifically, most of that surface is unused weight that
 increases operational cost, error surface, and onboarding time. There is room for a tool that does
 the essential 20% that delivers 80% of the value — but does it cleanly, reliably, type-safely, with
@@ -164,8 +165,8 @@ Redis. The lightweight modern stack is finally low-risk.
   across 50 consecutive runs in test).
 - Risk score is identical (±0) across dashboard, TI page, and PDF for the same data set.
 - CI pipeline green on PR with: typecheck, lint, unit, integration, e2e — under ~10 min.
-- Cold-start container footprint significantly smaller than ReNgGinaNg (target: ≤ 3 services,
-  single app image < 1.5 GB incl. tools + Chromium).
+- Cold-start container footprint significantly smaller than a typical heavyweight recon suite
+  (target: ≤ 3 services, single app image < 1.5 GB incl. tools + Chromium).
 - AI enrichment cache hit ratio > 80% on repeated scans of the same target.
 
 ## Constraints & Assumptions
@@ -217,7 +218,7 @@ Redis. The lightweight modern stack is finally low-risk.
 ## Status & remaining backlog (2026-06-04)
 
 Foundation, recon engine, threat-intel, reports, and API/integrations are **implemented and CI-green**;
-reports reached component parity with ReNgGinaNg (incl. logo, signatures, CVSS/CVE/references, custom
+reports reached full component coverage (incl. logo, signatures, CVSS/CVE/references, custom
 exec summary). A code-level audit reconciled `.claude/epics/` with reality (30 tasks closed; 12 open
 tasks carry a `## Status (2026-06-04)` note for remaining work).
 

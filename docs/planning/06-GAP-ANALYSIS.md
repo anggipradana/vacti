@@ -1,6 +1,6 @@
-# vacti - Gap Analysis vs ReNgGinaNg (re-audit)
+# vacti - Gap Analysis (cakupan fitur)
 
-> Re-audit of ReNgGinaNg (integration, reports, and all in-scope areas) to catch features vacti
+> Re-audit of vacti scope (integration, reports, and all in-scope areas) to catch features vacti
 > missed or under-specified. Legend: ✅ have · 🟡 partial · ❌ missing. Action: **ADD** (do soon) ·
 > _improve_ · later · skip (out of scope).
 
@@ -8,7 +8,7 @@
 priority items shipped: RBAC enforcement, scan cancel, scheduled scans, scan diff, sub-scan,
 key-vault UI, AI exec-summary + threat narrative, argon2id, audit log, server-side pagination,
 custom headers, universal search, recon notes, interesting keywords, seed/fixtures, onboarding.
-Reports remain component-complete with ReNgGinaNg. Only items explicitly out of v1 (proxy,
+Reports remain component-complete. Only items explicitly out of v1 (proxy,
 multi-org, WHOIS, in-app feed) are deferred. Epic/task statuses in `.claude/epics/` are synced.
 
 ## A. Findings / vulnerabilities
@@ -41,7 +41,7 @@ multi-org, WHOIS, in-app feed) are deferred. Epic/task statuses in `.claude/epic
 
 ## C. Scan engine / profile config
 
-ReNgGinaNg YAML exposes far more knobs. vacti `scan_profiles` should grow (still simpler than reNgine):
+A YAML scan-profile with far more knobs is possible. vacti `scan_profiles` should grow (still simple):
 
 | Option                                             | vacti                       | Action                                         |
 | -------------------------------------------------- | --------------------------- | ---------------------------------------------- |
@@ -89,26 +89,26 @@ ReNgGinaNg YAML exposes far more knobs. vacti `scan_profiles` should grow (still
 
 ## G. Settings / admin / RBAC
 
-| Feature                                        | vacti            | Action                                                                      |
-| ---------------------------------------------- | ---------------- | --------------------------------------------------------------------------- |
-| RBAC SysAdmin/PenTester/Auditor + matrix       | ✅               | -                                                                           |
-| Users management UI (assign role)              | 🟡 (planned)     | **ADD** users+roles settings page                                           |
-| Scan-profile CRUD UI                           | 🟡 (API planned) | **ADD** profiles settings UI                                                |
-| API key vault (encrypted) + UI                 | 🟡 (table only)  | **ADD** vault UI (integrations)                                             |
-| Notification settings (per-event, per-project) | ❌               | **ADD** (integrations) - per-project (improves on reNgine global singleton) |
-| Proxy settings                                 | ❌               | **ADD**                                                                     |
-| External tool version display                  | ❌               | later (small)                                                               |
+| Feature                                        | vacti            | Action                                                        |
+| ---------------------------------------------- | ---------------- | ------------------------------------------------------------- |
+| RBAC SysAdmin/PenTester/Auditor + matrix       | ✅               | -                                                             |
+| Users management UI (assign role)              | 🟡 (planned)     | **ADD** users+roles settings page                             |
+| Scan-profile CRUD UI                           | 🟡 (API planned) | **ADD** profiles settings UI                                  |
+| API key vault (encrypted) + UI                 | 🟡 (table only)  | **ADD** vault UI (integrations)                               |
+| Notification settings (per-event, per-project) | ❌               | **ADD** (integrations) - per-project (not a global singleton) |
+| Proxy settings                                 | ❌               | **ADD**                                                       |
+| External tool version display                  | ❌               | later (small)                                                 |
 
-## H. Reports (build target - match reNgine component-for-component, then improve)
+## H. Reports (build target - complete component coverage, then improve)
 
-VA report sections (reNgine `default.html`/`modern.html`): cover · TOC · **approval/signatory sheet**
+VA report sections: cover · TOC · **approval/signatory sheet**
 (Prepared/Reviewed/Approved) · executive summary (placeholder vars + optional AI remediation) · quick
 summary · assessment timeline · summary-of-findings charts (severity donut, http-status donut) ·
 interesting recon · vulnerability summary table · reconnaissance results (subdomains/IPs/ports) ·
 **vulnerability details** (severity badge, source, CVSS score+metrics, CVE, CWE, description, impact,
 remediation, vulnerable URLs, references) · end-of-report. Types: **recon / vuln / full**.
 
-TI report sections (`report_banking.html`): cover (classification) · TOC · approval sheet · document
+TI report sections: cover (classification) · TOC · approval sheet · document
 control · executive summary (risk score + stat cards + **risk meter**) · financial/threat overview
 (**banking_keywords** filter) · **IoC** table (+ manual indicators) · **CVE highlights** · **data
 breach & exposure monitoring** (checked/unchecked) · **severity & risk assessment** (per-component
@@ -117,7 +117,7 @@ breakdown) · **recommended actions** (immediate + ongoing) · end.
 Report settings: primary/secondary color, company name/address/email/website/logo, document_number,
 classification_label, footer toggle+text, language EN/ID, show_executive_summary, banking_keywords,
 exec-summary text (EN+ID with placeholders). **Signatories**: role(prepared/reviewed/approved), name,
-position, signature image, order (max 3). **Improvements over reNgine**: render via Playwright (not
+position, signature image, order (max 3). **Improvements**: render via Playwright (not
 WeasyPrint), redesigned modern layout, Recharts/SVG charts, finding-status-aware (exclude resolved/
 false-positive from counts), download + inline.
 
@@ -127,12 +127,12 @@ false-positive from counts), download + inline.
   embed field updates), Slack, Telegram (markdown), Google Chat, Lark. Per-event toggles: scan
   started/finished/failed, vuln found (by severity), interesting found, subdomain changes, TI
   refreshed, report ready, tracebacks. Message enrichment (scan id, status, engine, duration, host,
-  link). **Improve**: per-project config (reNgine is a global singleton), retry/backoff, templates.
+  link). **Improve**: per-project config (not a global singleton), retry/backoff, templates.
 - **AI** - vuln enrichment (description/impact/remediation/references), attack-suggestion, executive-
   summary remediation; bilingual (EN/ID); cache by content hash. **Improve**: Vercel AI SDK provider
-  abstraction (Claude default / OpenAI / Ollama) vs reNgine's OpenAI/Ollama only.
+  abstraction (Claude default / OpenAI / Ollama), multi-provider rather than a single fixed pair.
 - **API key vault** - OTX, LeakCheck, AI provider keys; **encrypted at rest (AES-256-GCM)** - improves
-  on reNgine plaintext. UI to set/rotate, masked display.
+  on plaintext storage. UI to set/rotate, masked display.
 - **Public REST + OpenAPI** - already have typed REST (Hono); **ADD** auto OpenAPI doc + Redoc/Swagger.
 - **Scheduled jobs** - TI refresh (cron) + nuclei-templates update (cron).
 - skip: HackerOne sync, in-app notification center (later).

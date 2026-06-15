@@ -12,10 +12,10 @@ github: (will be set on sync)
 
 ## Overview
 
-Pembeda utama vacti — modul Threat Intelligence ReNgGinaNg **dipertahankan penuh**: integrasi OTX
+Pembeda utama vacti — modul Threat Intelligence **dibangun penuh**: integrasi OTX
 AlienVault & LeakCheck, manual indicators, dan **Unified Risk Score** yang konsisten di dashboard,
 halaman TI, dan report. Refresh dijalankan sebagai job pg-boss dengan progress. Skor risiko memakai
-formula reNgine yang sama (5-komponen dengan VA / 4-komponen tanpa VA).
+formula tetap (5-komponen dengan VA / 4-komponen tanpa VA).
 
 Menutup baris Feature Parity Checklist: **2.1–2.8.**
 
@@ -26,7 +26,7 @@ Menutup baris Feature Parity Checklist: **2.1–2.8.**
 - **Client API eksternal** dengan kunci dari **vault terenkripsi** (platform-foundation); hasil di-cache
   (TTL) untuk hemat kuota & idempotensi refresh.
 - **Kredensial bocor** ditandai checked/unchecked via **hash MD5** (tanpa menyimpan plaintext ulang) —
-  review menurunkan skor (insentif triase), sesuai reNgine.
+  review menurunkan skor (insentif triase).
 - **Refresh per-domain** sinkron di dalam job pg-boss + progress (`ThreatIntelScanStatus`) via SSE/polling.
 
 ## Technical Approach
@@ -53,7 +53,7 @@ Menutup baris Feature Parity Checklist: **2.1–2.8.**
 ## Implementation Strategy
 
 1. Data models TI.
-2. Risk-score engine (pure) + test vektor lengkap (paritas dgn reNgine) — paling dulu, independen.
+2. Risk-score engine (pure) + test vektor lengkap (deterministik) — paling dulu, independen.
 3. OTX client + cache ‖ LeakCheck client + checked-state (paralel).
 4. Manual indicators + lookup.
 5. Refresh orchestrator (pg-boss) + progress + API/SSE.

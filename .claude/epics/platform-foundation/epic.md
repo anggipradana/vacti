@@ -34,7 +34,7 @@ Menutup baris Feature Parity Checklist: **4.1, 5.6 (sebagian), 6.3, 6.4, 8.1–8
   Library tipis (lucia-style/custom) di `@vacti/auth`, bukan framework berat. Password hash argon2id.
 - **RBAC server-side** — peran SysAdmin / PenetrationTester / Auditor + matriks permission
   (modify_system_config, modify_scan_config, modify_scan_results, modify_report, initiate_scans,
-  modify_targets). Ditegakkan di middleware tRPC/Hono, bukan hanya di UI. Mengacu `roles.py` reNgine.
+  modify_targets). Ditegakkan di middleware tRPC/Hono, bukan hanya di UI. Model RBAC tiga-peran standar.
 - **Secrets/vault** — API key (OTX/LeakCheck/AI) disimpan terenkripsi AES-256-GCM dengan kunci dari
   env (`ENCRYPTION_KEY`); plaintext tidak pernah ke log/response. Hanya `.env.example` di-commit.
 - **Governance = ose-primer** — hierarki 6-lapis di `repo-governance/`, Conventional Commits +
