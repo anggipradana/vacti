@@ -18,6 +18,7 @@ import { computeProjectRisk, isSector } from '@vacti/threat-intel';
 import { diffScans, type ScanResultKeys } from '@vacti/recon';
 import { dispatchWebhook, type Channel } from '@vacti/integrations';
 import { openApiSpec, redocHtml } from './openapi';
+import { registerPentestRoutes } from './pentest-routes';
 import {
   apiTokens,
   users,
@@ -55,7 +56,7 @@ export interface ApiDeps {
   enqueueTiRefresh: (projectId: string) => Promise<void>;
 }
 
-type Vars = { userId: string; role: RoleName };
+type Vars = { userId: string; role: RoleName; scopes: string[] };
 
 /** Permission gate for mutating routes. Returns a 403 Response when denied, else null. */
 function guard(c: Context<{ Variables: Vars }>, permission: (typeof Permission)[keyof typeof Permission]) {
@@ -136,6 +137,8 @@ export function buildApi(deps: ApiDeps): Hono<{ Variables: Vars }> {
       .catch(() => {});
     c.set('userId', row.userId);
     c.set('role', roleFromUser(user));
+    // Token scopes back the AI Pentest engine writeback verb-authz (producer/verifier/gatekeeper).
+    c.set('scopes', row.scopes ?? []);
     await next();
   });
 
@@ -1024,6 +1027,9 @@ export function buildApi(deps: ApiDeps): Hono<{ Variables: Vars }> {
     });
     return c.json({ result });
   });
+
+  // ── AI Pentest control plane (engine dispatch/writeback/heartbeat + human engagement mgmt) ──
+  registerPentestRoutes(app, db);
 
   return app;
 }

@@ -224,7 +224,8 @@ describe.skipIf(!url)('@vacti/api', () => {
         headers: sa(),
         body: JSON.stringify({ email, password: 'password1', role: 'Auditor' }),
       });
-      expect(created.status).toBe(200);
+      // POST /users returns 201 Created (matches the route and the OpenAPI contract).
+      expect(created.status).toBe(201);
       const { id } = (await created.json()) as { id: string };
       // Duplicate email rejected.
       const dup = await app.request('/api/users', {

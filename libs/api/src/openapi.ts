@@ -1481,6 +1481,248 @@ export function openApiSpec(): Record<string, unknown> {
           },
         },
       },
+      ...pentestPaths(),
+    },
+  };
+}
+
+/**
+ * AI Pentest control-plane paths. Engine-facing routes are scope-gated (writeback verb-authz),
+ * human-facing routes RBAC-gated. Kept in a helper so the main spec stays readable.
+ */
+function pentestPaths(): Record<string, unknown> {
+  const json = (schema: unknown) => ({ content: { 'application/json': { schema } } });
+  const ref = (name: string) => ({ $ref: `#/components/schemas/${name}` });
+  const bearer = [{ bearerAuth: [] }];
+  const tags = ['AI Pentest'];
+  const idParam = { name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } };
+  const fidParam = { name: 'fid', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } };
+  const unauthorized = { description: 'Missing or invalid bearer token', ...json(ref('Error')) };
+  const forbidden = { description: 'Missing scope or permission', ...json(ref('Error')) };
+  const notFound = { description: 'Not found', ...json(ref('Error')) };
+  const badRequest = { description: 'Invalid payload', ...json(ref('Error')) };
+  const idResult = { type: 'object', properties: { id: { type: 'string', format: 'uuid' } } };
+  const obj = (props: Record<string, unknown>) => ({ type: 'object', additionalProperties: true, properties: props });
+  return {
+    '/api/pentest/jobs/next': {
+      get: {
+        summary: 'Claim the next queued engagement (engine, atomic)',
+        description: 'Scope: `pentest:dispatch`. Returns 204 when the queue is empty.',
+        tags,
+        security: bearer,
+        parameters: [{ name: 'engine', in: 'query', schema: { type: 'string' } }],
+        responses: {
+          '200': { description: 'Claimed engagement', ...json(obj({})) },
+          '204': { description: 'Queue empty' },
+          '401': unauthorized,
+          '403': forbidden,
+        },
+      },
+    },
+    '/api/pentest/runners/heartbeat': {
+      post: {
+        summary: 'Engine heartbeat (liveness + progress); returns the cancel flag',
+        description: 'Scope: `pentest:dispatch`.',
+        tags,
+        security: bearer,
+        requestBody: { required: true, ...json(obj({ engine_id: { type: 'string' } })) },
+        responses: {
+          '200': { description: 'Cancel flag', ...json(obj({ cancel_requested: { type: 'boolean' } })) },
+          '400': badRequest,
+          '403': forbidden,
+        },
+      },
+    },
+    '/api/pentest/engagements': {
+      get: {
+        summary: 'List engagements',
+        tags,
+        security: bearer,
+        parameters: [{ name: 'projectId', in: 'query', schema: { type: 'string', format: 'uuid' } }],
+        responses: { '200': { description: 'Engagements', ...json(obj({})) }, '401': unauthorized },
+      },
+      post: {
+        summary: 'Create an engagement (draft)',
+        tags,
+        security: bearer,
+        requestBody: { required: true, ...json(obj({ projectId: { type: 'string' }, name: { type: 'string' } })) },
+        responses: { '201': { description: 'Created', ...json(obj({})) }, '400': badRequest, '403': forbidden },
+      },
+    },
+    '/api/pentest/engagements/{id}': {
+      get: {
+        summary: 'Get an engagement with findings, accounts, and agent runs',
+        tags,
+        security: bearer,
+        parameters: [idParam],
+        responses: { '200': { description: 'Engagement', ...json(obj({})) }, '404': notFound },
+      },
+      delete: {
+        summary: 'Delete an engagement (cascade)',
+        tags,
+        security: bearer,
+        parameters: [idParam],
+        responses: { '200': { description: 'Deleted', ...json(obj({ ok: { type: 'boolean' } })) }, '403': forbidden },
+      },
+    },
+    '/api/pentest/engagements/{id}/queue': {
+      post: {
+        summary: 'Run: move a draft engagement to queued',
+        tags,
+        security: bearer,
+        parameters: [idParam],
+        responses: {
+          '202': { description: 'Queued', ...json(obj({})) },
+          '403': forbidden,
+          '404': notFound,
+          '422': { description: 'Empty scope', ...json(ref('Error')) },
+        },
+      },
+    },
+    '/api/pentest/engagements/{id}/cancel': {
+      get: {
+        summary: 'Cancel poll (engine)',
+        description: 'Scope: `pentest:dispatch`.',
+        tags,
+        security: bearer,
+        parameters: [idParam],
+        responses: {
+          '200': { description: 'Cancel flag', ...json(obj({ cancel_requested: { type: 'boolean' } })) },
+          '404': notFound,
+        },
+      },
+      post: {
+        summary: 'Request cancel (kill switch)',
+        tags,
+        security: bearer,
+        parameters: [idParam],
+        responses: {
+          '200': { description: 'Engagement', ...json(obj({})) },
+          '202': { description: 'Cancel requested', ...json(obj({})) },
+          '403': forbidden,
+          '404': notFound,
+        },
+      },
+    },
+    '/api/pentest/engagements/{id}/findings': {
+      post: {
+        summary: 'Create a candidate finding (engine)',
+        description: 'Scope: `pentest:produce`. Idempotent on the fingerprint (409 on duplicate).',
+        tags,
+        security: bearer,
+        parameters: [idParam],
+        requestBody: { required: true, ...json(obj({ fingerprint: { type: 'string' } })) },
+        responses: {
+          '201': { description: 'Created', ...json(idResult) },
+          '409': { description: 'Duplicate fingerprint', ...json(idResult) },
+          '400': badRequest,
+          '403': forbidden,
+        },
+      },
+    },
+    '/api/pentest/engagements/{id}/findings/{fid}/evidence': {
+      post: {
+        summary: 'Attach evidence to a finding (engine)',
+        description: 'Scope: `pentest:produce`. Recomputes the SHA-256 when inline bytes are sent (fail-closed).',
+        tags,
+        security: bearer,
+        parameters: [idParam, fidParam],
+        requestBody: { required: true, ...json(obj({ evidence_key: { type: 'string' }, sha256: { type: 'string' } })) },
+        responses: {
+          '201': { description: 'Attached', ...json(idResult) },
+          '409': { description: 'Duplicate', ...json(idResult) },
+          '413': { description: 'Too large', ...json(ref('Error')) },
+          '422': { description: 'Hash mismatch', ...json(ref('Error')) },
+          '403': forbidden,
+        },
+      },
+    },
+    '/api/pentest/engagements/{id}/findings/{fid}/status': {
+      post: {
+        summary: 'Transition a finding status (engine)',
+        description:
+          'Scope: `pentest:verify`; `accepted` requires `pentest:accept` AND a verification_run_id (fail-closed).',
+        tags,
+        security: bearer,
+        parameters: [idParam, fidParam],
+        requestBody: { required: true, ...json(obj({ finding_id: { type: 'string' }, status: { type: 'string' } })) },
+        responses: {
+          '200': { description: 'Updated', ...json(idResult) },
+          '403': forbidden,
+          '404': notFound,
+          '422': { description: 'Fail-closed', ...json(ref('Error')) },
+        },
+      },
+    },
+    '/api/pentest/engagements/{id}/verdicts': {
+      post: {
+        summary: 'Record a verifier verdict (engine)',
+        description: 'Scope: `pentest:verify`. Idempotent on the verification_run_id.',
+        tags,
+        security: bearer,
+        parameters: [idParam],
+        requestBody: {
+          required: true,
+          ...json(
+            obj({
+              finding_id: { type: 'string' },
+              verdict: { type: 'string' },
+              verification_run_id: { type: 'string' },
+            }),
+          ),
+        },
+        responses: {
+          '201': { description: 'Recorded', ...json(idResult) },
+          '409': { description: 'Duplicate run', ...json(idResult) },
+          '400': badRequest,
+          '403': forbidden,
+        },
+      },
+    },
+    '/api/pentest/engagements/{id}/activity': {
+      post: {
+        summary: 'Log a swarm-activity row (engine, live map)',
+        tags,
+        security: bearer,
+        parameters: [idParam],
+        requestBody: { required: true, ...json(obj({ agent: { type: 'string' } })) },
+        responses: { '201': { description: 'Logged', ...json(idResult) }, '400': badRequest, '403': forbidden },
+      },
+    },
+    '/api/pentest/engagements/{id}/events': {
+      get: {
+        summary: 'Live swarm map (SSE: activity / status / done)',
+        tags,
+        security: bearer,
+        parameters: [idParam],
+        responses: { '200': { description: 'text/event-stream' } },
+      },
+    },
+    '/api/pentest/findings/{fid}/evidence': {
+      get: {
+        summary: 'List a finding evidence bundle',
+        tags,
+        security: bearer,
+        parameters: [fidParam],
+        responses: { '200': { description: 'Evidence', ...json(obj({})) }, '401': unauthorized },
+      },
+    },
+    '/api/pentest/engines': {
+      get: {
+        summary: 'List registered engines (online via heartbeat)',
+        tags,
+        security: bearer,
+        responses: { '200': { description: 'Engines', ...json(obj({})) }, '401': unauthorized },
+      },
+    },
+    '/api/pentest/engine-tokens': {
+      post: {
+        summary: 'Mint the three scoped engine tokens (producer / verifier / gatekeeper)',
+        tags,
+        security: bearer,
+        requestBody: { ...json(obj({ label: { type: 'string' } })) },
+        responses: { '201': { description: 'Tokens (returned once)', ...json(obj({})) }, '403': forbidden },
+      },
     },
   };
 }
