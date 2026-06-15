@@ -2,7 +2,7 @@
   "name": "vacti",
   "version": "0.1.0",
   "private": true,
-  "license": "GPL-3.0-or-later",
+  "license": "MIT",
   "description": "Lightweight, modern recon (VA) + Threat Intelligence platform",
   "type": "module",
   "workspaces": [

@@ -384,6 +384,6 @@ Out of scope for v1: bug-bounty sync, screenshots, heavy OSINT, multi-org, proxy
 
 ## License
 
-Licensed under the **GNU General Public License v3.0**. You may use, study, share, and modify it
-under the terms of the GPL; derivative works must remain GPL-licensed. See [`LICENSE`](LICENSE) for
-the full text. This is consistent with the reNgine lineage that vacti rewrites.
+Licensed under the **MIT License**. You may use, copy, modify, and distribute it, including in
+proprietary and commercial work, provided the copyright notice and license text are retained. See
+[`LICENSE`](LICENSE) for the full text.
