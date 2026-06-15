@@ -10,6 +10,9 @@ import {
   FolderKanban,
   FileText,
   CalendarClock,
+  Network,
+  ShieldAlert,
+  ShieldCheck,
   Search,
 } from 'lucide-react';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
@@ -19,7 +22,11 @@ const items = [
   { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { label: 'Targets', href: '/targets', icon: Crosshair },
   { label: 'Vulnerability Assessment', href: '/scans', icon: Radar },
+  { label: 'Attack Surface', href: '/surface', icon: Network },
+  { label: 'Cyber Threat Intel', href: '/threat', icon: ShieldAlert },
+  { label: 'AI Pentest', href: '/pentest', icon: ShieldCheck },
   { label: 'Reports', href: '/reports', icon: FileText },
+  { label: 'Search', href: '/search', icon: Search },
   { label: 'Projects', href: '/settings/projects', icon: FolderKanban },
   { label: 'Schedules', href: '/settings/schedules', icon: CalendarClock },
   { label: 'API Tokens', href: '/settings/tokens', icon: KeyRound },

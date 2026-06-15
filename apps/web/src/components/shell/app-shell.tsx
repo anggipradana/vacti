@@ -26,8 +26,8 @@ const nav = [
   { label: 'Vulnerability Assessment', href: '/scans' },
   { label: 'Attack Surface', href: '/surface' },
   { label: 'Cyber Threat Intel', href: '/threat' },
+  { label: 'AI Pentest', href: '/pentest' },
   { label: 'Reports', href: '/reports' },
-  { label: 'Search', href: '/search' },
   { label: 'Settings', href: '/settings/account' },
   { label: 'Docs', href: '/docs' },
 ];
@@ -106,12 +106,12 @@ export function AppShell({
                   href={item.href}
                   prefetch={false}
                   className={cn(
-                    'relative flex h-14 items-center whitespace-nowrap px-2.5 text-sm font-medium transition-colors',
+                    'relative flex h-14 items-center whitespace-nowrap px-2 text-sm font-medium transition-colors',
                     active ? 'text-fg' : 'text-fg-muted hover:text-fg',
                   )}
                 >
                   {item.label}
-                  {active ? <span className="absolute inset-x-2.5 bottom-0 h-0.5 rounded-full bg-accent" /> : null}
+                  {active ? <span className="absolute inset-x-2 bottom-0 h-0.5 rounded-full bg-accent" /> : null}
                 </Link>
               );
             })}
