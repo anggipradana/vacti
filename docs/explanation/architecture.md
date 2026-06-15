@@ -9,6 +9,14 @@ Intelligence.
 - **worker** (Node): pg-boss consumer running the recon pipeline, TI refresh, report rendering.
 - **db** (PostgreSQL 16): application data **and** the job queue (pg-boss schema). No Redis.
 
+These three services are the whole of vacti. The planned **AI Penetration Test** module adds an
+optional second runtime, the [vacti-pentest-engine](https://github.com/anggipradana/vacti-pentest-engine)
+on Kali. It is a **separate deploy unit** (its own repo + governance), not a fourth service: vacti
+holds the control plane (engagement tables, `/api/pentest/*`, dashboard, pentest report) while the
+engine runs the offensive agent swarm. The link is **one-way** - the engine reaches vacti outbound
+only to pull authorized engagements and write back findings + evidence - so vacti stays lightweight
+and has no inbound dependency on the engine.
+
 ## Why these choices
 
 - **pg-boss over Celery/Redis:** one datastore, fewer moving parts, jobs survive restarts.
