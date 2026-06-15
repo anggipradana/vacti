@@ -5,8 +5,8 @@
 <h1 align="center">vacti</h1>
 
 > Lightweight, modern, reliable **Vulnerability Assessment + Cyber Threat Intelligence** platform.
-> A focused rewrite of [ReNgGinaNg](https://github.com/anggipradana/rengginang) (a hardened reNgine
-> fork) with the same essential value at a fraction of the weight.
+> An independent, ground-up implementation in TypeScript: the essential recon + threat-intel value
+> at a fraction of the weight.
 
 Three services (app, worker, Postgres). No Redis, no Celery, no Ruby. End-to-end TypeScript.
 
