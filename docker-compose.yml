@@ -68,6 +68,12 @@ services:
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-}
+      # Where uploaded pentest evidence blobs (screenshots / command output) land. Backed by the bind
+      # mount below so they survive restarts; the dir is chowned to the container uid (10001). When an
+      # object-storage bucket is configured later, evidence goes there instead and this stays empty.
+      PENTEST_EVIDENCE_DIR: ${PENTEST_EVIDENCE_DIR:-/var/lib/vacti/pentest-evidence}
+    volumes:
+      - ./.data/pentest-evidence:/var/lib/vacti/pentest-evidence
     depends_on:
       db:
         condition: service_healthy

@@ -28,3 +28,4 @@ apps/web/e2e/.auth/
 .next-e2e/
 .next-prod/
 .next-build/
+.data/
