@@ -119,16 +119,24 @@ describe('Pentest report html', () => {
     generatedAt: '2026-06-16T00:00:00.000Z',
   };
 
-  it('renders cover, CVSS 4.0 vector, bilingual content, manifest, and methodology', () => {
+  it('renders a single-language (EN) report: cover, CVSS 4.0 vector, manifest, methodology', () => {
     const html = renderPentestReport(data);
     expect(html).toContain('Penetration Test Report');
     expect(html).toContain('CVSS:4.0/AV:N');
     expect(html).toContain('Horizontal IDOR on /api/orders');
-    expect(html).toContain('Cross-user order access.');
-    expect(html).toContain('Akses order lintas pengguna.'); // bilingual secondary
+    expect(html).toContain('Cross-user order access.'); // EN description
+    expect(html).not.toContain('Akses order lintas pengguna.'); // ID text must NOT leak into the EN report
+    expect(html).not.toContain('Ringkasan Eksekutif'); // labels are EN-only now
     expect(html).toContain('Evidence Manifest'); // chain-of-custody section
     expect(html).toContain('a'.repeat(64)); // hash in the manifest
     expect(html).not.toMatch(/[—–]/); // no em/en dashes (house style)
+  });
+
+  it('renders the Indonesian report with ID-only content', () => {
+    const html = renderPentestReport({ ...data, lang: 'id' });
+    expect(html).toContain('Akses order lintas pengguna.'); // ID description
+    expect(html).not.toContain('Cross-user order access.'); // EN text must NOT leak into the ID report
+    expect(html).toContain('Ringkasan Eksekutif'); // ID labels
   });
 
   it('summary type omits the evidence manifest', () => {

@@ -351,9 +351,6 @@ export function classificationNote(lang: Lang, company: string): string {
   const enText = `This report is classified as <b>CONFIDENTIAL</b> and intended for internal use of ${escapeHtml(company)} only; do not distribute to third parties without written permission.`;
   void pri;
   void sec;
-  return note(
-    lang === 'id'
-      ? `${idText}<br><br><i style="color:#7a8e96">${enText}</i>`
-      : `${enText}<br><br><i style="color:#7a8e96">${idText}</i>`,
-  );
+  // Single-language report: only the selected language (no stacked translation).
+  return note(lang === 'id' ? idText : enText);
 }

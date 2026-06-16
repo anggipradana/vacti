@@ -149,8 +149,12 @@ export function bi(lang: Lang, key: Key): string {
   return lang === 'id' ? `${dict.id[key]} / ${dict.en[key]}` : `${dict.en[key]} / ${dict.id[key]}`;
 }
 /** Free-text bilingual pair (no dictionary key). */
+/**
+ * A label/heading in the SELECTED language only. Reports are single-language documents (a separate EN
+ * report and ID report, chosen via ?lang=), so labels are no longer stacked "English / Indonesia".
+ */
 export function biText(lang: Lang, idStr: string, enStr: string): string {
-  return lang === 'id' ? `${idStr} / ${enStr}` : `${enStr} / ${idStr}`;
+  return lang === 'id' ? idStr : enStr;
 }
 /** Primary-language value for a key. */
 export function pri(lang: Lang, key: Key): string {
