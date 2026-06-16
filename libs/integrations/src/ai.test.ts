@@ -4,8 +4,46 @@ import {
   parseIrrelevantIndices,
   triageNewsRelevance,
   resolveAiModel,
+  parsePentestEnrichment,
+  pentestReferences,
   type AiProvider,
 } from './ai';
+
+describe('pentest reporting enrichment', () => {
+  it('parses the six bilingual sections, tolerating spacing', () => {
+    const out = parsePentestEnrichment(
+      [
+        '== DESCRIPTION_EN ==',
+        'A reflected XSS in the name parameter.',
+        '== IMPACT_EN ==',
+        'Session theft.',
+        '==REMEDIATION_EN==',
+        'Encode output.',
+        '== DESCRIPTION_ID ==',
+        'XSS terpantul di parameter name.',
+        '== IMPACT_ID ==',
+        'Pencurian sesi.',
+        '== REMEDIATION_ID ==',
+        'Enkode keluaran.',
+      ].join('\n'),
+    );
+    expect(out.descriptionEn).toBe('A reflected XSS in the name parameter.');
+    expect(out.businessImpactEn).toBe('Session theft.');
+    expect(out.remediationEn).toBe('Encode output.');
+    expect(out.descriptionId).toBe('XSS terpantul di parameter name.');
+    expect(out.remediationId).toBe('Enkode keluaran.');
+  });
+
+  it('returns class-specific references plus the OWASP baseline, and a baseline for unknown classes', () => {
+    const sqli = pentestReferences('sqli');
+    expect(sqli.some((r) => r.url.includes('cwe.mitre.org/data/definitions/89'))).toBe(true);
+    expect(sqli.some((r) => r.title === 'OWASP Top 10')).toBe(true);
+    expect(sqli.every((r) => /^https:\/\//.test(r.url))).toBe(true);
+    const unknown = pentestReferences('totally-unknown-class');
+    expect(unknown.map((r) => r.title)).toContain('OWASP Web Security Testing Guide');
+    expect(pentestReferences('idor-testing').some((r) => r.url.includes('idor'))).toBe(true);
+  });
+});
 
 describe('resolveAiModel', () => {
   it('defaults Kimi to kimi-latest (drops a coding-only / cross-provider model), keeps a Moonshot model', () => {
