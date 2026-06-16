@@ -288,6 +288,13 @@
       "when": 1781549769907,
       "tag": "0040_swift_silver_fox",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1781577441698,
+      "tag": "0041_chief_psynapse",
+      "breakpoints": true
     }
   ]
 }
