@@ -302,6 +302,13 @@
       "when": 1781579299097,
       "tag": "0042_solid_shooting_star",
       "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1781608347651,
+      "tag": "0043_rapid_absorbing_man",
+      "breakpoints": true
     }
   ]
 }

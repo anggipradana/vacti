@@ -1,0 +1,1 @@
+ALTER TABLE "pentest_findings" ADD COLUMN "references" jsonb;
