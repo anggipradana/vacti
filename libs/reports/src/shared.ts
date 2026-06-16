@@ -115,12 +115,12 @@ export function note(html: string): string {
   return `<div class="note">${html}</div>`;
 }
 
-/** Bilingual stat cards (primary bold + secondary muted). */
-export function statRow(items: { value: number | string; primary: string; secondary: string }[]): string {
+/** Stat cards (label bold; an optional muted second line - omitted for single-language reports). */
+export function statRow(items: { value: number | string; primary: string; secondary?: string }[]): string {
   return `<div class="stat-row">${items
     .map(
       (i) =>
-        `<div class="stat"><div class="sv">${escapeHtml(i.value)}</div><div class="sl"><b>${escapeHtml(i.primary)}</b><br>${escapeHtml(i.secondary)}</div></div>`,
+        `<div class="stat"><div class="sv">${escapeHtml(i.value)}</div><div class="sl"><b>${escapeHtml(i.primary)}</b>${i.secondary ? `<br>${escapeHtml(i.secondary)}` : ''}</div></div>`,
     )
     .join('')}</div>`;
 }
