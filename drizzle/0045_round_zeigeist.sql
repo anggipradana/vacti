@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS "pentest_credentials" (
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-ALTER TABLE "pentest_engines" ADD COLUMN "credential_id" uuid;--> statement-breakpoint
+ALTER TABLE "pentest_engines" ADD COLUMN IF NOT EXISTS "credential_id" uuid;--> statement-breakpoint
 DO $$ BEGIN
  ALTER TABLE "pentest_credentials" ADD CONSTRAINT "pentest_credentials_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;
 EXCEPTION
