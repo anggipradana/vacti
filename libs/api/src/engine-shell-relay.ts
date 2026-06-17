@@ -20,7 +20,8 @@ export type EngineFrame =
   | { type: 'start'; sessionId: string; kind: ShellKind; cols: number; rows: number; resume?: boolean }
   | { type: 'input'; sessionId: string; data: string }
   | { type: 'resize'; sessionId: string; cols: number; rows: number }
-  | { type: 'close'; sessionId: string };
+  | { type: 'close'; sessionId: string }
+  | { type: 'terminate'; sessionId: string };
 
 interface Session {
   id: string;
@@ -138,7 +139,8 @@ export function attachBrowser(sessionId: string, sink: (chunk: string) => void):
   return () => s.browserSinks.delete(sink);
 }
 
-/** Close a session: stop the PTY on the engine + drop it. Returns the captured transcript for the audit row. */
+/** Detach a session: drop the browser attachment but LEAVE the tmux-backed PTY running on the engine (the
+ *  operator can reopen to reattach). Returns the captured transcript for the audit row. */
 export function closeSession(sessionId: string): string {
   const s = reg.sessions.get(sessionId);
   if (!s) return '';
@@ -146,6 +148,17 @@ export function closeSession(sessionId: string): string {
   enqueue(s.engineId, { type: 'close', sessionId });
   const transcript = s.transcript;
   // Keep the row briefly so a late output post does not recreate sinks; drop after a tick.
+  reg.sessions.delete(sessionId);
+  return transcript;
+}
+
+/** Terminate a session: KILL the persistent tmux session on the engine for real. Returns the transcript. */
+export function terminateSession(sessionId: string): string {
+  const s = reg.sessions.get(sessionId);
+  if (!s) return '';
+  s.closed = true;
+  enqueue(s.engineId, { type: 'terminate', sessionId });
+  const transcript = s.transcript;
   reg.sessions.delete(sessionId);
   return transcript;
 }
