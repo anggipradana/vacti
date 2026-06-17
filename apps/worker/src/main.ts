@@ -1,4 +1,4 @@
-import { and, count, eq, inArray, isNull, lt, or, sql } from 'drizzle-orm';
+import { and, count, eq, gt, inArray, isNull, lt, or, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { loadEnv } from '@vacti/config';
 import { cronMatches, Severity, SEVERITY_LABEL, type SeverityValue } from '@vacti/core';
@@ -15,6 +15,8 @@ import {
   projects,
   extensionCategories,
   extensionSuffixRules,
+  pentestEngagements,
+  pentestEngines,
 } from '@vacti/db';
 import { createQueue } from '@vacti/queue';
 import { setGlobalDispatcher } from 'undici';
@@ -120,6 +122,55 @@ async function main(): Promise<void> {
         if (n) console.log(`[worker] watchdog failed ${n} lost queued scan(s)`);
       })
       .catch((err) => console.error('[worker] watchdog error (queued):', err));
+
+    // Pentest engagements reach a terminal state only when the engine POSTs /complete after a clean swarm
+    // exit. If the engine crashes (a flaky LLM/API socket drop, a killed process) it never calls /complete
+    // and the engagement sits 'running' forever - the run-state is driven by the OUTBOUND engine, not a
+    // local handler, so the scan watchdog above never sees it. Fail engagements stuck in an active state
+    // that NO live engine still drives: a heartbeating engine always reports its current_engagement_id, so
+    // "active for a while AND no engine claims it with a fresh heartbeat" means the engine is gone. The age
+    // gate (10 min) keeps a brief heartbeat gap from failing a healthy run.
+    const STUCK_ENGAGEMENT_MS = Number(process.env.PENTEST_STUCK_MS ?? 10 * 60 * 1000);
+    const ENGINE_FRESH_MS = 3 * 60 * 1000;
+    void db
+      .select({ id: pentestEngagements.id })
+      .from(pentestEngagements)
+      .where(
+        and(
+          inArray(pentestEngagements.status, ['claimed', 'running', 'tearing_down']),
+          lt(pentestEngagements.updatedAt, new Date(Date.now() - STUCK_ENGAGEMENT_MS)),
+        ),
+      )
+      .then(async (rows) => {
+        if (!rows.length) return;
+        // An engagement is still alive if SOME engine names it as current with a fresh heartbeat.
+        const live = await db
+          .select({ id: pentestEngines.currentEngagementId })
+          .from(pentestEngines)
+          .where(
+            and(
+              inArray(
+                pentestEngines.currentEngagementId,
+                rows.map((r) => r.id),
+              ),
+              gt(pentestEngines.lastHeartbeatAt, new Date(Date.now() - ENGINE_FRESH_MS)),
+            ),
+          );
+        const liveIds = new Set(live.map((l) => l.id).filter(Boolean));
+        const orphaned = rows.map((r) => r.id).filter((id) => !liveIds.has(id));
+        if (!orphaned.length) return;
+        await db
+          .update(pentestEngagements)
+          .set({ status: 'failed', finishedAt: new Date(), updatedAt: new Date() })
+          .where(
+            and(
+              inArray(pentestEngagements.id, orphaned),
+              inArray(pentestEngagements.status, ['claimed', 'running', 'tearing_down']),
+            ),
+          );
+        console.log(`[worker] watchdog failed ${orphaned.length} orphaned pentest engagement(s)`);
+      })
+      .catch((err) => console.error('[worker] watchdog error (pentest):', err));
   }, 60_000);
   watchdog.unref();
 
