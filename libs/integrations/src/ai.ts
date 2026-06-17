@@ -390,6 +390,80 @@ export function pentestReferences(findingClass: string): { title: string; url: s
   return [...(hit?.refs ?? []), owaspTop10, wstg];
 }
 
+/**
+ * Curated, representative CVSS 4.0 base metrics for a CONFIRMED, exploited instance of each web class
+ * (the engine confirms exploitation, so these reflect a working PoC, not a theoretical worst case). Used
+ * to give every finding a CVSS 4.0 vector + base score + qualitative rating in the report (matching a
+ * pro pentest report). Deterministic + curated (not AI-guessed) per class; the operator can refine.
+ */
+export function pentestCvss(findingClass: string): { vector: string; baseScore: number; severity: string } {
+  const c = (findingClass ?? '').toLowerCase();
+  const V = (vector: string, baseScore: number, severity: string) => ({ vector, baseScore, severity });
+  // CVSS:4.0/AV/AC/AT/PR/UI / VC:VI:VA (vuln system C/I/A) / SC:SI:SA (subsequent system C/I/A)
+  if (/(command|rce|exec\b|^os|deserial|ssti|template)/.test(c))
+    return V('CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:H/SC:H/SI:H/SA:H', 9.9, 'critical'); // RCE
+  if (/upload/.test(c)) return V('CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:H/VI:H/VA:H/SC:H/SI:H/SA:H', 9.4, 'critical'); // upload->RCE
+  if (/(sql|nosql)/.test(c))
+    return V('CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:N/SC:N/SI:N/SA:N', 9.3, 'critical');
+  if (/(inclusion|lfi|rfi|traversal|path)/.test(c))
+    return V('CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:N/VA:N/SC:N/SI:N/SA:N', 8.7, 'high');
+  if (/(default[-_ ]?cred|weak.*auth|auth.*bypass|brute)/.test(c))
+    return V('CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:N/SC:N/SI:N/SA:N', 8.7, 'high');
+  if (/(ssrf)/.test(c)) return V('CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:H/VI:N/VA:N/SC:L/SI:N/SA:N', 8.2, 'high');
+  if (/(idor|bola|broken.*access|bac|privilege)/.test(c))
+    return V('CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:H/VI:H/VA:N/SC:N/SI:N/SA:N', 8.7, 'high');
+  if (/(xxe)/.test(c)) return V('CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:N/VA:N/SC:L/SI:N/SA:N', 8.6, 'high');
+  if (/stored.*xss|xss.*stored/.test(c))
+    return V('CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:L/VI:L/VA:N/SC:H/SI:H/SA:N', 8.3, 'high');
+  if (/xss|cross-site scripting/.test(c))
+    return V('CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:P/VC:L/VI:L/VA:N/SC:L/SI:L/SA:N', 6.5, 'medium');
+  if (/csrf/.test(c)) return V('CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:A/VC:N/VI:H/VA:N/SC:N/SI:N/SA:N', 6.5, 'medium');
+  if (/cors/.test(c)) return V('CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:N/VA:N/SC:N/SI:N/SA:N', 6.9, 'medium');
+  if (/redirect/.test(c)) return V('CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:A/VC:N/VI:L/VA:N/SC:N/SI:L/SA:N', 4.3, 'medium');
+  if (/(host.*header|header.*inj)/.test(c))
+    return V('CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:L/VI:L/VA:N/SC:N/SI:N/SA:N', 5.3, 'medium');
+  if (/(business.*logic|logic)/.test(c))
+    return V('CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:L/VI:H/VA:N/SC:N/SI:N/SA:N', 6.8, 'medium');
+  // sensible default for an unspecified confirmed web finding
+  return V('CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:L/VI:L/VA:N/SC:N/SI:N/SA:N', 5.3, 'medium');
+}
+
+/** Parse a CVSS 4.0 vector string into human-readable metric labels (for the report's CVSS panel). */
+export function parseCvss4(vector: string): { label: string; value: string }[] {
+  const NAMES: Record<string, string> = {
+    AV: 'Attack Vector',
+    AC: 'Attack Complexity',
+    AT: 'Attack Requirements',
+    PR: 'Privileges Required',
+    UI: 'User Interaction',
+    VC: 'Confidentiality (VC)',
+    VI: 'Integrity (VI)',
+    VA: 'Availability (VA)',
+    SC: 'Subsequent Conf. (SC)',
+    SI: 'Subsequent Integ. (SI)',
+    SA: 'Subsequent Avail. (SA)',
+  };
+  const VALS: Record<string, Record<string, string>> = {
+    AV: { N: 'Network', A: 'Adjacent', L: 'Local', P: 'Physical' },
+    AC: { L: 'Low', H: 'High' },
+    AT: { N: 'None', P: 'Present' },
+    PR: { N: 'None', L: 'Low', H: 'High' },
+    UI: { N: 'None', P: 'Passive', A: 'Active' },
+    VC: { H: 'High', L: 'Low', N: 'None' },
+    VI: { H: 'High', L: 'Low', N: 'None' },
+    VA: { H: 'High', L: 'Low', N: 'None' },
+    SC: { H: 'High', L: 'Low', N: 'None' },
+    SI: { H: 'High', L: 'Low', N: 'None' },
+    SA: { H: 'High', L: 'Low', N: 'None' },
+  };
+  const out: { label: string; value: string }[] = [];
+  for (const part of (vector ?? '').split('/')) {
+    const [k, v] = part.split(':');
+    if (k && v && NAMES[k]) out.push({ label: NAMES[k], value: VALS[k]?.[v] ?? v });
+  }
+  return out;
+}
+
 /** Build a concrete provider via the Vercel AI SDK. Returns null when no key/config (graceful degrade). */
 export async function makeProvider(cfg: AiConfig): Promise<AiProvider | null> {
   try {
