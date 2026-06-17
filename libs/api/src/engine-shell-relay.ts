@@ -17,7 +17,7 @@ export type ShellKind = 'shell' | 'claude';
 
 /** A frame the engine pulls: start a PTY, feed it input, resize it, or kill it. */
 export type EngineFrame =
-  | { type: 'start'; sessionId: string; kind: ShellKind; cols: number; rows: number }
+  | { type: 'start'; sessionId: string; kind: ShellKind; cols: number; rows: number; resume?: boolean }
   | { type: 'input'; sessionId: string; data: string }
   | { type: 'resize'; sessionId: string; cols: number; rows: number }
   | { type: 'close'; sessionId: string };
@@ -71,6 +71,8 @@ export function openSession(opts: {
   openedBy: string;
   cols?: number;
   rows?: number;
+  /** claude only: spawn `claude --continue` to resume the engine's last Claude Code conversation. */
+  resume?: boolean;
 }): void {
   const s: Session = {
     id: opts.sessionId,
@@ -88,6 +90,7 @@ export function openSession(opts: {
     kind: opts.kind,
     cols: opts.cols ?? 120,
     rows: opts.rows ?? 30,
+    resume: opts.resume ?? false,
   });
 }
 

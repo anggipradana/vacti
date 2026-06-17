@@ -25,8 +25,10 @@ export async function POST(req: NextRequest): Promise<Response> {
     kind?: string;
     cols?: number;
     rows?: number;
+    resume?: boolean;
   };
   const kind: ShellKind = body.kind === 'claude' ? 'claude' : 'shell';
+  const resume = kind === 'claude' && body.resume === true;
   if (!body.engineId) return NextResponse.json({ error: 'engineId required' }, { status: 400 });
 
   const db = getDb();
@@ -37,11 +39,11 @@ export async function POST(req: NextRequest): Promise<Response> {
   await db
     .insert(pentestEngineShellSessions)
     .values({ id: sessionId, engineId: eng.engineId, kind, openedBy: user.id });
-  openSession({ sessionId, engineId: eng.engineId, kind, openedBy: user.id, cols: body.cols, rows: body.rows });
+  openSession({ sessionId, engineId: eng.engineId, kind, openedBy: user.id, cols: body.cols, rows: body.rows, resume });
   await recordAudit({
     actorId: user.id,
     action: 'pentest.engine.shell.open',
-    resource: `engine:${eng.engineId}:${kind}`,
+    resource: `engine:${eng.engineId}:${kind}${resume ? ':resume' : ''}`,
   });
   return NextResponse.json({ sessionId });
 }
