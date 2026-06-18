@@ -4,6 +4,19 @@ import type { ReportSettings, Signatory } from './types';
 
 const SEV_VAR = ['--sev-info', '--sev-low', '--sev-medium', '--sev-high', '--sev-critical'];
 
+/**
+ * Whether an evidence item should be SHOWN for a finding. For XSS findings the only trustworthy alert
+ * screenshot is the deterministic engine capture (evidence_key 'auto-*', a real rendered popup proven by
+ * the payload actually executing). Swarm-attached XSS screenshots have repeatedly been fabricated (pasted
+ * "alert" text on a real page), so hide non-auto SCREENSHOTS for XSS. Everything else passes: non-XSS
+ * findings, and non-screenshot evidence (request/response, command output) for XSS.
+ */
+export function showEvidence(findingClass: string | null | undefined, kind: string, evidenceKey: string): boolean {
+  const isXss = (findingClass ?? '').toLowerCase().includes('xss');
+  if (isXss && kind === 'screenshot' && !evidenceKey.startsWith('auto-')) return false;
+  return true;
+}
+
 export function sevClass(sev: number): string {
   return SEV_KEYS[Math.max(0, Math.min(4, sev))] ?? 'info';
 }
