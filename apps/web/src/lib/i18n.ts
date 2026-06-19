@@ -18,12 +18,14 @@ type Dict = Record<string, { en: string; id: string }>;
 // Translation table. Keys are dotted namespaces. Add entries as modules are localised; a missing key falls
 // back to the English text (or the key itself), so partial coverage degrades gracefully.
 const DICT: Dict = {
-  // Top navigation
-  'nav.dashboard': { en: 'Dashboard', id: 'Dasbor' },
+  // Top navigation. NOTE: established cybersecurity / industry terms stay in English in BOTH languages
+  // (Vulnerability Assessment, Attack Surface, Cyber Threat Intel, Pentest, VA) - translating them reads
+  // wrong to practitioners. Only generic UI terms are localised.
+  'nav.dashboard': { en: 'Dashboard', id: 'Dashboard' },
   'nav.targets': { en: 'Targets', id: 'Target' },
-  'nav.va': { en: 'Vulnerability Assessment', id: 'Penilaian Kerentanan' },
-  'nav.surface': { en: 'Attack Surface', id: 'Permukaan Serang' },
-  'nav.threat': { en: 'Cyber Threat Intel', id: 'Intel Ancaman Siber' },
+  'nav.va': { en: 'Vulnerability Assessment', id: 'Vulnerability Assessment' },
+  'nav.surface': { en: 'Attack Surface', id: 'Attack Surface' },
+  'nav.threat': { en: 'Cyber Threat Intel', id: 'Cyber Threat Intel' },
   'nav.pentest': { en: 'AI Pentest', id: 'AI Pentest' },
   'nav.reports': { en: 'Reports', id: 'Laporan' },
   'nav.settings': { en: 'Settings', id: 'Pengaturan' },
@@ -62,6 +64,31 @@ const DICT: Dict = {
   'finding.description': { en: 'Description', id: 'Deskripsi' },
   'finding.impact': { en: 'Business impact', id: 'Dampak bisnis' },
   'finding.remediation': { en: 'Remediation', id: 'Remediasi' },
+  // Findings table. Technical/status terms (Severity, Skill, Evidence, Accepted) kept in English.
+  'col.finding': { en: 'Finding', id: 'Temuan' },
+  'col.location': { en: 'Location', id: 'Lokasi' },
+  'col.severity': { en: 'Severity', id: 'Severity' },
+  'col.status': { en: 'Status', id: 'Status' },
+  'col.evidence': { en: 'Evidence', id: 'Evidence' },
+  'col.skill': { en: 'Skill', id: 'Skill' },
+  'col.review': { en: 'Review', id: 'Tinjau' },
+  'finding.noneYet': { en: 'None yet.', id: 'Belum ada.' },
+  'finding.cardTitle': { en: 'Findings', id: 'Findings' },
+  'finding.noneTitle': { en: 'No findings yet', id: 'Belum ada temuan' },
+  'finding.cardHint': {
+    en: 'Verified findings appear here as the swarm confirms them. Only accepted findings reach the report.',
+    id: 'Temuan terverifikasi muncul di sini saat swarm mengonfirmasinya. Hanya temuan accepted yang masuk laporan.',
+  },
+  'finding.accepted': { en: 'Accepted (shippable)', id: 'Accepted (siap dikirim)' },
+  'finding.acceptedHint': {
+    en: 'Verified by an independent agent or a human reviewer; these render in the report.',
+    id: 'Terverifikasi oleh agent independen atau peninjau manusia; ini muncul di laporan.',
+  },
+  'finding.needsReview': { en: 'Needs review (not shipped)', id: 'Perlu ditinjau (belum dikirim)' },
+  'finding.rejectedSummary': { en: 'rejected (kept for audit)', id: 'rejected (disimpan untuk audit)' },
+  'eng.reportEn': { en: 'Report EN', id: 'Report EN' },
+  'eng.reportId': { en: 'Report ID', id: 'Report ID' },
+  'eng.engagement': { en: 'engagement', id: 'engagement' },
 };
 
 /** Translate a key for a locale, with an optional explicit fallback (else the EN string, else the key). */
