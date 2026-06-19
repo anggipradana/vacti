@@ -102,3 +102,14 @@ export function t(locale: Locale, key: string, fallback?: string): string {
 export function makeT(locale: Locale): (key: string, fallback?: string) => string {
   return (key, fallback) => t(locale, key, fallback);
 }
+
+/**
+ * INLINE translator - no dictionary key needed: `tx(locale, 'Findings', 'Temuan')`. Use this for the bulk
+ * of page-body strings (it keeps the English + Indonesian side by side at the call site, which is easy to
+ * review and lets many pages be localised in parallel without touching a shared dictionary). RULE: keep
+ * established cybersecurity / industry terms in English in BOTH args (Vulnerability Assessment, Attack
+ * Surface, Cyber Threat Intel, Pentest, VA, CVE, SQLi/XSS/IDOR, severity levels) - only translate generic UI.
+ */
+export function tx(locale: Locale, en: string, id: string): string {
+  return locale === 'id' ? id : en;
+}

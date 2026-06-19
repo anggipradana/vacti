@@ -19,6 +19,8 @@ import { scans, targets, scanActivity, subdomains, endpoints, ports as portsTabl
 import { getDb } from '../../../../lib/db';
 import { getCurrentUser } from '../../../../lib/session';
 import { cancelScanAction, deleteScanAction } from '../../../../lib/recon-actions';
+import { getLocale } from '../../../../lib/locale';
+import { tx } from '../../../../lib/i18n';
 import AutoRefresh from './auto-refresh';
 import { VulnTable } from './vuln-table';
 import { RescanForm } from './rescan-form';
@@ -36,6 +38,7 @@ export default async function ScanDetail({
 }) {
   const user = await getCurrentUser();
   if (!user) redirect('/login');
+  const locale = await getLocale();
   const { id } = await params;
   const { compare, tab = 'endpoints' } = await searchParams;
   const db = getDb();
@@ -101,7 +104,7 @@ export default async function ScanDetail({
       <AutoRefresh terminal={terminal} />
       <div className="mb-6">
         <Link href="/scans" className="mb-3 inline-flex items-center gap-1 text-sm text-fg-muted hover:text-fg">
-          <ArrowLeft className="size-4" /> Scans
+          <ArrowLeft className="size-4" /> {tx(locale, 'Scans', 'Scan')}
         </Link>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
@@ -120,9 +123,9 @@ export default async function ScanDetail({
                   variant="outline"
                   size="sm"
                   className="text-danger hover:bg-danger/10"
-                  pendingText="Cancelling..."
+                  pendingText={tx(locale, 'Cancelling...', 'Membatalkan...')}
                 >
-                  Cancel scan
+                  {tx(locale, 'Cancel scan', 'Batalkan scan')}
                 </ActionSubmit>
               </ActionForm>
             ) : null}
@@ -130,12 +133,12 @@ export default async function ScanDetail({
               // A passive scan has no VA results: a VA PDF for it would document an assessment
               // that never ran. Its output lives on the Attack Surface page instead.
               <Button asChild variant="secondary" size="sm">
-                <Link href="/surface">View on Attack Surface</Link>
+                <Link href="/surface">{tx(locale, 'View on Attack Surface', 'Lihat di Attack Surface')}</Link>
               </Button>
             ) : (
               <Button asChild size="sm">
                 <a href={`/reports/va/${scan.id}?type=full`} target="_blank" rel="noopener noreferrer">
-                  Generate report
+                  {tx(locale, 'Generate report', 'Buat laporan')}
                 </a>
               </Button>
             )}
@@ -145,16 +148,20 @@ export default async function ScanDetail({
               <ActionForm
                 action={deleteScanAction}
                 redirectTo="/scans"
-                confirm="Delete this scan and all its results? This cannot be undone."
+                confirm={tx(
+                  locale,
+                  'Delete this scan and all its results? This cannot be undone.',
+                  'Hapus scan ini beserta seluruh hasilnya? Tindakan ini tidak dapat dibatalkan.',
+                )}
               >
                 <input type="hidden" name="id" value={scan.id} />
                 <ActionSubmit
                   size="sm"
                   variant="ghost"
                   className="text-danger hover:bg-danger/10"
-                  pendingText="Deleting..."
+                  pendingText={tx(locale, 'Deleting...', 'Menghapus...')}
                 >
-                  Delete scan
+                  {tx(locale, 'Delete scan', 'Hapus scan')}
                 </ActionSubmit>
               </ActionForm>
             ) : null}
@@ -176,10 +183,12 @@ export default async function ScanDetail({
             {siblings.length > 0 ? (
               <Form action={`/scans/${id}`} className="flex flex-wrap items-end gap-2">
                 <div className="space-y-1">
-                  <span className="text-xs font-medium text-fg-subtle">Compare with an earlier scan</span>
+                  <span className="text-xs font-medium text-fg-subtle">
+                    {tx(locale, 'Compare with an earlier scan', 'Bandingkan dengan scan sebelumnya')}
+                  </span>
                   <div className="flex items-center gap-2">
                     <Select name="compare" defaultValue={compare ?? ''} className="w-72">
-                      <option value="">Select a scan…</option>
+                      <option value="">{tx(locale, 'Select a scan…', 'Pilih scan…')}</option>
                       {siblings.map((s) => (
                         <option key={s.id} value={s.id}>
                           {new Date(s.createdAt).toISOString().slice(0, 16).replace('T', ' ')} · {s.status}
@@ -187,7 +196,7 @@ export default async function ScanDetail({
                       ))}
                     </Select>
                     <Button type="submit" variant="outline" size="sm">
-                      Compare
+                      {tx(locale, 'Compare', 'Bandingkan')}
                     </Button>
                   </div>
                 </div>
@@ -213,7 +222,7 @@ export default async function ScanDetail({
                     </div>
                     {d.added.length ? (
                       <div className="mt-1 truncate font-mono text-[11px] text-success" title={d.added.join('\n')}>
-                        new: {d.added.slice(0, 3).join(', ')}
+                        {tx(locale, 'new', 'baru')}: {d.added.slice(0, 3).join(', ')}
                         {d.added.length > 3 ? ` +${d.added.length - 3}` : ''}
                       </div>
                     ) : null}
@@ -222,7 +231,7 @@ export default async function ScanDetail({
               </div>
             ) : null}
 
-            {canScan ? <RescanForm scanId={scan.id} passive={scan.mode === 'passive'} /> : null}
+            {canScan ? <RescanForm scanId={scan.id} passive={scan.mode === 'passive'} locale={locale} /> : null}
           </CardContent>
         </Card>
       ) : null}
@@ -260,8 +269,8 @@ export default async function ScanDetail({
             <THead>
               <TR>
                 <TH>URL</TH>
-                <TH>Status</TH>
-                <TH>Title</TH>
+                <TH>{tx(locale, 'Status', 'Status')}</TH>
+                <TH>{tx(locale, 'Title', 'Judul')}</TH>
                 <TH>Tech</TH>
               </TR>
             </THead>
@@ -273,7 +282,7 @@ export default async function ScanDetail({
                   <TD className="max-w-xs truncate text-fg-muted">{e.title}</TD>
                   <TD>
                     <div className="flex flex-wrap gap-1">
-                      {e.isInteresting ? <Badge variant="danger">interesting</Badge> : null}
+                      {e.isInteresting ? <Badge variant="danger">{tx(locale, 'interesting', 'menarik')}</Badge> : null}
                       {e.isWordpress ? <Badge variant="accent">WordPress</Badge> : null}
                       {e.tech.slice(0, 3).map((t) => (
                         <Badge key={t} variant="outline">
@@ -297,7 +306,7 @@ export default async function ScanDetail({
                 </Badge>
               ))
             ) : (
-              <p className="text-sm text-fg-subtle">No open ports found.</p>
+              <p className="text-sm text-fg-subtle">{tx(locale, 'No open ports found.', 'Tidak ada port terbuka.')}</p>
             )}
           </div>
         </TabsContent>
@@ -311,7 +320,13 @@ export default async function ScanDetail({
                 </Badge>
               ))
             ) : (
-              <p className="text-sm text-fg-subtle">No subdomains (predefined or none discovered).</p>
+              <p className="text-sm text-fg-subtle">
+                {tx(
+                  locale,
+                  'No subdomains (predefined or none discovered).',
+                  'Tidak ada subdomain (sudah ditentukan atau tidak ditemukan).',
+                )}
+              </p>
             )}
           </div>
         </TabsContent>
@@ -321,6 +336,7 @@ export default async function ScanDetail({
             <VulnTable
               scanId={scan.id}
               canTriage={canTriage}
+              locale={locale}
               vulns={vulns.map((v) => ({
                 id: v.id,
                 name: v.name,
@@ -342,7 +358,9 @@ export default async function ScanDetail({
               }))}
             />
           ) : (
-            <p className="text-sm text-fg-subtle">No vulnerabilities found.</p>
+            <p className="text-sm text-fg-subtle">
+              {tx(locale, 'No vulnerabilities found.', 'Tidak ada vulnerability ditemukan.')}
+            </p>
           )}
         </TabsContent>
       </Tabs>

@@ -6,6 +6,7 @@ import { StatCard } from '../../../components/ui/stat-card';
 import { fetchKev, fetchEpss, fetchRansomwareLandscape } from '@vacti/threat-intel';
 import { scans, vulnerabilities } from '@vacti/db';
 import { getDb } from '../../../lib/db';
+import { tx, type Locale } from '../../../lib/i18n';
 import { RansomwareFeed } from './ransomware-feed';
 
 // Cache the intel feeds in Next's data cache (refresh hourly) so big files aren't refetched per render.
@@ -16,7 +17,7 @@ const cached = ((url: string) => fetch(url, { next: { revalidate: 3600 } })) as 
  * mirror) and the CISA Known-Exploited-Vulnerabilities catalog cross-referenced against this
  * project's own findings, with EPSS exploit-probability scores. All feeds degrade gracefully.
  */
-export async function CtiCards({ projectId }: { projectId: string }) {
+export async function CtiCards({ projectId, locale = 'en' }: { projectId: string; locale?: Locale }) {
   const db = getDb();
   const projectScans = await db.select({ id: scans.id }).from(scans).where(eq(scans.projectId, projectId));
   const scanIds = projectScans.map((s) => s.id);
@@ -72,7 +73,7 @@ export async function CtiCards({ projectId }: { projectId: string }) {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="flex items-center gap-2">
-            <Skull className="size-4 text-danger" /> Ransomware landscape
+            <Skull className="size-4 text-danger" /> {tx(locale, 'Ransomware landscape', 'Ransomware landscape')}
           </CardTitle>
           {ransomware.stats.lastUpdate ? (
             <span className="text-xs text-fg-subtle">{ransomware.stats.lastUpdate.slice(0, 10)}</span>
@@ -80,9 +81,9 @@ export async function CtiCards({ projectId }: { projectId: string }) {
         </CardHeader>
         <CardContent className="pt-0">
           <div className="mb-3 grid grid-cols-3 gap-2">
-            <StatCard label="Victims" value={ransomware.stats.victims.toLocaleString()} />
-            <StatCard label="Groups" value={ransomware.stats.groups} />
-            <StatCard label="ID victims" value={ransomware.indonesia.length} />
+            <StatCard label={tx(locale, 'Victims', 'Korban')} value={ransomware.stats.victims.toLocaleString()} />
+            <StatCard label={tx(locale, 'Groups', 'Grup')} value={ransomware.stats.groups} />
+            <StatCard label={tx(locale, 'ID victims', 'Korban ID')} value={ransomware.indonesia.length} />
           </div>
           {ransomware.topGroups.length ? (
             <div className="mb-3 flex flex-wrap gap-1.5">
@@ -93,8 +94,15 @@ export async function CtiCards({ projectId }: { projectId: string }) {
               ))}
             </div>
           ) : null}
-          <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-fg-subtle">Recently disclosed</div>
-          <RansomwareFeed victims={cappedVictims} countries={ransomware.countries} sectors={ransomware.sectors} />
+          <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-fg-subtle">
+            {tx(locale, 'Recently disclosed', 'Baru diungkap')}
+          </div>
+          <RansomwareFeed
+            victims={cappedVictims}
+            countries={ransomware.countries}
+            sectors={ransomware.sectors}
+            locale={locale}
+          />
         </CardContent>
       </Card>
 
@@ -102,15 +110,26 @@ export async function CtiCards({ projectId }: { projectId: string }) {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="flex items-center gap-2">
-            <ShieldAlert className="size-4 text-high" /> Known exploited (CISA KEV)
+            <ShieldAlert className="size-4 text-high" />{' '}
+            {tx(locale, 'Known exploited (CISA KEV)', 'Known exploited (CISA KEV)')}
           </CardTitle>
-          <span className="text-xs text-fg-subtle">{kev.size.toLocaleString()} in catalog</span>
+          <span className="text-xs text-fg-subtle">
+            {kev.size.toLocaleString()} {tx(locale, 'in catalog', 'di katalog')}
+          </span>
         </CardHeader>
         <CardContent className="pt-0">
           <p className="mb-2 text-sm text-fg-muted">
             {dedupKev.length === 0
-              ? "None of this project's findings are in the CISA KEV catalog."
-              : `${dedupKev.length} finding CVE(s) are actively exploited in the wild. Prioritise these.`}
+              ? tx(
+                  locale,
+                  "None of this project's findings are in the CISA KEV catalog.",
+                  'Tidak ada findings project ini yang ada di katalog CISA KEV.',
+                )
+              : tx(
+                  locale,
+                  `${dedupKev.length} finding CVE(s) are actively exploited in the wild. Prioritise these.`,
+                  `${dedupKev.length} CVE dari findings aktif dieksploitasi di dunia nyata. Prioritaskan ini.`,
+                )}
           </p>
           {dedupKev.length > 0 ? (
             <ul className="divide-y divide-border">

@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { tx, type Locale } from '../../../lib/i18n';
 import { Button } from '../../../components/ui/button';
 
 type ScanProgress = { id: string; status: string; stage: string | null };
@@ -11,7 +12,7 @@ type ScanProgress = { id: string; status: string; stage: string | null };
  * jumps to the VA Scans dashboard. On completion it reloads once to render the freshly discovered
  * IPs / URLs (a soft refresh does not re-apply the flight on this page).
  */
-export function PassiveReconRunner({ projectId }: { projectId: string }) {
+export function PassiveReconRunner({ projectId, locale = 'en' }: { projectId: string; locale?: Locale }) {
   const [state, setState] = React.useState<'idle' | 'running' | 'done' | 'error'>('idle');
   const [stage, setStage] = React.useState('');
   const [msg, setMsg] = React.useState('');
@@ -38,18 +39,22 @@ export function PassiveReconRunner({ projectId }: { projectId: string }) {
       const data = (await res.json()) as { ok?: boolean; scanIds?: string[]; error?: string };
       if (!data.ok) {
         setState('error');
-        setMsg(data.error === 'no_targets' ? 'Add a target first' : 'Could not start');
+        setMsg(
+          data.error === 'no_targets'
+            ? tx(locale, 'Add a target first', 'Tambahkan target dahulu')
+            : tx(locale, 'Could not start', 'Tidak dapat memulai'),
+        );
         return;
       }
       ids = data.scanIds ?? [];
       if (ids.length === 0) {
         setState('done');
-        setMsg('Nothing to run');
+        setMsg(tx(locale, 'Nothing to run', 'Tidak ada yang dijalankan'));
         return;
       }
     } catch {
       setState('error');
-      setMsg('Could not start');
+      setMsg(tx(locale, 'Could not start', 'Tidak dapat memulai'));
       return;
     }
 
@@ -64,7 +69,7 @@ export function PassiveReconRunner({ projectId }: { projectId: string }) {
         if (data.done) {
           if (timer.current) window.clearInterval(timer.current);
           setState('done');
-          setMsg('Done, loading results...');
+          setMsg(tx(locale, 'Done, loading results...', 'Selesai, memuat hasil...'));
           window.setTimeout(() => window.location.reload(), 1200);
         }
       } catch {
@@ -85,17 +90,19 @@ export function PassiveReconRunner({ projectId }: { projectId: string }) {
         onClick={start}
         data-testid="run-passive-recon"
       >
-        {state === 'running' ? 'Running...' : 'Run passive recon'}
+        {state === 'running'
+          ? tx(locale, 'Running...', 'Menjalankan...')
+          : tx(locale, 'Run passive recon', 'Jalankan passive recon')}
       </Button>
       {state === 'running' ? (
         <span className="flex items-center gap-2 text-xs text-fg-muted">
           <span className="inline-block h-1 w-24 overflow-hidden rounded-full bg-surface-3">
             <span className="block h-full w-1/2 animate-pulse rounded-full bg-accent" />
           </span>
-          {stage ? `stage: ${stage}` : 'queued...'}
+          {stage ? `${tx(locale, 'stage', 'tahap')}: ${stage}` : tx(locale, 'queued...', 'antri...')}
         </span>
       ) : null}
-      {state === 'done' ? <span className="text-xs text-success">{msg || 'Done'}</span> : null}
+      {state === 'done' ? <span className="text-xs text-success">{msg || tx(locale, 'Done', 'Selesai')}</span> : null}
       {state === 'error' ? <span className="text-xs text-danger">{msg}</span> : null}
     </div>
   );

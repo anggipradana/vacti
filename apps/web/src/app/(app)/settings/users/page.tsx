@@ -18,6 +18,8 @@ import {
   deleteUserAction,
   resetUserPasswordAction,
 } from '../../../../lib/actions';
+import { getLocale } from '../../../../lib/locale';
+import { tx } from '../../../../lib/i18n';
 
 export const dynamic = 'force-dynamic';
 
@@ -30,6 +32,7 @@ export default async function UsersSettingsPage({
   if (!me) redirect('/login');
   // SysAdmin-only page (requires modify_system_config).
   if (!userCan(me, Permission.ModifySystemConfig)) redirect('/dashboard');
+  const locale = await getLocale();
   const rows = await getDb().select().from(users).orderBy(desc(users.createdAt));
   const sp = await searchParams;
 
@@ -39,48 +42,52 @@ export default async function UsersSettingsPage({
         ok={sp.ok}
         error={sp.error}
         messages={{
-          invalid: 'Enter a valid email and a password of at least 8 characters.',
-          exists: 'A user with that email already exists.',
-          weak: 'Password must be at least 8 characters.',
+          invalid: tx(
+            locale,
+            'Enter a valid email and a password of at least 8 characters.',
+            'Masukkan email yang valid dan password minimal 8 karakter.',
+          ),
+          exists: tx(locale, 'A user with that email already exists.', 'Pengguna dengan email itu sudah ada.'),
+          weak: tx(locale, 'Password must be at least 8 characters.', 'Password minimal 8 karakter.'),
         }}
       />
       <Card className="mb-4">
         <CardHeader>
-          <CardTitle>Add user</CardTitle>
+          <CardTitle>{tx(locale, 'Add user', 'Tambah pengguna')}</CardTitle>
         </CardHeader>
         <CardContent className="pt-0">
           <form action={addUserAction} className="flex flex-wrap items-end gap-3">
             <div className="space-y-1.5">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">{tx(locale, 'Email', 'Email')}</Label>
               <Input id="email" name="email" type="email" placeholder="analyst@org.com" required className="w-56" />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">{tx(locale, 'Password', 'Password')}</Label>
               <Input
                 id="password"
                 name="password"
                 type="password"
-                placeholder="min 8 chars"
+                placeholder={tx(locale, 'min 8 chars', 'min 8 karakter')}
                 required
                 className="w-48"
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="newrole">Role</Label>
+              <Label htmlFor="newrole">{tx(locale, 'Role', 'Peran')}</Label>
               <Select id="newrole" name="role" defaultValue={Role.PenetrationTester} className="w-48">
                 <option value={Role.SysAdmin}>{ROLE_LABEL[Role.SysAdmin]}</option>
                 <option value={Role.PenetrationTester}>{ROLE_LABEL[Role.PenetrationTester]}</option>
                 <option value={Role.Auditor}>{ROLE_LABEL[Role.Auditor]}</option>
               </Select>
             </div>
-            <SubmitButton>Add user</SubmitButton>
+            <SubmitButton>{tx(locale, 'Add user', 'Tambah pengguna')}</SubmitButton>
           </form>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle>Users & roles</CardTitle>
+          <CardTitle>{tx(locale, 'Users & roles', 'Pengguna & peran')}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2 pt-0">
           {rows.map((u) => (
@@ -89,7 +96,7 @@ export default async function UsersSettingsPage({
                 <span className="font-medium">{u.email}</span>
                 {u.id === me.id ? (
                   <Badge variant="accent" className="ml-2">
-                    you
+                    {tx(locale, 'you', 'Anda')}
                   </Badge>
                 ) : null}
                 <div className="text-xs text-fg-subtle">{ROLE_LABEL[roleFromUser(u)]}</div>
@@ -103,7 +110,7 @@ export default async function UsersSettingsPage({
                     <option value={Role.Auditor}>{ROLE_LABEL[Role.Auditor]}</option>
                   </Select>
                   <SubmitButton size="sm" variant="outline">
-                    Save
+                    {tx(locale, 'Save', 'Simpan')}
                   </SubmitButton>
                 </form>
                 <form action={resetUserPasswordAction} className="flex items-center gap-2">
@@ -111,13 +118,13 @@ export default async function UsersSettingsPage({
                   <Input
                     name="password"
                     type="password"
-                    placeholder="New password"
+                    placeholder={tx(locale, 'New password', 'Password baru')}
                     required
                     minLength={8}
                     className="w-44"
                   />
                   <SubmitButton size="sm" variant="outline">
-                    Reset password
+                    {tx(locale, 'Reset password', 'Reset password')}
                   </SubmitButton>
                 </form>
                 {u.id !== me.id ? (
@@ -127,9 +134,13 @@ export default async function UsersSettingsPage({
                       size="sm"
                       variant="ghost"
                       className="text-danger hover:bg-danger/10"
-                      confirm={`Delete user ${u.email}? This cannot be undone.`}
+                      confirm={tx(
+                        locale,
+                        `Delete user ${u.email}? This cannot be undone.`,
+                        `Hapus pengguna ${u.email}? Tindakan ini tidak dapat dibatalkan.`,
+                      )}
                     >
-                      Delete
+                      {tx(locale, 'Delete', 'Hapus')}
                     </ConfirmButton>
                   </form>
                 ) : null}
@@ -139,8 +150,11 @@ export default async function UsersSettingsPage({
         </CardContent>
       </Card>
       <p className="mt-4 text-xs text-fg-subtle">
-        Auditor = read-only + reports. Penetration Tester = scans, results, targets, reports (no system config). System
-        Admin = everything, incl. integrations &amp; user roles.
+        {tx(
+          locale,
+          'Auditor = read-only + reports. Penetration Tester = scans, results, targets, reports (no system config). System Admin = everything, incl. integrations & user roles.',
+          'Auditor = baca-saja + laporan. Penetration Tester = scan, hasil, target, laporan (tanpa system config). System Admin = semuanya, termasuk integrasi & peran pengguna.',
+        )}
       </p>
     </>
   );

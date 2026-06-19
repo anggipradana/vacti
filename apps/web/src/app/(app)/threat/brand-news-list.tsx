@@ -12,6 +12,7 @@ import { Badge } from '../../../components/ui/badge';
 import { NewsStatusBadge } from '../../../components/ui/finding-status';
 import { AutoSubmitSelect } from '../../../components/ui/auto-submit-select';
 import { setBrandNewsStatusAction, bulkSetBrandNewsStatusByIdsAction } from '../../../lib/threat-actions';
+import { tx, type Locale } from '../../../lib/i18n';
 
 export interface BrandNewsItem {
   id: string;
@@ -51,6 +52,7 @@ function BrandSentiment({
   canTriage,
   onGenerate,
   onMark,
+  locale,
 }: {
   verdict: Verdict;
   loading: boolean;
@@ -58,6 +60,7 @@ function BrandSentiment({
   canTriage: boolean;
   onGenerate: () => void;
   onMark: (value: 'correct' | 'incorrect') => void;
+  locale: Locale;
 }) {
   const { sentiment, relevance, reason, feedback } = verdict;
 
@@ -74,7 +77,9 @@ function BrandSentiment({
           onClick={onGenerate}
         >
           {loading ? null : <Sparkles className="size-3.5" />}
-          {loading ? 'Analyzing sentiment…' : 'AI sentiment'}
+          {loading
+            ? tx(locale, 'Analyzing sentiment…', 'Menganalisis sentiment…')
+            : tx(locale, 'AI sentiment', 'AI sentiment')}
         </Button>
         {err ? <span className="text-xs text-danger">{err}</span> : null}
       </div>
@@ -89,7 +94,11 @@ function BrandSentiment({
       {relevance ? (
         <Badge
           variant={relevance === 'irrelevant' ? 'neutral' : 'accent'}
-          title="Is this headline actually about the brand?"
+          title={tx(
+            locale,
+            'Is this headline actually about the brand?',
+            'Apakah headline ini benar tentang brand ini?',
+          )}
         >
           {relevance}
         </Badge>
@@ -97,7 +106,7 @@ function BrandSentiment({
       {reason ? <span className="max-w-[26rem] truncate text-xs text-fg-subtle">{reason}</span> : null}
       {canTriage ? (
         <span className="flex items-center gap-1 text-xs text-fg-subtle">
-          <span>Correct?</span>
+          <span>{tx(locale, 'Correct?', 'Benar?')}</span>
           <button
             type="button"
             onClick={() => onMark('correct')}
@@ -135,7 +144,15 @@ const STATUS_OPTIONS = Object.entries(NEWS_STATUS_LABEL);
  * Brand monitoring headline list: text search, client status filter, checkbox multi-select for bulk
  * status, per-row instant status change, and AI sentiment (per-row + an "analyze all" bulk button).
  */
-export function BrandNewsList({ items, canTriage }: { items: BrandNewsItem[]; canTriage: boolean }) {
+export function BrandNewsList({
+  items,
+  canTriage,
+  locale = 'en',
+}: {
+  items: BrandNewsItem[];
+  canTriage: boolean;
+  locale?: Locale;
+}) {
   const [query, setQuery] = React.useState('');
   const [statusFilter, setStatusFilter] = React.useState('all');
   const [selected, setSelected] = React.useState<Set<string>>(new Set());
@@ -205,10 +222,16 @@ export function BrandNewsList({ items, canTriage }: { items: BrandNewsItem[]; ca
         }));
         return true;
       }
-      setErrIds((p) => ({ ...p, [id]: data.error === 'no_ai_provider' ? 'Set an AI provider first' : 'AI failed' }));
+      setErrIds((p) => ({
+        ...p,
+        [id]:
+          data.error === 'no_ai_provider'
+            ? tx(locale, 'Set an AI provider first', 'Atur AI provider terlebih dulu')
+            : tx(locale, 'AI failed', 'AI gagal'),
+      }));
       return false;
     } catch {
-      setErrIds((p) => ({ ...p, [id]: 'Request failed' }));
+      setErrIds((p) => ({ ...p, [id]: tx(locale, 'Request failed', 'Permintaan gagal') }));
       return false;
     } finally {
       setLoading(id, false);
@@ -285,13 +308,13 @@ export function BrandNewsList({ items, canTriage }: { items: BrandNewsItem[]; ca
               onChange={toggleAllFiltered}
               aria-label="Select all shown headlines"
             />
-            Select all
+            {tx(locale, 'Select all', 'Pilih semua')}
           </label>
         ) : null}
         <Input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search headlines (title, source)…"
+          placeholder={tx(locale, 'Search headlines (title, source)…', 'Cari headline (judul, source)…')}
           className="h-8 w-64 text-xs"
           aria-label="Search brand news"
         />
@@ -301,7 +324,7 @@ export function BrandNewsList({ items, canTriage }: { items: BrandNewsItem[]; ca
           className="h-8 w-36 text-xs"
           aria-label="Filter brand news by status"
         >
-          <option value="all">All statuses</option>
+          <option value="all">{tx(locale, 'All statuses', 'Semua status')}</option>
           {STATUS_OPTIONS.map(([val, label]) => (
             <option key={val} value={val}>
               {label}
@@ -309,14 +332,18 @@ export function BrandNewsList({ items, canTriage }: { items: BrandNewsItem[]; ca
           ))}
         </Select>
         <span className="text-xs text-fg-subtle">
-          {filtered.length} of {items.length}
+          {filtered.length} {tx(locale, 'of', 'dari')} {items.length}
         </span>
         {accuracy !== null ? (
           <Badge
             variant={accuracy >= 80 ? 'success' : accuracy >= 50 ? 'accent' : 'danger'}
-            title={`${correctCount} of ${rated.length} AI verdicts marked correct`}
+            title={tx(
+              locale,
+              `${correctCount} of ${rated.length} AI verdicts marked correct`,
+              `${correctCount} dari ${rated.length} verdict AI ditandai benar`,
+            )}
           >
-            AI accuracy {accuracy}% ({rated.length})
+            {tx(locale, 'AI accuracy', 'Akurasi AI')} {accuracy}% ({rated.length})
           </Badge>
         ) : null}
         {canTriage ? (
@@ -328,10 +355,16 @@ export function BrandNewsList({ items, canTriage }: { items: BrandNewsItem[]; ca
             loading={bulk.running}
             disabled={pendingCount === 0}
             onClick={generateAll}
-            title="Run AI sentiment for every shown headline that doesn't have one yet"
+            title={tx(
+              locale,
+              "Run AI sentiment for every shown headline that doesn't have one yet",
+              'Jalankan AI sentiment untuk setiap headline yang belum punya',
+            )}
           >
             {bulk.running ? null : <Sparkles className="size-3.5" />}
-            {bulk.running ? `Analyzing ${bulk.done}/${bulk.total}…` : `AI sentiment: all (${pendingCount})`}
+            {bulk.running
+              ? `${tx(locale, 'Analyzing', 'Menganalisis')} ${bulk.done}/${bulk.total}…`
+              : `${tx(locale, 'AI sentiment: all', 'AI sentiment: semua')} (${pendingCount})`}
           </Button>
         ) : null}
       </div>
@@ -347,10 +380,14 @@ export function BrandNewsList({ items, canTriage }: { items: BrandNewsItem[]; ca
           ))}
           <input type="hidden" name="status" value="dismissed" />
           <span className="text-xs text-fg-muted">
-            AI flagged {aiIrrelevantIds.length} headline(s) as not about this brand.
+            {tx(
+              locale,
+              `AI flagged ${aiIrrelevantIds.length} headline(s) as not about this brand.`,
+              `AI menandai ${aiIrrelevantIds.length} headline sebagai bukan tentang brand ini.`,
+            )}
           </span>
           <ActionSubmit size="sm" variant="outline" className="text-xs">
-            Dismiss AI-irrelevant ({aiIrrelevantIds.length})
+            {tx(locale, 'Dismiss AI-irrelevant', 'Singkirkan AI-irrelevant')} ({aiIrrelevantIds.length})
           </ActionSubmit>
         </ActionForm>
       ) : null}
@@ -364,25 +401,33 @@ export function BrandNewsList({ items, canTriage }: { items: BrandNewsItem[]; ca
           {selectedIds.map((id) => (
             <input key={id} type="hidden" name="ids" value={id} />
           ))}
-          <span className="text-xs font-medium">{selected.size} selected</span>
+          <span className="text-xs font-medium">
+            {selected.size} {tx(locale, 'selected', 'dipilih')}
+          </span>
           <Select name="status" defaultValue="reviewed" className="h-8 w-36 text-xs" aria-label="Bulk set status">
             {STATUS_OPTIONS.map(([val, label]) => (
               <option key={val} value={val}>
-                Set: {label}
+                {tx(locale, 'Set', 'Atur')}: {label}
               </option>
             ))}
           </Select>
           <ActionSubmit size="sm" variant="primary">
-            Apply to selected
+            {tx(locale, 'Apply to selected', 'Terapkan ke yang dipilih')}
           </ActionSubmit>
           <Button type="button" size="sm" variant="ghost" onClick={() => setSelected(new Set())}>
-            Clear
+            {tx(locale, 'Clear', 'Bersihkan')}
           </Button>
         </ActionForm>
       ) : null}
 
       {filtered.length === 0 ? (
-        <p className="py-2 text-sm text-fg-muted">No headlines match your search/filter.</p>
+        <p className="py-2 text-sm text-fg-muted">
+          {tx(
+            locale,
+            'No headlines match your search/filter.',
+            'Tidak ada headline yang cocok dengan pencarian/filter Anda.',
+          )}
+        </p>
       ) : (
         <ul className="divide-y divide-border">
           {filtered.map((n) => (
@@ -417,6 +462,7 @@ export function BrandNewsList({ items, canTriage }: { items: BrandNewsItem[]; ca
                     canTriage={canTriage}
                     onGenerate={() => void generateOne(n.id)}
                     onMark={(v) => void markOne(n.id, v)}
+                    locale={locale}
                   />
                 </div>
               </div>

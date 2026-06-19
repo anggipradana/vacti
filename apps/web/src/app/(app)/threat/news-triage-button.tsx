@@ -2,21 +2,30 @@
 
 import * as React from 'react';
 import { Button } from '../../../components/ui/button';
-
-const ERR: Record<string, string> = {
-  no_ai_provider: 'Set an AI provider + key first',
-  no_candidates: 'Nothing new to triage',
-  ai_failed: 'AI failed, try again',
-};
+import { tx, type Locale } from '../../../lib/i18n';
 
 /**
  * AI news-triage trigger via plain fetch: the AI call takes 10-30s, so a server action would be
  * reloaded through by the heavy /threat page before it returned (the result then looked like a
  * no-op). This awaits the result, then reloads once so the dismissed headlines drop out of view.
  */
-export function NewsTriageButton({ projectId, kind }: { projectId: string; kind: 'sector' | 'brand' }) {
+export function NewsTriageButton({
+  projectId,
+  kind,
+  locale = 'en',
+}: {
+  projectId: string;
+  kind: 'sector' | 'brand';
+  locale?: Locale;
+}) {
   const [loading, setLoading] = React.useState(false);
   const [msg, setMsg] = React.useState('');
+
+  const ERR: Record<string, string> = {
+    no_ai_provider: tx(locale, 'Set an AI provider + key first', 'Atur AI provider + key terlebih dulu'),
+    no_candidates: tx(locale, 'Nothing new to triage', 'Tidak ada yang baru untuk ditriase'),
+    ai_failed: tx(locale, 'AI failed, try again', 'AI gagal, coba lagi'),
+  };
 
   const run = async () => {
     if (loading) return;
@@ -33,10 +42,10 @@ export function NewsTriageButton({ projectId, kind }: { projectId: string; kind:
         window.location.reload();
         return; // keep the spinner during reload
       }
-      setMsg(ERR[data.error ?? ''] ?? 'Triage failed');
+      setMsg(ERR[data.error ?? ''] ?? tx(locale, 'Triage failed', 'Triase gagal'));
       setLoading(false);
     } catch {
-      setMsg('Request failed');
+      setMsg(tx(locale, 'Request failed', 'Permintaan gagal'));
       setLoading(false);
     }
   };
@@ -49,9 +58,15 @@ export function NewsTriageButton({ projectId, kind }: { projectId: string; kind:
         size="sm"
         loading={loading}
         onClick={run}
-        title="Auto-mark off-topic headlines as Irrelevant (learns from your past triage)"
+        title={tx(
+          locale,
+          'Auto-mark off-topic headlines as Irrelevant (learns from your past triage)',
+          'Tandai otomatis headline di luar topik sebagai Irrelevant (belajar dari triase Anda sebelumnya)',
+        )}
       >
-        {loading ? 'Analyzing…' : 'AI: filter irrelevant'}
+        {loading
+          ? tx(locale, 'Analyzing…', 'Menganalisis…')
+          : tx(locale, 'AI: filter irrelevant', 'AI: saring irrelevant')}
       </Button>
       {msg ? <span className="text-xs text-fg-subtle">{msg}</span> : null}
     </span>

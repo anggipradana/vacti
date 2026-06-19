@@ -8,20 +8,18 @@ import { ConfirmButton } from '../../../../components/ui/confirm-button';
 import { roleFromUser } from '@vacti/core';
 import { getCurrentUser } from '../../../../lib/session';
 import { changeOwnPasswordAction, changeOwnEmailAction, signOutEverywhereAction } from '../../../../lib/actions';
+import { getLocale } from '../../../../lib/locale';
+import { tx, type Locale } from '../../../../lib/i18n';
 
 export const dynamic = 'force-dynamic';
 
-const ERRORS: Record<string, string> = {
-  current: 'Current password is incorrect.',
-  weak: 'New password must be at least 8 characters.',
-  mismatch: 'New password and confirmation do not match.',
-  email: 'Enter a valid email.',
-  emailtaken: 'That email is already in use.',
-};
-
-const OK_MESSAGES: Record<string, string> = {
-  email: 'Email updated.',
-};
+const ERRORS = (locale: Locale): Record<string, string> => ({
+  current: tx(locale, 'Current password is incorrect.', 'Password saat ini salah.'),
+  weak: tx(locale, 'New password must be at least 8 characters.', 'Password baru minimal 8 karakter.'),
+  mismatch: tx(locale, 'New password and confirmation do not match.', 'Password baru dan konfirmasi tidak cocok.'),
+  email: tx(locale, 'Enter a valid email.', 'Masukkan email yang valid.'),
+  emailtaken: tx(locale, 'That email is already in use.', 'Email itu sudah digunakan.'),
+});
 
 export default async function AccountPage({
   searchParams,
@@ -30,20 +28,28 @@ export default async function AccountPage({
 }) {
   const user = await getCurrentUser();
   if (!user) redirect('/login');
+  const locale = await getLocale();
+  const errs = ERRORS(locale);
   const sp = await searchParams;
   // Email card owns email errors/ok; password card owns the rest. Keep banners on the right card.
   const isEmailScope = sp.error === 'email' || sp.error === 'emailtaken' || sp.ok === 'email';
-  const emailError = sp.error && isEmailScope ? (ERRORS[sp.error] ?? 'Could not update email.') : null;
-  const passwordError = sp.error && !isEmailScope ? (ERRORS[sp.error] ?? 'Could not update password.') : null;
-  const emailOk = sp.ok === 'email' ? OK_MESSAGES.email : null;
+  const emailError =
+    sp.error && isEmailScope
+      ? (errs[sp.error] ?? tx(locale, 'Could not update email.', 'Tidak dapat memperbarui email.'))
+      : null;
+  const passwordError =
+    sp.error && !isEmailScope
+      ? (errs[sp.error] ?? tx(locale, 'Could not update password.', 'Tidak dapat memperbarui password.'))
+      : null;
+  const emailOk = sp.ok === 'email' ? tx(locale, 'Email updated.', 'Email diperbarui.') : null;
   // Password success historically lands as ?ok=1 (any non-email ok value).
-  const passwordOk = sp.ok && sp.ok !== 'email' ? 'Password updated.' : null;
+  const passwordOk = sp.ok && sp.ok !== 'email' ? tx(locale, 'Password updated.', 'Password diperbarui.') : null;
 
   return (
     <div className="grid max-w-xl gap-6">
       <Card>
         <CardHeader>
-          <CardTitle>My account</CardTitle>
+          <CardTitle>{tx(locale, 'My account', 'Akun saya')}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2 pt-0 text-sm">
           <div className="flex items-center gap-2">
@@ -51,7 +57,7 @@ export default async function AccountPage({
             <span className="font-medium">{user.email}</span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-fg-muted">Role</span>
+            <span className="text-fg-muted">{tx(locale, 'Role', 'Peran')}</span>
             <Badge variant="neutral">{roleFromUser(user)}</Badge>
           </div>
         </CardContent>
@@ -59,7 +65,7 @@ export default async function AccountPage({
 
       <Card>
         <CardHeader>
-          <CardTitle>Email</CardTitle>
+          <CardTitle>{tx(locale, 'Email', 'Email')}</CardTitle>
         </CardHeader>
         <CardContent className="pt-0">
           {emailOk ? (
@@ -74,17 +80,17 @@ export default async function AccountPage({
           ) : null}
           <form action={changeOwnEmailAction} className="space-y-4">
             <div className="space-y-1.5">
-              <Label htmlFor="email">Email address</Label>
+              <Label htmlFor="email">{tx(locale, 'Email address', 'Alamat email')}</Label>
               <Input id="email" name="email" type="email" autoComplete="email" defaultValue={user.email} required />
             </div>
-            <SubmitButton>Save</SubmitButton>
+            <SubmitButton>{tx(locale, 'Save', 'Simpan')}</SubmitButton>
           </form>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle>Change password</CardTitle>
+          <CardTitle>{tx(locale, 'Change password', 'Ubah password')}</CardTitle>
         </CardHeader>
         <CardContent className="pt-0">
           {passwordOk ? (
@@ -99,33 +105,44 @@ export default async function AccountPage({
           ) : null}
           <form action={changeOwnPasswordAction} className="space-y-4">
             <div className="space-y-1.5">
-              <Label htmlFor="current">Current password</Label>
+              <Label htmlFor="current">{tx(locale, 'Current password', 'Password saat ini')}</Label>
               <Input id="current" name="current" type="password" autoComplete="current-password" required />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="next">New password</Label>
+              <Label htmlFor="next">{tx(locale, 'New password', 'Password baru')}</Label>
               <Input id="next" name="next" type="password" autoComplete="new-password" minLength={8} required />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="confirm">Confirm new password</Label>
+              <Label htmlFor="confirm">{tx(locale, 'Confirm new password', 'Konfirmasi password baru')}</Label>
               <Input id="confirm" name="confirm" type="password" autoComplete="new-password" minLength={8} required />
             </div>
-            <SubmitButton>Update password</SubmitButton>
+            <SubmitButton>{tx(locale, 'Update password', 'Perbarui password')}</SubmitButton>
           </form>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle>Sessions</CardTitle>
+          <CardTitle>{tx(locale, 'Sessions', 'Sesi')}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3 pt-0">
           <p className="text-sm text-fg-muted">
-            Revoke every active session across all devices. You will be signed out here too.
+            {tx(
+              locale,
+              'Revoke every active session across all devices. You will be signed out here too.',
+              'Cabut semua sesi aktif di seluruh perangkat. Anda juga akan keluar di sini.',
+            )}
           </p>
           <form action={signOutEverywhereAction}>
-            <ConfirmButton variant="destructive" confirm="Sign out of all sessions, including this one?">
-              Sign out of all devices
+            <ConfirmButton
+              variant="destructive"
+              confirm={tx(
+                locale,
+                'Sign out of all sessions, including this one?',
+                'Keluar dari semua sesi, termasuk yang ini?',
+              )}
+            >
+              {tx(locale, 'Sign out of all devices', 'Keluar dari semua perangkat')}
             </ConfirmButton>
           </form>
         </CardContent>

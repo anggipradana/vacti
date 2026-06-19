@@ -21,6 +21,8 @@ import { getCurrentUser } from '../../../lib/session';
 import { createTargetAction, editTargetAction, deleteTargetAction } from '../../../lib/recon-actions';
 import { ProjectSwitcher } from '../../../components/project-switcher';
 import { getActiveProjectId } from '../../../lib/active-project';
+import { getLocale } from '../../../lib/locale';
+import { tx } from '../../../lib/i18n';
 
 export const dynamic = 'force-dynamic';
 
@@ -33,6 +35,7 @@ export default async function TargetsPage({
 }) {
   const user = await getCurrentUser();
   if (!user) redirect('/login');
+  const locale = await getLocale();
   const db = getDb();
   const sp = await searchParams;
   const page = Math.max(1, Number(sp.tpage ?? 1) || 1);
@@ -56,21 +59,31 @@ export default async function TargetsPage({
   return (
     <>
       <PageHeader
-        title="Targets"
-        description="Domains and organisations to assess. Predefined subdomains skip discovery."
+        title={tx(locale, 'Targets', 'Target')}
+        description={tx(
+          locale,
+          'Domains and organisations to assess. Predefined subdomains skip discovery.',
+          'Domain dan organisasi untuk dinilai. Subdomain yang sudah ditentukan melewati discovery.',
+        )}
         actions={<ProjectSwitcher projects={projectRows} current={projectId} basePath="/targets" />}
       />
       <FormBanner
         ok={sp.ok}
         error={sp.error}
-        messages={{ invalid: 'Enter a valid domain (and select a project) before adding a target.' }}
+        messages={{
+          invalid: tx(
+            locale,
+            'Enter a valid domain (and select a project) before adding a target.',
+            'Masukkan domain yang valid (dan pilih proyek) sebelum menambahkan target.',
+          ),
+        }}
       />
       <div className="grid gap-6 lg:grid-cols-[360px_1fr]">
         <Card>
           <CardContent className="pt-5">
             <form action={createTargetAction} className="space-y-4">
               <div className="space-y-1.5">
-                <Label htmlFor="projectId">Project</Label>
+                <Label htmlFor="projectId">{tx(locale, 'Project', 'Proyek')}</Label>
                 <Select id="projectId" name="projectId" data-testid="target-project" defaultValue={projectId} required>
                   {projectRows.map((p) => (
                     <option key={p.id} value={p.id}>
@@ -80,21 +93,27 @@ export default async function TargetsPage({
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="domain">Domain</Label>
+                <Label htmlFor="domain">{tx(locale, 'Domain', 'Domain')}</Label>
                 <Input id="domain" name="domain" data-testid="target-domain" placeholder="example.com" required />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="subs">Predefined subdomains</Label>
+                <Label htmlFor="subs">{tx(locale, 'Predefined subdomains', 'Subdomain yang ditentukan')}</Label>
                 <Input
                   id="subs"
                   name="predefinedSubdomains"
                   data-testid="target-subs"
                   placeholder="a.example.com b.example.com"
                 />
-                <p className="text-xs text-fg-subtle">Space or comma separated. Skips subfinder when set.</p>
+                <p className="text-xs text-fg-subtle">
+                  {tx(
+                    locale,
+                    'Space or comma separated. Skips subfinder when set.',
+                    'Dipisahkan spasi atau koma. Melewati subfinder jika diisi.',
+                  )}
+                </p>
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="headers">Custom request headers</Label>
+                <Label htmlFor="headers">{tx(locale, 'Custom request headers', 'Header request kustom')}</Label>
                 <Textarea
                   id="headers"
                   name="customHeaders"
@@ -102,18 +121,30 @@ export default async function TargetsPage({
                   placeholder={'Authorization: Bearer …\nX-Api-Key: …'}
                 />
                 <p className="text-xs text-fg-subtle">
-                  One per line as &quot;Key: value&quot;. Sent by httpx &amp; nuclei.
+                  {tx(
+                    locale,
+                    'One per line as "Key: value". Sent by httpx & nuclei.',
+                    'Satu per baris sebagai "Key: value". Dikirim oleh httpx & nuclei.',
+                  )}
                 </p>
               </div>
-              <SubmitButton data-testid="create-target" className="w-full" pendingText="Adding…">
-                Add target
+              <SubmitButton
+                data-testid="create-target"
+                className="w-full"
+                pendingText={tx(locale, 'Adding…', 'Menambahkan…')}
+              >
+                {tx(locale, 'Add target', 'Tambah target')}
               </SubmitButton>
             </form>
           </CardContent>
         </Card>
         <div data-testid="target-list" className="space-y-2">
           {targetRows.length === 0 ? (
-            <EmptyState icon={<Crosshair />} title="No targets yet" description="Add a domain to scan." />
+            <EmptyState
+              icon={<Crosshair />}
+              title={tx(locale, 'No targets yet', 'Belum ada target')}
+              description={tx(locale, 'Add a domain to scan.', 'Tambahkan domain untuk discan.')}
+            />
           ) : (
             targetRows.map((t) => (
               <Card key={t.id}>
@@ -123,11 +154,13 @@ export default async function TargetsPage({
                       {t.domain}
                     </Link>
                     <div className="flex items-center gap-2">
-                      {t.customHeaders ? <Badge variant="neutral">custom headers</Badge> : null}
+                      {t.customHeaders ? (
+                        <Badge variant="neutral">{tx(locale, 'custom headers', 'header kustom')}</Badge>
+                      ) : null}
                       <Badge variant={t.predefinedSubdomains.length ? 'accent' : 'neutral'}>
                         {t.predefinedSubdomains.length
-                          ? `${t.predefinedSubdomains.length} predefined subs`
-                          : 'discovery on'}
+                          ? `${t.predefinedSubdomains.length} ${tx(locale, 'predefined subs', 'subdomain ditentukan')}`
+                          : tx(locale, 'discovery on', 'discovery aktif')}
                       </Badge>
                       {userCan(user, Permission.ModifyTargets) ? (
                         <form action={deleteTargetAction}>
@@ -136,9 +169,13 @@ export default async function TargetsPage({
                             size="sm"
                             variant="ghost"
                             className="text-danger hover:bg-danger/10"
-                            confirm={`Delete target ${t.domain} and all its scans/results? This cannot be undone.`}
+                            confirm={tx(
+                              locale,
+                              `Delete target ${t.domain} and all its scans/results? This cannot be undone.`,
+                              `Hapus target ${t.domain} dan semua scan/hasilnya? Ini tidak bisa dibatalkan.`,
+                            )}
                           >
-                            Delete
+                            {tx(locale, 'Delete', 'Hapus')}
                           </ConfirmButton>
                         </form>
                       ) : null}
@@ -146,15 +183,19 @@ export default async function TargetsPage({
                   </div>
                   {userCan(user, Permission.ModifyTargets) ? (
                     <details className="mt-3">
-                      <summary className="cursor-pointer text-xs text-fg-muted hover:text-fg">Edit</summary>
+                      <summary className="cursor-pointer text-xs text-fg-muted hover:text-fg">
+                        {tx(locale, 'Edit', 'Ubah')}
+                      </summary>
                       <form action={editTargetAction} className="mt-3 space-y-3">
                         <input type="hidden" name="id" value={t.id} />
                         <div className="space-y-1.5">
-                          <Label htmlFor={`domain-${t.id}`}>Domain</Label>
+                          <Label htmlFor={`domain-${t.id}`}>{tx(locale, 'Domain', 'Domain')}</Label>
                           <Input id={`domain-${t.id}`} name="domain" defaultValue={t.domain} required />
                         </div>
                         <div className="space-y-1.5">
-                          <Label htmlFor={`subs-${t.id}`}>Predefined subdomains</Label>
+                          <Label htmlFor={`subs-${t.id}`}>
+                            {tx(locale, 'Predefined subdomains', 'Subdomain yang ditentukan')}
+                          </Label>
                           <Input
                             id={`subs-${t.id}`}
                             name="predefinedSubdomains"
@@ -163,7 +204,9 @@ export default async function TargetsPage({
                           />
                         </div>
                         <div className="space-y-1.5">
-                          <Label htmlFor={`headers-${t.id}`}>Custom request headers</Label>
+                          <Label htmlFor={`headers-${t.id}`}>
+                            {tx(locale, 'Custom request headers', 'Header request kustom')}
+                          </Label>
                           <Textarea
                             id={`headers-${t.id}`}
                             name="customHeaders"
@@ -174,8 +217,8 @@ export default async function TargetsPage({
                             placeholder={'Authorization: Bearer …\nX-Api-Key: …'}
                           />
                         </div>
-                        <SubmitButton size="sm" pendingText="Saving…">
-                          Save changes
+                        <SubmitButton size="sm" pendingText={tx(locale, 'Saving…', 'Menyimpan…')}>
+                          {tx(locale, 'Save changes', 'Simpan perubahan')}
                         </SubmitButton>
                       </form>
                     </details>
@@ -188,7 +231,7 @@ export default async function TargetsPage({
             page={page}
             totalPages={totalPages}
             total={total}
-            label="targets"
+            label={tx(locale, 'targets', 'target')}
             makeHref={(p) => '/targets?project=' + projectId + '&tpage=' + p}
           />
         </div>

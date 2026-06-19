@@ -47,6 +47,8 @@ import { getDb } from '../../../lib/db';
 import { getCurrentUser } from '../../../lib/session';
 import { ProjectSwitcher } from '../../../components/project-switcher';
 import { getActiveProjectId } from '../../../lib/active-project';
+import { getLocale } from '../../../lib/locale';
+import { tx } from '../../../lib/i18n';
 import { RansomwareHighlight, RansomwareHighlightFallback } from './cti-overview';
 
 export const dynamic = 'force-dynamic';
@@ -54,6 +56,7 @@ export const dynamic = 'force-dynamic';
 export default async function Dashboard({ searchParams }: { searchParams: Promise<{ project?: string }> }) {
   const user = await getCurrentUser();
   if (!user) redirect('/login');
+  const locale = await getLocale();
   const db = getDb();
   const projectRows = await db.select().from(projects).orderBy(desc(projects.createdAt));
   const projectId = await getActiveProjectId((await searchParams).project, projectRows);
@@ -252,13 +255,13 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
   return (
     <>
       <PageHeader
-        title="Overview"
-        description={`Signed in as ${user.email}${user.isSysAdmin ? ' · SysAdmin' : ''}`}
+        title={tx(locale, 'Overview', 'Ikhtisar')}
+        description={`${tx(locale, 'Signed in as', 'Masuk sebagai')} ${user.email}${user.isSysAdmin ? ' · SysAdmin' : ''}`}
         actions={
           <div className="flex items-center gap-2">
             <ProjectSwitcher projects={projectRows} current={projectId} basePath="/dashboard" />
             <Button asChild>
-              <Link href="/scans">New scan</Link>
+              <Link href="/scans">{tx(locale, 'New scan', 'Scan baru')}</Link>
             </Button>
           </div>
         }
@@ -268,7 +271,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
       {targetRows.length === 0 || scanRows.length === 0 ? (
         <Card className="mb-6 border-accent/40 bg-accent/5">
           <CardHeader>
-            <CardTitle>Get started</CardTitle>
+            <CardTitle>{tx(locale, 'Get started', 'Mulai')}</CardTitle>
           </CardHeader>
           <CardContent className="pt-0">
             <ol className="space-y-2 text-sm">
@@ -276,10 +279,12 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
                 <span className="flex size-5 items-center justify-center rounded-full bg-accent/20 text-xs font-semibold">
                   1
                 </span>
-                <span className={targetRows.length ? 'text-fg-subtle line-through' : ''}>Create a project</span>
+                <span className={targetRows.length ? 'text-fg-subtle line-through' : ''}>
+                  {tx(locale, 'Create a project', 'Buat proyek')}
+                </span>
                 {targetRows.length === 0 ? (
                   <Link href="/settings/projects" className="text-accent hover:underline">
-                    → Projects
+                    → {tx(locale, 'Projects', 'Proyek')}
                   </Link>
                 ) : null}
               </li>
@@ -287,10 +292,12 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
                 <span className="flex size-5 items-center justify-center rounded-full bg-accent/20 text-xs font-semibold">
                   2
                 </span>
-                <span className={targetRows.length ? 'text-fg-subtle line-through' : ''}>Add a target</span>
+                <span className={targetRows.length ? 'text-fg-subtle line-through' : ''}>
+                  {tx(locale, 'Add a target', 'Tambah target')}
+                </span>
                 {targetRows.length === 0 ? (
                   <Link href="/targets" className="text-accent hover:underline">
-                    → Targets
+                    → {tx(locale, 'Targets', 'Target')}
                   </Link>
                 ) : null}
               </li>
@@ -298,10 +305,12 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
                 <span className="flex size-5 items-center justify-center rounded-full bg-accent/20 text-xs font-semibold">
                   3
                 </span>
-                <span className={scanRows.length ? 'text-fg-subtle line-through' : ''}>Run your first scan</span>
+                <span className={scanRows.length ? 'text-fg-subtle line-through' : ''}>
+                  {tx(locale, 'Run your first scan', 'Jalankan scan pertama Anda')}
+                </span>
                 {targetRows.length > 0 && scanRows.length === 0 ? (
                   <Link href="/scans" className="text-accent hover:underline">
-                    → Scans
+                    → {tx(locale, 'Scans', 'Scan')}
                   </Link>
                 ) : null}
               </li>
@@ -309,7 +318,9 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
                 <span className="flex size-5 items-center justify-center rounded-full bg-accent/20 text-xs font-semibold">
                   4
                 </span>
-                <span className="text-fg-muted">Generate a report from the scan detail</span>
+                <span className="text-fg-muted">
+                  {tx(locale, 'Generate a report from the scan detail', 'Buat laporan dari detail scan')}
+                </span>
               </li>
             </ol>
           </CardContent>
@@ -318,15 +329,24 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
 
       {/* Metric tiles */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
-        <StatCard label="Targets" value={targetRows.length} icon={<Crosshair />} testId="stat-targets" />
-        <StatCard label="Scans" value={scanRows.length} icon={<Radar />} />
-        <StatCard label="Live endpoints" value={endpointCount} icon={<Globe />} />
+        <StatCard
+          label={tx(locale, 'Targets', 'Target')}
+          value={targetRows.length}
+          icon={<Crosshair />}
+          testId="stat-targets"
+        />
+        <StatCard label={tx(locale, 'Scans', 'Scan')} value={scanRows.length} icon={<Radar />} />
+        <StatCard label={tx(locale, 'Live endpoints', 'Endpoint aktif')} value={endpointCount} icon={<Globe />} />
         <StatCard label="Vulnerabilities" value={vulnRows.length} icon={<ShieldAlert />} />
         <Link href="/surface">
           <StatCard label="Passive subdomains" value={passiveSubdomains} icon={<RadarIcon />} />
         </Link>
         <Link href="/surface">
-          <StatCard label="Exposure findings" value={exposureFindingsCount} icon={<KeyRound />} />
+          <StatCard
+            label={tx(locale, 'Exposure findings', 'Temuan exposure')}
+            value={exposureFindingsCount}
+            icon={<KeyRound />}
+          />
         </Link>
       </div>
 
@@ -334,20 +354,44 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
       <Card className="mt-4">
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="flex items-center gap-2">
-            <ShieldAlert className="size-4 text-accent" /> Needs review
+            <ShieldAlert className="size-4 text-accent" /> {tx(locale, 'Needs review', 'Perlu ditinjau')}
           </CardTitle>
-          <Badge variant={reviewTotal > 0 ? 'accent' : 'neutral'}>{reviewTotal} pending</Badge>
+          <Badge variant={reviewTotal > 0 ? 'accent' : 'neutral'}>
+            {reviewTotal} {tx(locale, 'pending', 'menunggu')}
+          </Badge>
         </CardHeader>
         <CardContent>
           {reviewTotal === 0 ? (
-            <p className="py-1 text-sm text-fg-muted">Nothing pending - all findings, leaks and news are triaged. 🎉</p>
+            <p className="py-1 text-sm text-fg-muted">
+              {tx(
+                locale,
+                'Nothing pending - all findings, leaks and news are triaged. 🎉',
+                'Tidak ada yang menunggu - semua temuan, kebocoran, dan berita sudah ditriase. 🎉',
+              )}
+            </p>
           ) : (
             <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
               {[
-                { label: 'Open vulnerabilities', count: reviewVulns, href: `/scans?project=${projectId}` },
-                { label: 'New leaked creds', count: reviewLeaks, href: `/threat?project=${projectId}&leak=new` },
-                { label: 'New sector news', count: reviewNews, href: `/threat?project=${projectId}&news=new` },
-                { label: 'New brand news', count: reviewBrand, href: `/threat?project=${projectId}&bnews=new` },
+                {
+                  label: tx(locale, 'Open vulnerabilities', 'Vulnerability terbuka'),
+                  count: reviewVulns,
+                  href: `/scans?project=${projectId}`,
+                },
+                {
+                  label: tx(locale, 'New leaked creds', 'Kredensial bocor baru'),
+                  count: reviewLeaks,
+                  href: `/threat?project=${projectId}&leak=new`,
+                },
+                {
+                  label: tx(locale, 'New sector news', 'Berita sektor baru'),
+                  count: reviewNews,
+                  href: `/threat?project=${projectId}&news=new`,
+                },
+                {
+                  label: tx(locale, 'New brand news', 'Berita brand baru'),
+                  count: reviewBrand,
+                  href: `/threat?project=${projectId}&bnews=new`,
+                },
               ].map((r) => (
                 <Link
                   key={r.label}
@@ -366,13 +410,19 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
       </Card>
 
       {/* Modules */}
-      <h2 className="mb-3 mt-8 font-display text-sm font-semibold uppercase tracking-wider text-fg-subtle">Modules</h2>
+      <h2 className="mb-3 mt-8 font-display text-sm font-semibold uppercase tracking-wider text-fg-subtle">
+        {tx(locale, 'Modules', 'Modul')}
+      </h2>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <ModuleCard
           hue="204 90% 50%"
           icon={<RadarIcon />}
           title="Vulnerability Assessment"
-          description="subfinder · httpx · naabu · nuclei recon pipeline."
+          description={tx(
+            locale,
+            'subfinder · httpx · naabu · nuclei recon pipeline.',
+            'Pipeline recon subfinder · httpx · naabu · nuclei.',
+          )}
           href="/scans"
           status="live"
         />
@@ -380,23 +430,35 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
           hue="262 70% 62%"
           icon={<ShieldCheck />}
           title="Cyber Threat Intelligence"
-          description="OTX, LeakCheck, indicators & unified risk score."
+          description={tx(
+            locale,
+            'OTX, LeakCheck, indicators & unified risk score.',
+            'OTX, LeakCheck, indikator & skor risiko terpadu.',
+          )}
           href="/threat"
           status="live"
         />
         <ModuleCard
           hue="160 70% 42%"
           icon={<FileText />}
-          title="Reports"
-          description="Bilingual VA & TI PDF reports - generate from any scan."
+          title={tx(locale, 'Reports', 'Laporan')}
+          description={tx(
+            locale,
+            'Bilingual VA & TI PDF reports - generate from any scan.',
+            'Laporan PDF VA & TI dwibahasa - buat dari scan mana pun.',
+          )}
           href="/scans"
           status="live"
         />
         <ModuleCard
           hue="35 92% 52%"
           icon={<Plug />}
-          title="API & Integrations"
-          description="REST API tokens, webhooks & AI enrichment."
+          title={tx(locale, 'API & Integrations', 'API & Integrasi')}
+          description={tx(
+            locale,
+            'REST API tokens, webhooks & AI enrichment.',
+            'Token REST API, webhook & pengayaan AI.',
+          )}
           href="/settings/tokens"
           status="live"
         />
@@ -406,7 +468,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
       <div className="mt-8 grid gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-1">
           <CardHeader>
-            <CardTitle>Severity breakdown</CardTitle>
+            <CardTitle>{tx(locale, 'Severity breakdown', 'Rincian severity')}</CardTitle>
           </CardHeader>
           <CardContent>
             <SeverityDonut counts={severityCounts} />
@@ -414,7 +476,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
         </Card>
         <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle>Scans · last 7 days</CardTitle>
+            <CardTitle>{tx(locale, 'Scans · last 7 days', 'Scan · 7 hari terakhir')}</CardTitle>
           </CardHeader>
           <CardContent>
             <TrendArea data={days} />
@@ -425,7 +487,9 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
       {discoveryEver > 0 ? (
         <Card className="mt-4">
           <CardHeader>
-            <CardTitle>URL discovery · last 14 days (passive)</CardTitle>
+            <CardTitle>
+              {tx(locale, 'URL discovery · last 14 days (passive)', 'Penemuan URL · 14 hari terakhir (pasif)')}
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <TrendArea data={discoveryDays} />
@@ -437,7 +501,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
       {vulnRows.length > 0 ? (
         <Card className="mt-6">
           <CardHeader>
-            <CardTitle>VA review status</CardTitle>
+            <CardTitle>{tx(locale, 'VA review status', 'Status review VA')}</CardTitle>
           </CardHeader>
           <CardContent className="pt-0">
             <div className="flex flex-wrap gap-2">
@@ -465,16 +529,18 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
       {/* CTI overview - unified risk, leaked credentials & ransomware highlight for this project. */}
       <div className="mb-3 mt-8 flex items-center justify-between">
         <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-fg-subtle">
-          Threat intelligence
+          {tx(locale, 'Threat intelligence', 'Threat Intelligence')}
         </h2>
         <Button asChild variant="ghost" size="sm">
-          <Link href={projectId ? `/threat?project=${projectId}` : '/threat'}>Open CTI →</Link>
+          <Link href={projectId ? `/threat?project=${projectId}` : '/threat'}>
+            {tx(locale, 'Open CTI →', 'Buka CTI →')}
+          </Link>
         </Button>
       </div>
       <div className="grid gap-4 lg:grid-cols-[280px_1fr]">
         <Card>
           <CardHeader>
-            <CardTitle>Unified risk score</CardTitle>
+            <CardTitle>{tx(locale, 'Unified risk score', 'Skor risiko terpadu')}</CardTitle>
           </CardHeader>
           <CardContent className="flex justify-center py-4">
             <RiskGauge score={risk.score} />
@@ -482,19 +548,19 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
         </Card>
         <div className="grid content-start gap-4">
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-            <StatCard label="Risk score" value={risk.score} icon={<Gauge />} />
+            <StatCard label={tx(locale, 'Risk score', 'Skor risiko')} value={risk.score} icon={<Gauge />} />
             <StatCard
-              label="Leaked creds"
+              label={tx(locale, 'Leaked creds', 'Kredensial bocor')}
               value={leakRows.length}
               icon={<KeyRound />}
-              hint={`${leakUnchecked} unchecked`}
+              hint={`${leakUnchecked} ${tx(locale, 'unchecked', 'belum diperiksa')}`}
             />
-            <StatCard label="Targets" value={targetRows.length} icon={<Crosshair />} />
+            <StatCard label={tx(locale, 'Targets', 'Target')} value={targetRows.length} icon={<Crosshair />} />
           </div>
           {leakStatusBreakdown.length > 0 ? (
             <Card>
               <CardHeader>
-                <CardTitle>Leak triage status</CardTitle>
+                <CardTitle>{tx(locale, 'Leak triage status', 'Status triase kebocoran')}</CardTitle>
               </CardHeader>
               <CardContent className="pt-0">
                 <div className="flex flex-wrap gap-2">
@@ -522,8 +588,8 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
       </div>
       {/* Ransomware highlight does a (cached) network fetch - stream it so it never blocks the dashboard. */}
       <div className="mt-4">
-        <Suspense fallback={<RansomwareHighlightFallback />}>
-          <RansomwareHighlight />
+        <Suspense fallback={<RansomwareHighlightFallback locale={locale} />}>
+          <RansomwareHighlight locale={locale} />
         </Suspense>
       </div>
 
@@ -532,16 +598,16 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
         <div className="mt-6 grid gap-4 lg:grid-cols-2">
           <Card className="lg:col-span-2">
             <CardHeader>
-              <CardTitle>Top vulnerable subdomains</CardTitle>
+              <CardTitle>{tx(locale, 'Top vulnerable subdomains', 'Subdomain paling rentan')}</CardTitle>
             </CardHeader>
             <CardContent className="pt-0">
               {topHosts.length ? (
                 <Table>
                   <THead>
                     <TR>
-                      <TH>Subdomain / host</TH>
-                      <TH>Top severity</TH>
-                      <TH className="text-right">Active findings</TH>
+                      <TH>{tx(locale, 'Subdomain / host', 'Subdomain / host')}</TH>
+                      <TH>{tx(locale, 'Top severity', 'Severity tertinggi')}</TH>
+                      <TH className="text-right">{tx(locale, 'Active findings', 'Temuan aktif')}</TH>
                     </TR>
                   </THead>
                   <TBody>
@@ -559,21 +625,23 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
                   </TBody>
                 </Table>
               ) : (
-                <p className="py-4 text-sm text-fg-muted">No active findings.</p>
+                <p className="py-4 text-sm text-fg-muted">
+                  {tx(locale, 'No active findings.', 'Tidak ada temuan aktif.')}
+                </p>
               )}
             </CardContent>
           </Card>
           <Card>
             <CardHeader>
-              <CardTitle>Most common vulnerabilities</CardTitle>
+              <CardTitle>{tx(locale, 'Most common vulnerabilities', 'Vulnerability paling umum')}</CardTitle>
             </CardHeader>
             <CardContent className="pt-0">
               <Table>
                 <THead>
                   <TR>
-                    <TH>Finding</TH>
+                    <TH>{tx(locale, 'Finding', 'Temuan')}</TH>
                     <TH>Severity</TH>
-                    <TH className="text-right">Count</TH>
+                    <TH className="text-right">{tx(locale, 'Count', 'Jumlah')}</TH>
                   </TR>
                 </THead>
                 <TBody>
@@ -594,15 +662,17 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
           </Card>
           <Card>
             <CardHeader>
-              <CardTitle>Top targets by active findings</CardTitle>
+              <CardTitle>
+                {tx(locale, 'Top targets by active findings', 'Target teratas berdasarkan temuan aktif')}
+              </CardTitle>
             </CardHeader>
             <CardContent className="pt-0">
               {topTargets.length ? (
                 <Table>
                   <THead>
                     <TR>
-                      <TH>Target</TH>
-                      <TH className="text-right">Active findings</TH>
+                      <TH>{tx(locale, 'Target', 'Target')}</TH>
+                      <TH className="text-right">{tx(locale, 'Active findings', 'Temuan aktif')}</TH>
                     </TR>
                   </THead>
                   <TBody>
@@ -617,7 +687,9 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
                   </TBody>
                 </Table>
               ) : (
-                <p className="py-4 text-sm text-fg-muted">No active findings.</p>
+                <p className="py-4 text-sm text-fg-muted">
+                  {tx(locale, 'No active findings.', 'Tidak ada temuan aktif.')}
+                </p>
               )}
             </CardContent>
           </Card>
@@ -626,25 +698,25 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
 
       {/* Recent scans */}
       <h2 className="mb-3 mt-8 font-display text-sm font-semibold uppercase tracking-wider text-fg-subtle">
-        Recent scans
+        {tx(locale, 'Recent scans', 'Scan terbaru')}
       </h2>
       {scanRows.length === 0 ? (
         <Card>
           <CardContent className="py-6 text-sm text-fg-muted">
-            No scans yet.{' '}
+            {tx(locale, 'No scans yet.', 'Belum ada scan.')}{' '}
             <Link href="/targets" className="text-accent hover:underline">
-              Add a target
+              {tx(locale, 'Add a target', 'Tambah target')}
             </Link>{' '}
-            to begin.
+            {tx(locale, 'to begin.', 'untuk memulai.')}
           </CardContent>
         </Card>
       ) : (
         <Table>
           <THead>
             <TR>
-              <TH>Target</TH>
-              <TH>Status</TH>
-              <TH>Findings</TH>
+              <TH>{tx(locale, 'Target', 'Target')}</TH>
+              <TH>{tx(locale, 'Status', 'Status')}</TH>
+              <TH>{tx(locale, 'Findings', 'Temuan')}</TH>
             </TR>
           </THead>
           <TBody>
@@ -661,7 +733,8 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
                     <StatusPill status={s.status} />
                   </TD>
                   <TD className="tabular text-sm text-fg-muted">
-                    {c.endpoints ?? 0} endpoints · {c.ports ?? 0} ports · {c.vulnerabilities ?? 0} vulns
+                    {c.endpoints ?? 0} {tx(locale, 'endpoints', 'endpoint')} · {c.ports ?? 0}{' '}
+                    {tx(locale, 'ports', 'port')} · {c.vulnerabilities ?? 0} {tx(locale, 'vulns', 'vuln')}
                   </TD>
                 </TR>
               );

@@ -10,6 +10,7 @@ import { NEWS_STATUS_LABEL } from '@vacti/core';
 import { brandNews } from '@vacti/db';
 import { getDb } from '../../../lib/db';
 import { bulkReviewBrandNewsAction, refreshBrandNewsAction } from '../../../lib/threat-actions';
+import { tx, type Locale } from '../../../lib/i18n';
 import { NewsTriageButton } from './news-triage-button';
 import { BrandNewsList } from './brand-news-list';
 
@@ -25,6 +26,7 @@ export async function BrandNews({
   filter = 'all',
   newsFilter = 'all',
   leakFilter = 'all',
+  locale = 'en',
 }: {
   projectId: string;
   brand: string;
@@ -32,6 +34,7 @@ export async function BrandNews({
   filter?: string;
   newsFilter?: string;
   leakFilter?: string;
+  locale?: Locale;
 }) {
   const db = getDb();
 
@@ -49,7 +52,7 @@ export async function BrandNews({
     <Card className="mt-4">
       <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3">
         <CardTitle className="flex items-center gap-2">
-          <Newspaper className="size-4 text-accent" /> Brand monitoring · {brand}
+          <Newspaper className="size-4 text-accent" /> {tx(locale, 'Brand monitoring', 'Brand monitoring')} · {brand}
         </CardTitle>
         <div className="flex flex-wrap items-center gap-2">
           <Form action="/threat" className="flex items-center gap-1.5">
@@ -57,7 +60,7 @@ export async function BrandNews({
             <input type="hidden" name="news" value={newsFilter} />
             <input type="hidden" name="leak" value={leakFilter} />
             <Select name="bnews" defaultValue={filter} className="h-8 w-36 text-xs" aria-label="Filter brand news">
-              <option value="all">All statuses</option>
+              <option value="all">{tx(locale, 'All statuses', 'Semua status')}</option>
               {Object.entries(NEWS_STATUS_LABEL).map(([val, label]) => (
                 <option key={val} value={val}>
                   {label}
@@ -65,7 +68,7 @@ export async function BrandNews({
               ))}
             </Select>
             <Button type="submit" variant="ghost" size="sm">
-              Filter
+              {tx(locale, 'Filter', 'Filter')}
             </Button>
           </Form>
           {canTriage ? (
@@ -73,18 +76,22 @@ export async function BrandNews({
               <ActionForm
                 action={refreshBrandNewsAction}
                 className="flex items-center gap-1.5"
-                confirm="Searching for new news keeps only the newest 15 headlines and removes older stored ones. Continue?"
+                confirm={tx(
+                  locale,
+                  'Searching for new news keeps only the newest 15 headlines and removes older stored ones. Continue?',
+                  'Mencari news baru hanya menyimpan 15 headline terbaru dan menghapus yang lebih lama. Lanjutkan?',
+                )}
               >
                 <input type="hidden" name="projectId" value={projectId} />
                 <Input
                   name="query"
                   defaultValue={brand}
-                  placeholder="brand / keyword"
+                  placeholder={tx(locale, 'brand / keyword', 'brand / kata kunci')}
                   className="h-8 w-44 text-xs"
                   aria-label="Brand search term"
                 />
                 <ActionSubmit variant="primary" size="sm">
-                  Search now
+                  {tx(locale, 'Search now', 'Cari sekarang')}
                 </ActionSubmit>
               </ActionForm>
               <ActionForm action={bulkReviewBrandNewsAction} className="flex items-center gap-1.5">
@@ -93,26 +100,33 @@ export async function BrandNews({
                 <Select name="status" defaultValue="reviewed" className="h-8 w-36 text-xs" aria-label="Bulk status">
                   {Object.entries(NEWS_STATUS_LABEL).map(([val, label]) => (
                     <option key={val} value={val}>
-                      Mark all: {label}
+                      {tx(locale, 'Mark all', 'Tandai semua')}: {label}
                     </option>
                   ))}
                 </Select>
                 <ActionSubmit variant="outline" size="sm">
-                  Apply
+                  {tx(locale, 'Apply', 'Terapkan')}
                 </ActionSubmit>
               </ActionForm>
-              <NewsTriageButton projectId={projectId} kind="brand" />
+              <NewsTriageButton projectId={projectId} kind="brand" locale={locale} />
             </>
           ) : (
-            <span className="text-xs text-fg-subtle">public news</span>
+            <span className="text-xs text-fg-subtle">{tx(locale, 'public news', 'news publik')}</span>
           )}
         </div>
       </CardHeader>
       <CardContent className="pt-0">
         {rows.length === 0 ? (
-          <p className="py-2 text-sm text-fg-muted">No recent public news mentioning this brand.</p>
+          <p className="py-2 text-sm text-fg-muted">
+            {tx(
+              locale,
+              'No recent public news mentioning this brand.',
+              'Tidak ada news publik terbaru yang menyebut brand ini.',
+            )}
+          </p>
         ) : (
           <BrandNewsList
+            locale={locale}
             items={items.map((n) => ({
               id: n.id,
               title: n.title,

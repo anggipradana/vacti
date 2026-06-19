@@ -14,15 +14,18 @@ import { getActiveProjectId } from '../../../lib/active-project';
 import { scans, targets, scanProfiles, projects } from '@vacti/db';
 import { getDb } from '../../../lib/db';
 import { getCurrentUser } from '../../../lib/session';
+import { getLocale } from '../../../lib/locale';
+import { tx, type Locale } from '../../../lib/i18n';
 
 export const dynamic = 'force-dynamic';
 
-function rel(d: Date): string {
+function rel(d: Date, locale: Locale): string {
   const s = Math.floor((Date.now() - d.getTime()) / 1000);
-  if (s < 60) return `${s}s ago`;
-  if (s < 3600) return `${Math.floor(s / 60)}m ago`;
-  if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
-  return `${Math.floor(s / 86400)}d ago`;
+  const ago = (v: string) => (locale === 'id' ? `${v} lalu` : `${v} ago`);
+  if (s < 60) return ago(`${s}s`);
+  if (s < 3600) return ago(`${Math.floor(s / 60)}m`);
+  if (s < 86400) return ago(`${Math.floor(s / 3600)}h`);
+  return ago(`${Math.floor(s / 86400)}d`);
 }
 
 const PAGE_SIZE = 25;
@@ -34,6 +37,7 @@ export default async function ScansPage({
 }) {
   const user = await getCurrentUser();
   if (!user) redirect('/login');
+  const locale = await getLocale();
   const db = getDb();
   const sp = await searchParams;
   const page = Math.max(1, Number(sp.page ?? 1) || 1);
@@ -61,7 +65,7 @@ export default async function ScansPage({
     <>
       <PageHeader
         title="Vulnerability Assessment"
-        description="Recon runs across your targets."
+        description={tx(locale, 'Recon runs across your targets.', 'Proses recon pada target Anda.')}
         actions={
           <div className="flex items-center gap-2">
             <ProjectSwitcher projects={projectRows} current={projectId} basePath="/scans" />
@@ -75,11 +79,15 @@ export default async function ScansPage({
       {scanRows.length === 0 ? (
         <EmptyState
           icon={<Radar />}
-          title="No scans yet"
-          description="Add a target, then start your first recon scan."
+          title={tx(locale, 'No scans yet', 'Belum ada scan')}
+          description={tx(
+            locale,
+            'Add a target, then start your first recon scan.',
+            'Tambahkan target, lalu mulai scan recon pertama Anda.',
+          )}
           action={
             <Button asChild variant="secondary">
-              <Link href="/targets">Add a target</Link>
+              <Link href="/targets">{tx(locale, 'Add a target', 'Tambah target')}</Link>
             </Button>
           }
         />
@@ -89,9 +97,9 @@ export default async function ScansPage({
             <THead>
               <TR>
                 <TH>Target</TH>
-                <TH>Status</TH>
-                <TH>Findings</TH>
-                <TH>Started</TH>
+                <TH>{tx(locale, 'Status', 'Status')}</TH>
+                <TH>{tx(locale, 'Findings', 'Temuan')}</TH>
+                <TH>{tx(locale, 'Started', 'Dimulai')}</TH>
               </TR>
             </THead>
             <TBody>
@@ -112,7 +120,7 @@ export default async function ScansPage({
                     <TD className="tabular text-sm text-fg-muted">
                       {c.endpoints ?? 0} endpoints · {c.ports ?? 0} ports · {c.vulnerabilities ?? 0} vulns
                     </TD>
-                    <TD className="text-sm text-fg-subtle">{rel(s.createdAt)}</TD>
+                    <TD className="text-sm text-fg-subtle">{rel(s.createdAt, locale)}</TD>
                   </TR>
                 );
               })}
@@ -122,7 +130,7 @@ export default async function ScansPage({
             page={page}
             totalPages={totalPages}
             total={totalScans}
-            label="scans"
+            label={tx(locale, 'scans', 'scan')}
             makeHref={(p) => `/scans?project=${projectId}&page=${p}`}
           />
         </div>

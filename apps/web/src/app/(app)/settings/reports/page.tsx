@@ -21,20 +21,24 @@ import {
   deleteSignatoryAction,
 } from '../../../../lib/report-actions';
 import { ExecSummaryButton } from './exec-summary-button';
+import { getLocale } from '../../../../lib/locale';
+import { tx, type Locale } from '../../../../lib/i18n';
 
 export const dynamic = 'force-dynamic';
 
-const FIELDS: { name: string; label: string }[] = [
-  { name: 'companyName', label: 'Company name' },
-  { name: 'companyAddress', label: 'Address' },
-  { name: 'companyWebsite', label: 'Website' },
-  { name: 'companyEmail', label: 'Email' },
-  { name: 'documentNumber', label: 'Document number' },
+const fields = (locale: Locale): { name: string; label: string }[] => [
+  { name: 'companyName', label: tx(locale, 'Company name', 'Nama perusahaan') },
+  { name: 'companyAddress', label: tx(locale, 'Address', 'Alamat') },
+  { name: 'companyWebsite', label: tx(locale, 'Website', 'Website') },
+  { name: 'companyEmail', label: tx(locale, 'Email', 'Email') },
+  { name: 'documentNumber', label: tx(locale, 'Document number', 'Nomor dokumen') },
 ];
 
 export default async function ReportSettingsPage({ searchParams }: { searchParams: Promise<{ project?: string }> }) {
   const user = await getCurrentUser();
   if (!user) redirect('/login');
+  const locale = await getLocale();
+  const FIELDS = fields(locale);
   const db = getDb();
   const projectRows = await db.select().from(projects).orderBy(desc(projects.createdAt));
   const sp = await searchParams;
@@ -43,7 +47,9 @@ export default async function ReportSettingsPage({ searchParams }: { searchParam
   const projectId = await getActiveProjectId(sp.project, projectRows);
 
   if (!projectId) {
-    return <p className="text-sm text-fg-muted">Create a project first.</p>;
+    return (
+      <p className="text-sm text-fg-muted">{tx(locale, 'Create a project first.', 'Buat project terlebih dahulu.')}</p>
+    );
   }
 
   const [allSettings, signatories] = await Promise.all([
@@ -57,7 +63,11 @@ export default async function ReportSettingsPage({ searchParams }: { searchParam
     return (
       <Card>
         <CardHeader>
-          <CardTitle>{kind === 'va' ? 'VA report branding' : 'TI report branding'}</CardTitle>
+          <CardTitle>
+            {kind === 'va'
+              ? tx(locale, 'VA report branding', 'Branding laporan VA')
+              : tx(locale, 'TI report branding', 'Branding laporan TI')}
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <form action={saveReportSettingsAction} className="space-y-3">
@@ -75,7 +85,7 @@ export default async function ReportSettingsPage({ searchParams }: { searchParam
             ))}
             <div className="grid grid-cols-3 gap-3">
               <div className="space-y-1">
-                <Label htmlFor={`${kind}-primary`}>Primary (teal)</Label>
+                <Label htmlFor={`${kind}-primary`}>{tx(locale, 'Primary (teal)', 'Primer (teal)')}</Label>
                 <Input
                   id={`${kind}-primary`}
                   name="primaryColor"
@@ -85,7 +95,7 @@ export default async function ReportSettingsPage({ searchParams }: { searchParam
                 />
               </div>
               <div className="space-y-1">
-                <Label htmlFor={`${kind}-secondary`}>Cover (navy)</Label>
+                <Label htmlFor={`${kind}-secondary`}>{tx(locale, 'Cover (navy)', 'Sampul (navy)')}</Label>
                 <Input
                   id={`${kind}-secondary`}
                   name="secondaryColor"
@@ -95,7 +105,7 @@ export default async function ReportSettingsPage({ searchParams }: { searchParam
                 />
               </div>
               <div className="space-y-1">
-                <Label htmlFor={`${kind}-lang`}>Language</Label>
+                <Label htmlFor={`${kind}-lang`}>{tx(locale, 'Language', 'Bahasa')}</Label>
                 <Select id={`${kind}-lang`} name="language" defaultValue={s?.language ?? 'en'}>
                   <option value="en">English</option>
                   <option value="id">Indonesia</option>
@@ -103,7 +113,7 @@ export default async function ReportSettingsPage({ searchParams }: { searchParam
               </div>
             </div>
             <div className="space-y-1">
-              <Label htmlFor={`${kind}-classif`}>Classification</Label>
+              <Label htmlFor={`${kind}-classif`}>{tx(locale, 'Classification', 'Klasifikasi')}</Label>
               <Input
                 id={`${kind}-classif`}
                 name="classification"
@@ -111,11 +121,11 @@ export default async function ReportSettingsPage({ searchParams }: { searchParam
               />
             </div>
             <div className="space-y-1">
-              <Label htmlFor={`${kind}-footer`}>Footer text</Label>
+              <Label htmlFor={`${kind}-footer`}>{tx(locale, 'Footer text', 'Teks footer')}</Label>
               <Input id={`${kind}-footer`} name="footerText" defaultValue={s?.footerText ?? 'CONFIDENTIAL'} />
             </div>
             <div className="space-y-1">
-              <Label htmlFor={`${kind}-logo`}>Company logo (cover)</Label>
+              <Label htmlFor={`${kind}-logo`}>{tx(locale, 'Company logo (cover)', 'Logo perusahaan (sampul)')}</Label>
               {s?.companyLogo ? (
                 <div className="flex items-center gap-3">
                   <img
@@ -124,12 +134,18 @@ export default async function ReportSettingsPage({ searchParams }: { searchParam
                     className="h-9 max-w-[120px] rounded border border-border object-contain"
                   />
                   <label className="flex items-center gap-1.5 text-xs text-fg-muted">
-                    <Checkbox name="removeLogo" /> Remove
+                    <Checkbox name="removeLogo" /> {tx(locale, 'Remove', 'Hapus')}
                   </label>
                 </div>
               ) : null}
               <Input id={`${kind}-logo`} name="companyLogoFile" type="file" accept="image/*" className="h-9 py-1.5" />
-              <p className="text-xs text-fg-subtle">PNG/SVG/JPG, ≤ 600 KB. Falls back to a monogram.</p>
+              <p className="text-xs text-fg-subtle">
+                {tx(
+                  locale,
+                  'PNG/SVG/JPG, ≤ 600 KB. Falls back to a monogram.',
+                  'PNG/SVG/JPG, ≤ 600 KB. Jika kosong memakai monogram.',
+                )}
+              </p>
             </div>
             {kind === 'va' ? (
               <div className="space-y-2 rounded-md border border-border p-3">
@@ -139,11 +155,12 @@ export default async function ReportSettingsPage({ searchParams }: { searchParam
                     name="showExecutiveSummary"
                     defaultChecked={s?.showExecutiveSummary ?? false}
                   />
-                  Use custom executive summary
+                  {tx(locale, 'Use custom executive summary', 'Pakai ringkasan eksekutif kustom')}
                 </label>
                 <p className="text-xs text-fg-subtle">
-                  Placeholders: {'{company_name}'} {'{target_name}'} {'{subdomain_count}'} {'{vulnerability_count}'}{' '}
-                  {'{critical_count}'} {'{high_count}'} {'{active_count}'} {'{scan_date}'}
+                  {tx(locale, 'Placeholders:', 'Placeholder:')} {'{company_name}'} {'{target_name}'}{' '}
+                  {'{subdomain_count}'} {'{vulnerability_count}'} {'{critical_count}'} {'{high_count}'}{' '}
+                  {'{active_count}'} {'{scan_date}'}
                 </p>
                 <Textarea
                   id="va-exec-en"
@@ -161,9 +178,9 @@ export default async function ReportSettingsPage({ searchParams }: { searchParam
                 />
               </div>
             ) : null}
-            <SubmitButton>Save</SubmitButton>
+            <SubmitButton>{tx(locale, 'Save', 'Simpan')}</SubmitButton>
           </form>
-          {kind === 'va' ? <ExecSummaryButton projectId={projectId} /> : null}
+          {kind === 'va' ? <ExecSummaryButton projectId={projectId} locale={locale} /> : null}
         </CardContent>
       </Card>
     );
@@ -173,8 +190,15 @@ export default async function ReportSettingsPage({ searchParams }: { searchParam
     <>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-fg-muted">
-          PDF report branding, executive summary and signatories for{' '}
-          <span className="font-medium text-fg">{projectRows.find((p) => p.id === projectId)?.name ?? 'project'}</span>.
+          {tx(
+            locale,
+            'PDF report branding, executive summary and signatories for',
+            'Branding laporan PDF, ringkasan eksekutif, dan penanda tangan untuk',
+          )}{' '}
+          <span className="font-medium text-fg">
+            {projectRows.find((p) => p.id === projectId)?.name ?? tx(locale, 'project', 'project')}
+          </span>
+          .
         </p>
         <ProjectSwitcher projects={projectRows} current={projectId} basePath="/settings/reports" />
       </div>
@@ -184,7 +208,11 @@ export default async function ReportSettingsPage({ searchParams }: { searchParam
       </div>
 
       <h2 className="mb-3 mt-8 font-display text-sm font-semibold uppercase tracking-wider text-fg-subtle">
-        Signatories (Prepared / Reviewed / Approved)
+        {tx(
+          locale,
+          'Signatories (Prepared / Reviewed / Approved)',
+          'Penanda tangan (Disiapkan / Ditinjau / Disetujui)',
+        )}
       </h2>
       <div className="grid gap-4 lg:grid-cols-[360px_1fr]">
         <Card>
@@ -192,33 +220,35 @@ export default async function ReportSettingsPage({ searchParams }: { searchParam
             <form action={addSignatoryAction} className="space-y-3">
               <input type="hidden" name="projectId" value={projectId} />
               <div className="space-y-1">
-                <Label htmlFor="role">Role</Label>
+                <Label htmlFor="role">{tx(locale, 'Role', 'Peran')}</Label>
                 <Select id="role" name="role">
-                  <option value="prepared">Prepared By</option>
-                  <option value="reviewed">Reviewed By</option>
-                  <option value="approved">Approved By</option>
+                  <option value="prepared">{tx(locale, 'Prepared By', 'Disiapkan Oleh')}</option>
+                  <option value="reviewed">{tx(locale, 'Reviewed By', 'Ditinjau Oleh')}</option>
+                  <option value="approved">{tx(locale, 'Approved By', 'Disetujui Oleh')}</option>
                 </Select>
               </div>
               <div className="space-y-1">
-                <Label htmlFor="signame">Name</Label>
+                <Label htmlFor="signame">{tx(locale, 'Name', 'Nama')}</Label>
                 <Input id="signame" name="name" required />
               </div>
               <div className="space-y-1">
-                <Label htmlFor="sigpos">Position</Label>
+                <Label htmlFor="sigpos">{tx(locale, 'Position', 'Jabatan')}</Label>
                 <Input id="sigpos" name="position" />
               </div>
               <div className="space-y-1">
-                <Label htmlFor="sigimg">Signature image</Label>
+                <Label htmlFor="sigimg">{tx(locale, 'Signature image', 'Gambar tanda tangan')}</Label>
                 <Input id="sigimg" name="signatureImageFile" type="file" accept="image/*" className="h-9 py-1.5" />
               </div>
-              <SubmitButton className="w-full">Add signatory</SubmitButton>
+              <SubmitButton className="w-full">{tx(locale, 'Add signatory', 'Tambah penanda tangan')}</SubmitButton>
             </form>
           </CardContent>
         </Card>
         <div className="space-y-2">
           {signatories.length === 0 ? (
             <Card>
-              <CardContent className="py-5 text-sm text-fg-muted">No signatories yet.</CardContent>
+              <CardContent className="py-5 text-sm text-fg-muted">
+                {tx(locale, 'No signatories yet.', 'Belum ada penanda tangan.')}
+              </CardContent>
             </Card>
           ) : (
             signatories
@@ -241,30 +271,36 @@ export default async function ReportSettingsPage({ searchParams }: { searchParam
                         <form action={deleteSignatoryAction}>
                           <input type="hidden" name="id" value={s.id} />
                           <ConfirmButton
-                            confirm="Remove this signatory?"
+                            confirm={tx(locale, 'Remove this signatory?', 'Hapus penanda tangan ini?')}
                             variant="ghost"
                             size="sm"
                             className="text-danger hover:bg-danger/10"
                           >
-                            Remove
+                            {tx(locale, 'Remove', 'Hapus')}
                           </ConfirmButton>
                         </form>
                       </div>
                     </div>
                     <details className="mt-2">
-                      <summary className="cursor-pointer text-xs text-fg-subtle hover:text-fg-muted">Edit</summary>
+                      <summary className="cursor-pointer text-xs text-fg-subtle hover:text-fg-muted">
+                        {tx(locale, 'Edit', 'Ubah')}
+                      </summary>
                       <form action={editSignatoryAction} className="mt-2 space-y-2">
                         <input type="hidden" name="id" value={s.id} />
-                        <Select name="role" defaultValue={s.role} aria-label="Role">
-                          <option value="prepared">Prepared By</option>
-                          <option value="reviewed">Reviewed By</option>
-                          <option value="approved">Approved By</option>
+                        <Select name="role" defaultValue={s.role} aria-label={tx(locale, 'Role', 'Peran')}>
+                          <option value="prepared">{tx(locale, 'Prepared By', 'Disiapkan Oleh')}</option>
+                          <option value="reviewed">{tx(locale, 'Reviewed By', 'Ditinjau Oleh')}</option>
+                          <option value="approved">{tx(locale, 'Approved By', 'Disetujui Oleh')}</option>
                         </Select>
-                        <Input name="name" defaultValue={s.name} placeholder="Name" required />
-                        <Input name="position" defaultValue={s.position} placeholder="Position" />
+                        <Input name="name" defaultValue={s.name} placeholder={tx(locale, 'Name', 'Nama')} required />
+                        <Input
+                          name="position"
+                          defaultValue={s.position}
+                          placeholder={tx(locale, 'Position', 'Jabatan')}
+                        />
                         <Input name="signatureImageFile" type="file" accept="image/*" className="h-9 py-1.5" />
                         <SubmitButton size="sm" variant="outline">
-                          Save
+                          {tx(locale, 'Save', 'Simpan')}
                         </SubmitButton>
                       </form>
                     </details>

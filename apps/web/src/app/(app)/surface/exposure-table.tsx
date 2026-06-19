@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import { LEAK_STATUS_LABEL } from '@vacti/core';
+import { tx, type Locale } from '../../../lib/i18n';
 import { Table, THead, TBody, TR, TH, TD } from '../../../components/ui/table';
 import { Checkbox } from '../../../components/ui/checkbox';
 import { Button } from '../../../components/ui/button';
@@ -42,7 +43,15 @@ const STATUS_OPTIONS = Object.entries(LEAK_STATUS_LABEL);
  * bulk status changes - plus per-row instant status change (AutoSubmitSelect) and delete.
  * Snippet masking and per-row RBAC (canTriage) controls are preserved exactly as before.
  */
-export function ExposureTable({ findings, canTriage }: { findings: ExposureRow[]; canTriage: boolean }) {
+export function ExposureTable({
+  findings,
+  canTriage,
+  locale = 'en',
+}: {
+  findings: ExposureRow[];
+  canTriage: boolean;
+  locale?: Locale;
+}) {
   const [query, setQuery] = React.useState('');
   const [statusFilter, setStatusFilter] = React.useState('all');
   const [typeFilter, setTypeFilter] = React.useState('all');
@@ -100,7 +109,7 @@ export function ExposureTable({ findings, canTriage }: { findings: ExposureRow[]
             setQuery(e.target.value);
             setPage(1);
           }}
-          placeholder="Search findings (type, URL)…"
+          placeholder={tx(locale, 'Search findings (type, URL)…', 'Cari findings (type, URL)…')}
           className="h-8 w-72 text-xs"
           aria-label="Search exposure findings"
         />
@@ -113,7 +122,7 @@ export function ExposureTable({ findings, canTriage }: { findings: ExposureRow[]
           className="h-8 w-40 text-xs"
           aria-label="Filter exposure findings by type"
         >
-          <option value="all">All types</option>
+          <option value="all">{tx(locale, 'All types', 'Semua tipe')}</option>
           {types.map(([t, n]) => (
             <option key={t} value={t}>
               {t} ({n})
@@ -129,7 +138,7 @@ export function ExposureTable({ findings, canTriage }: { findings: ExposureRow[]
           className="h-8 w-36 text-xs"
           aria-label="Filter exposure findings by status"
         >
-          <option value="all">All statuses</option>
+          <option value="all">{tx(locale, 'All statuses', 'Semua status')}</option>
           {STATUS_OPTIONS.map(([val, label]) => (
             <option key={val} value={val}>
               {label}
@@ -137,7 +146,7 @@ export function ExposureTable({ findings, canTriage }: { findings: ExposureRow[]
           ))}
         </Select>
         <span className="text-xs text-fg-subtle">
-          {filtered.length} of {findings.length}
+          {filtered.length} {tx(locale, 'of', 'dari')} {findings.length}
         </span>
       </div>
 
@@ -150,25 +159,33 @@ export function ExposureTable({ findings, canTriage }: { findings: ExposureRow[]
           {selectedIds.map((id) => (
             <input key={id} type="hidden" name="ids" value={id} />
           ))}
-          <span className="text-xs font-medium">{selected.size} selected</span>
+          <span className="text-xs font-medium">
+            {selected.size} {tx(locale, 'selected', 'dipilih')}
+          </span>
           <Select name="status" defaultValue="investigating" className="h-8 w-36 text-xs" aria-label="Bulk set status">
             {STATUS_OPTIONS.map(([val, label]) => (
               <option key={val} value={val}>
-                Set: {label}
+                {tx(locale, 'Set', 'Set')}: {label}
               </option>
             ))}
           </Select>
           <ActionSubmit size="sm" variant="primary">
-            Apply to selected
+            {tx(locale, 'Apply to selected', 'Terapkan ke yang dipilih')}
           </ActionSubmit>
           <Button type="button" size="sm" variant="ghost" onClick={() => setSelected(new Set())}>
-            Clear
+            {tx(locale, 'Clear', 'Hapus')}
           </Button>
         </ActionForm>
       ) : null}
 
       {filtered.length === 0 ? (
-        <p className="py-3 text-sm text-fg-muted">No exposure findings match your search/filter.</p>
+        <p className="py-3 text-sm text-fg-muted">
+          {tx(
+            locale,
+            'No exposure findings match your search/filter.',
+            'Tidak ada exposure findings yang cocok dengan pencarian/filter Anda.',
+          )}
+        </p>
       ) : (
         <Table>
           <THead>
@@ -178,10 +195,10 @@ export function ExposureTable({ findings, canTriage }: { findings: ExposureRow[]
                   <Checkbox checked={allShownSelected} onChange={toggleAllShown} aria-label="Select all shown" />
                 </TH>
               ) : null}
-              <TH>Type</TH>
-              <TH>Snippet</TH>
+              <TH>{tx(locale, 'Type', 'Tipe')}</TH>
+              <TH>{tx(locale, 'Snippet', 'Snippet')}</TH>
               <TH>URL</TH>
-              <TH>Status</TH>
+              <TH>{tx(locale, 'Status', 'Status')}</TH>
             </TR>
           </THead>
           <TBody>
@@ -208,7 +225,7 @@ export function ExposureTable({ findings, canTriage }: { findings: ExposureRow[]
                   </div>
                   {f.analystNote ? (
                     <p className="mt-1 whitespace-normal rounded-md border border-border bg-surface-2 p-1.5 font-sans">
-                      <strong>Note:</strong> {f.analystNote}
+                      <strong>{tx(locale, 'Note', 'Catatan')}:</strong> {f.analystNote}
                     </p>
                   ) : null}
                 </TD>
@@ -232,22 +249,27 @@ export function ExposureTable({ findings, canTriage }: { findings: ExposureRow[]
                             ))}
                           </AutoSubmitSelect>
                         </ActionForm>
-                        <ActionForm action={deleteExposureAction} confirm="Delete this exposure finding?">
+                        <ActionForm
+                          action={deleteExposureAction}
+                          confirm={tx(locale, 'Delete this exposure finding?', 'Hapus exposure finding ini?')}
+                        >
                           <input type="hidden" name="id" value={f.id} />
                           <ActionSubmit size="sm" variant="ghost" className="text-danger hover:bg-danger/10">
-                            Delete
+                            {tx(locale, 'Delete', 'Hapus')}
                           </ActionSubmit>
                         </ActionForm>
                       </div>
                       <details className="text-xs text-fg-muted">
                         <summary className="cursor-pointer text-accent">
-                          {f.analystNote ? 'Edit note' : 'Add note'}
+                          {f.analystNote
+                            ? tx(locale, 'Edit note', 'Edit catatan')
+                            : tx(locale, 'Add note', 'Tambah catatan')}
                         </summary>
                         <ActionForm action={setExposureNoteAction} className="mt-1 space-y-1">
                           <input type="hidden" name="id" value={f.id} />
                           <Textarea name="note" defaultValue={f.analystNote ?? ''} rows={2} className="text-xs" />
                           <ActionSubmit size="sm" variant="outline">
-                            Save note
+                            {tx(locale, 'Save note', 'Simpan catatan')}
                           </ActionSubmit>
                         </ActionForm>
                       </details>
@@ -265,14 +287,15 @@ export function ExposureTable({ findings, canTriage }: { findings: ExposureRow[]
       {totalPages > 1 ? (
         <div className="flex items-center justify-between text-xs text-fg-subtle">
           <span>
-            Page {safePage} of {totalPages} · {filtered.length} findings
+            {tx(locale, 'Page', 'Halaman')} {safePage} {tx(locale, 'of', 'dari')} {totalPages} · {filtered.length}{' '}
+            findings
           </span>
           <div className="flex gap-1.5">
             <Button size="sm" variant="outline" disabled={safePage <= 1} onClick={() => setPage(safePage - 1)}>
-              Prev
+              {tx(locale, 'Prev', 'Sebelumnya')}
             </Button>
             <Button size="sm" variant="outline" disabled={safePage >= totalPages} onClick={() => setPage(safePage + 1)}>
-              Next
+              {tx(locale, 'Next', 'Berikutnya')}
             </Button>
           </div>
         </div>

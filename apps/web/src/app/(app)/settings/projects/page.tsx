@@ -22,6 +22,8 @@ import {
   setDefaultProjectAction,
   editProjectAction,
 } from '../../../../lib/actions';
+import { getLocale } from '../../../../lib/locale';
+import { tx } from '../../../../lib/i18n';
 
 export const dynamic = 'force-dynamic';
 
@@ -34,6 +36,7 @@ export default async function ProjectsPage({
 }) {
   const user = await getCurrentUser();
   if (!user) redirect('/login');
+  const locale = await getLocale();
   const canManage = userCan(user, Permission.ModifyTargets);
   const sp = await searchParams;
   const page = Math.max(1, Number(sp.ppage ?? 1) || 1);
@@ -54,23 +57,35 @@ export default async function ProjectsPage({
       <FormBanner
         ok={sp.ok}
         error={sp.error}
-        messages={{ invalid: 'Enter a name and a slug (lowercase letters, numbers, hyphens).' }}
+        messages={{
+          invalid: tx(
+            locale,
+            'Enter a name and a slug (lowercase letters, numbers, hyphens).',
+            'Masukkan nama dan slug (huruf kecil, angka, tanda hubung).',
+          ),
+        }}
       />
-      <p className="mb-4 text-sm text-fg-muted">Workspaces that scope your targets, scans, and findings.</p>
+      <p className="mb-4 text-sm text-fg-muted">
+        {tx(
+          locale,
+          'Workspaces that scope your targets, scans, and findings.',
+          'Workspace yang membatasi target, scan, dan temuan Anda.',
+        )}
+      </p>
       <div className="grid gap-6 lg:grid-cols-[360px_1fr]">
         <Card>
           <CardContent className="pt-5">
             <form action={createProjectAction} className="space-y-4">
               <div className="space-y-1.5">
-                <Label htmlFor="name">Name</Label>
+                <Label htmlFor="name">{tx(locale, 'Name', 'Nama')}</Label>
                 <Input id="name" name="name" data-testid="project-name" placeholder="Acme Corp" required />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="slug">Slug</Label>
+                <Label htmlFor="slug">{tx(locale, 'Slug', 'Slug')}</Label>
                 <Input id="slug" name="slug" data-testid="project-slug" placeholder="acme-corp" required />
               </div>
               <SubmitButton data-testid="create-project" className="w-full">
-                Create project
+                {tx(locale, 'Create project', 'Buat project')}
               </SubmitButton>
             </form>
           </CardContent>
@@ -79,8 +94,12 @@ export default async function ProjectsPage({
           {rows.length === 0 ? (
             <EmptyState
               icon={<FolderKanban />}
-              title="No projects yet"
-              description="Create your first workspace to get started."
+              title={tx(locale, 'No projects yet', 'Belum ada project')}
+              description={tx(
+                locale,
+                'Create your first workspace to get started.',
+                'Buat workspace pertama Anda untuk memulai.',
+              )}
             />
           ) : (
             rows.map((p) => (
@@ -92,7 +111,7 @@ export default async function ProjectsPage({
                         <span className="font-medium">{p.name}</span>
                         {p.isDefault ? (
                           <Badge variant="accent" className="text-[10px]">
-                            Default
+                            {tx(locale, 'Default', 'Default')}
                           </Badge>
                         ) : null}
                       </div>
@@ -104,7 +123,7 @@ export default async function ProjectsPage({
                           <form action={setDefaultProjectAction}>
                             <input type="hidden" name="id" value={p.id} />
                             <SubmitButton size="sm" variant="outline">
-                              Set default
+                              {tx(locale, 'Set default', 'Jadikan default')}
                             </SubmitButton>
                           </form>
                         ) : null}
@@ -114,9 +133,13 @@ export default async function ProjectsPage({
                             size="sm"
                             variant="ghost"
                             className="text-danger hover:bg-danger/10"
-                            confirm={`Delete project "${p.name}" and ALL its targets, scans, findings and TI data? This cannot be undone.`}
+                            confirm={tx(
+                              locale,
+                              `Delete project "${p.name}" and ALL its targets, scans, findings and TI data? This cannot be undone.`,
+                              `Hapus project "${p.name}" dan SEMUA target, scan, temuan, dan data TI-nya? Tindakan ini tidak dapat dibatalkan.`,
+                            )}
                           >
-                            Delete
+                            {tx(locale, 'Delete', 'Hapus')}
                           </ConfirmButton>
                         </form>
                       </div>
@@ -124,15 +147,15 @@ export default async function ProjectsPage({
                   </div>
                   {canManage ? (
                     <details className="mt-3">
-                      <summary className="cursor-pointer text-xs text-fg-subtle">Edit</summary>
+                      <summary className="cursor-pointer text-xs text-fg-subtle">{tx(locale, 'Edit', 'Ubah')}</summary>
                       <form action={editProjectAction} className="mt-3 flex flex-wrap items-end gap-3">
                         <input type="hidden" name="id" value={p.id} />
                         <div className="space-y-1.5">
-                          <Label htmlFor={`name-${p.id}`}>Name</Label>
+                          <Label htmlFor={`name-${p.id}`}>{tx(locale, 'Name', 'Nama')}</Label>
                           <Input id={`name-${p.id}`} name="name" defaultValue={p.name} required className="w-48" />
                         </div>
                         <div className="space-y-1.5">
-                          <Label htmlFor={`sector-${p.id}`}>Sector</Label>
+                          <Label htmlFor={`sector-${p.id}`}>{tx(locale, 'Sector', 'Sektor')}</Label>
                           <Select id={`sector-${p.id}`} name="sector" defaultValue={p.sector} className="w-40">
                             {Object.keys(SECTORS).map((s) => (
                               <option key={s} value={s}>
@@ -142,10 +165,10 @@ export default async function ProjectsPage({
                           </Select>
                         </div>
                         <div className="space-y-1.5">
-                          <Label htmlFor={`slug-${p.id}`}>Slug</Label>
+                          <Label htmlFor={`slug-${p.id}`}>{tx(locale, 'Slug', 'Slug')}</Label>
                           <Input id={`slug-${p.id}`} name="slug" defaultValue={p.slug} className="w-40" />
                         </div>
-                        <SubmitButton size="sm">Save</SubmitButton>
+                        <SubmitButton size="sm">{tx(locale, 'Save', 'Simpan')}</SubmitButton>
                       </form>
                     </details>
                   ) : null}
@@ -157,7 +180,7 @@ export default async function ProjectsPage({
             page={page}
             totalPages={totalPages}
             total={total}
-            label="projects"
+            label={tx(locale, 'projects', 'project')}
             makeHref={(p) => '/settings/projects?ppage=' + p}
           />
         </div>

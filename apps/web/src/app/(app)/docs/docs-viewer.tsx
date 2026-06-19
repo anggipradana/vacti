@@ -5,6 +5,7 @@ import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeSlug from 'rehype-slug';
 import { cn } from '../../../lib/cn';
+import { tx, type Locale } from '../../../lib/i18n';
 
 export interface Doc {
   slug: string;
@@ -108,7 +109,7 @@ const makeComponents = (docPath: string, repoBase: string) => ({
 });
 
 /** Documentation reader: a sidebar of doc pages + a styled markdown content pane. */
-export function DocsViewer({ docs, repoBase }: { docs: Doc[]; repoBase: string }) {
+export function DocsViewer({ docs, repoBase, locale = 'en' }: { docs: Doc[]; repoBase: string; locale?: Locale }) {
   const [active, setActive] = React.useState(docs[0]?.slug ?? '');
   const current = docs.find((d) => d.slug === active) ?? docs[0];
   const components = React.useMemo(() => makeComponents(current?.path ?? '', repoBase), [current?.path, repoBase]);
@@ -116,7 +117,9 @@ export function DocsViewer({ docs, repoBase }: { docs: Doc[]; repoBase: string }
   return (
     <div className="grid gap-6 lg:grid-cols-[200px_1fr]">
       <nav className="lg:sticky lg:top-20 lg:self-start">
-        <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-fg-subtle">Guides</div>
+        <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-fg-subtle">
+          {tx(locale, 'Guides', 'Panduan')}
+        </div>
         <ul className="space-y-0.5">
           {docs.map((d) => (
             <li key={d.slug}>

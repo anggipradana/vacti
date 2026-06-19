@@ -18,6 +18,8 @@ import { analyzeEndpoints } from '@vacti/recon';
 import { projects, scans, discoveredUrls, exposureFindings, ipResolutions, ipResolutionSightings } from '@vacti/db';
 import { getDb } from '../../../lib/db';
 import { getCurrentUser } from '../../../lib/session';
+import { getLocale } from '../../../lib/locale';
+import { tx } from '../../../lib/i18n';
 import { getActiveProjectId } from '../../../lib/active-project';
 import { bulkReviewExposureAction } from '../../../lib/surface-actions';
 import { ExposureTable } from './exposure-table';
@@ -40,6 +42,7 @@ export default async function SurfacePage({
 }) {
   const user = await getCurrentUser();
   if (!user) redirect('/login');
+  const locale = await getLocale();
   const db = getDb();
   const projectRows = await db.select().from(projects).orderBy(desc(projects.createdAt));
   const sp = await searchParams;
@@ -48,7 +51,15 @@ export default async function SurfacePage({
     return (
       <>
         <PageHeader title="Attack Surface" />
-        <EmptyState icon={<FileSearch />} title="No project yet" description="Create a project to run passive recon." />
+        <EmptyState
+          icon={<FileSearch />}
+          title={tx(locale, 'No project yet', 'Belum ada project')}
+          description={tx(
+            locale,
+            'Create a project to run passive recon.',
+            'Buat project untuk menjalankan passive recon.',
+          )}
+        />
       </>
     );
   }
@@ -146,11 +157,15 @@ export default async function SurfacePage({
     <>
       <PageHeader
         title="Attack Surface"
-        description="Passive OSINT discovery (VirusTotal + Wayback): URLs, exposure findings, and IP resolutions. Run passive recon to populate (uses your VirusTotal key)."
+        description={tx(
+          locale,
+          'Passive OSINT discovery (VirusTotal + Wayback): URLs, exposure findings, and IP resolutions. Run passive recon to populate (uses your VirusTotal key).',
+          'Discovery passive OSINT (VirusTotal + Wayback): URLs, exposure findings, dan IP resolutions. Jalankan passive recon untuk mengisi data (memakai VirusTotal key Anda).',
+        )}
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            <PassiveReconRunner projectId={projectId} />
-            <SurfaceExportMenu projectId={projectId} />
+            <PassiveReconRunner projectId={projectId} locale={locale} />
+            <SurfaceExportMenu projectId={projectId} locale={locale} />
           </div>
         }
       />
@@ -160,23 +175,26 @@ export default async function SurfacePage({
         <Form action="/surface" className="flex items-center gap-1.5">
           <input type="hidden" name="project" value={projectId} />
           <Select name="scan" defaultValue={diffScanId} className="h-8 w-64 text-xs" aria-label="Diff: new in scan">
-            <option value="">Diff: all discoveries</option>
+            <option value="">{tx(locale, 'Diff: all discoveries', 'Diff: semua temuan')}</option>
             {passiveScans.map((s) => (
               <option key={s.id} value={s.id}>
-                New in {s.mode} scan {s.id.slice(0, 8)} ·{' '}
+                {tx(locale, 'New in', 'Baru di')} {s.mode} scan {s.id.slice(0, 8)} ·{' '}
                 {new Date(s.createdAt).toISOString().slice(0, 16).replace('T', ' ')}
               </option>
             ))}
           </Select>
           <Button type="submit" variant="ghost" size="sm">
-            Apply diff
+            {tx(locale, 'Apply diff', 'Terapkan diff')}
           </Button>
         </Form>
         {diffScanId ? (
           <span className="flex items-center gap-2 text-xs text-fg-muted">
-            <Badge variant="accent">Showing NEW discoveries from scan {diffScanId.slice(0, 8)}</Badge>
+            <Badge variant="accent">
+              {tx(locale, 'Showing NEW discoveries from scan', 'Menampilkan temuan BARU dari scan')}{' '}
+              {diffScanId.slice(0, 8)}
+            </Badge>
             <Link href={`/surface?project=${projectId}`} className="text-accent hover:underline">
-              clear
+              {tx(locale, 'clear', 'hapus')}
             </Link>
           </span>
         ) : null}
@@ -186,25 +204,25 @@ export default async function SurfacePage({
         <Card>
           <CardContent className="py-4">
             <div className="text-2xl font-semibold">{totalUrls}</div>
-            <div className="text-xs text-fg-muted">Discovered URLs</div>
+            <div className="text-xs text-fg-muted">{tx(locale, 'Discovered URLs', 'URL ditemukan')}</div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="py-4">
             <div className="text-2xl font-semibold">{Number(findTotal[0]!.n)}</div>
-            <div className="text-xs text-fg-muted">Exposure findings</div>
+            <div className="text-xs text-fg-muted">{tx(locale, 'Exposure findings', 'Exposure findings')}</div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="py-4">
             <div className="text-2xl font-semibold">{Number(ipTotal[0]!.n)}</div>
-            <div className="text-xs text-fg-muted">IP resolutions</div>
+            <div className="text-xs text-fg-muted">{tx(locale, 'IP resolutions', 'IP resolutions')}</div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="py-4">
             <div className="text-2xl font-semibold">{types.length}</div>
-            <div className="text-xs text-fg-muted">Exposure types</div>
+            <div className="text-xs text-fg-muted">{tx(locale, 'Exposure types', 'Tipe exposure')}</div>
           </CardContent>
         </Card>
       </div>
@@ -213,7 +231,7 @@ export default async function SurfacePage({
       <Card className="mt-2">
         <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3">
           <CardTitle className="flex items-center gap-2">
-            <ShieldAlert className="size-4 text-accent" /> Exposure findings
+            <ShieldAlert className="size-4 text-accent" /> {tx(locale, 'Exposure findings', 'Exposure findings')}
           </CardTitle>
           {/* Bulk-by-filter: mark ALL of the project's findings (honours the active scan-diff). The
               per-selection checkbox bulk + search/type/status filters live inside ExposureTable. */}
@@ -225,21 +243,27 @@ export default async function SurfacePage({
               <Select name="status" defaultValue="investigating" className="h-8 w-36 text-xs" aria-label="Bulk status">
                 {Object.entries(LEAK_STATUS_LABEL).map(([v, l]) => (
                   <option key={v} value={v}>
-                    Mark all: {l}
+                    {tx(locale, 'Mark all', 'Tandai semua')}: {l}
                   </option>
                 ))}
               </Select>
               <ActionSubmit variant="outline" size="sm">
-                Apply
+                {tx(locale, 'Apply', 'Terapkan')}
               </ActionSubmit>
             </ActionForm>
           ) : null}
         </CardHeader>
         <CardContent className="pt-0">
           {finds.length === 0 ? (
-            <p className="py-3 text-sm text-fg-muted">No exposure findings match - run a passive or full scan.</p>
+            <p className="py-3 text-sm text-fg-muted">
+              {tx(
+                locale,
+                'No exposure findings match - run a passive or full scan.',
+                'Tidak ada exposure findings yang cocok - jalankan passive atau full scan.',
+              )}
+            </p>
           ) : (
-            <ExposureTable findings={finds} canTriage={canTriage} />
+            <ExposureTable findings={finds} canTriage={canTriage} locale={locale} />
           )}
         </CardContent>
       </Card>
@@ -248,12 +272,12 @@ export default async function SurfacePage({
       <Card className="mt-4">
         <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3">
           <CardTitle className="flex items-center gap-2">
-            <FileSearch className="size-4 text-accent" /> Discovered URLs
+            <FileSearch className="size-4 text-accent" /> {tx(locale, 'Discovered URLs', 'URL ditemukan')}
           </CardTitle>
           <Form action="/surface" className="flex flex-wrap items-center gap-1.5">
             <input type="hidden" name="project" value={projectId} />
             <Select name="cat" defaultValue={cat} className="h-8 w-44 text-xs" aria-label="Filter by category">
-              <option value="all">All categories</option>
+              <option value="all">{tx(locale, 'All categories', 'Semua kategori')}</option>
               {catCounts
                 .filter((c) => c.slug)
                 .map((c) => (
@@ -262,23 +286,30 @@ export default async function SurfacePage({
                   </option>
                 ))}
             </Select>
-            <Input name="q" defaultValue={q} placeholder="Search URL…" className="h-8 w-48 text-xs" />
+            <Input
+              name="q"
+              defaultValue={q}
+              placeholder={tx(locale, 'Search URL…', 'Cari URL…')}
+              className="h-8 w-48 text-xs"
+            />
             <Button type="submit" variant="ghost" size="sm">
-              Filter
+              {tx(locale, 'Filter', 'Filter')}
             </Button>
           </Form>
         </CardHeader>
         <CardContent className="pt-0">
           {urls.length === 0 ? (
-            <p className="py-3 text-sm text-fg-muted">No discovered URLs match.</p>
+            <p className="py-3 text-sm text-fg-muted">
+              {tx(locale, 'No discovered URLs match.', 'Tidak ada URL ditemukan yang cocok.')}
+            </p>
           ) : (
             <>
               <Table>
                 <THead>
                   <TR>
                     <TH>URL</TH>
-                    <TH>Category</TH>
-                    <TH>Source</TH>
+                    <TH>{tx(locale, 'Category', 'Kategori')}</TH>
+                    <TH>{tx(locale, 'Source', 'Sumber')}</TH>
                   </TR>
                 </THead>
                 <TBody>
@@ -315,7 +346,7 @@ export default async function SurfacePage({
                 page={upage}
                 totalPages={urlPages}
                 total={Number(urlTotal[0]!.n)}
-                label="URLs"
+                label={tx(locale, 'URLs', 'URLs')}
                 makeHref={(p) => `/surface?${keep}&upage=${p}&cat=${cat}&q=${encodeURIComponent(q)}`}
               />
             </>
@@ -327,19 +358,26 @@ export default async function SurfacePage({
       <Card className="mt-4">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <FileSearch className="size-4 text-accent" /> Endpoints &amp; parameters · {endpoints.paramCount} params ·{' '}
-            {endpoints.authCount} auth
+            <FileSearch className="size-4 text-accent" />{' '}
+            {tx(locale, 'Endpoints & parameters', 'Endpoints & parameter')} · {endpoints.paramCount}{' '}
+            {tx(locale, 'params', 'param')} · {endpoints.authCount} auth
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3 pt-0">
           {endpoints.params.length === 0 && endpoints.authEndpoints.length === 0 ? (
-            <p className="py-1 text-sm text-fg-muted">No parameters or auth endpoints derived yet.</p>
+            <p className="py-1 text-sm text-fg-muted">
+              {tx(
+                locale,
+                'No parameters or auth endpoints derived yet.',
+                'Belum ada parameter atau auth endpoint yang diturunkan.',
+              )}
+            </p>
           ) : (
             <>
               {endpoints.params.length ? (
                 <div>
                   <div className="mb-1 text-xs font-semibold uppercase tracking-wider text-fg-subtle">
-                    Top parameters
+                    {tx(locale, 'Top parameters', 'Parameter teratas')}
                   </div>
                   <div className="flex flex-wrap gap-1.5">
                     {endpoints.params.slice(0, 30).map((p) => (
@@ -353,7 +391,7 @@ export default async function SurfacePage({
               {endpoints.authEndpoints.length ? (
                 <div>
                   <div className="mb-1 text-xs font-semibold uppercase tracking-wider text-fg-subtle">
-                    Auth / admin endpoints
+                    {tx(locale, 'Auth / admin endpoints', 'Auth / admin endpoints')}
                   </div>
                   <ul className="space-y-0.5">
                     {endpoints.authEndpoints.slice(0, 20).map((e) => (
@@ -381,21 +419,26 @@ export default async function SurfacePage({
       <Card className="mt-4">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Network className="size-4 text-accent" /> IP directory (passive DNS)
+            <Network className="size-4 text-accent" />{' '}
+            {tx(locale, 'IP directory (passive DNS)', 'Direktori IP (passive DNS)')}
           </CardTitle>
         </CardHeader>
         <CardContent className="pt-0">
           {ips.length === 0 ? (
             <p className="py-3 text-sm text-fg-muted">
-              No IP resolutions yet - requires a VirusTotal API key (passive DNS).
+              {tx(
+                locale,
+                'No IP resolutions yet - requires a VirusTotal API key (passive DNS).',
+                'Belum ada IP resolutions - membutuhkan VirusTotal API key (passive DNS).',
+              )}
             </p>
           ) : (
             <Table>
               <THead>
                 <TR>
                   <TH>IP</TH>
-                  <TH>Hostnames</TH>
-                  <TH>Latest resolved</TH>
+                  <TH>{tx(locale, 'Hostnames', 'Hostname')}</TH>
+                  <TH>{tx(locale, 'Latest resolved', 'Terakhir resolved')}</TH>
                 </TR>
               </THead>
               <TBody>

@@ -13,6 +13,7 @@ import { Reveal } from '../../../components/ui/reveal';
 import { LeakStatusBadge } from '../../../components/ui/finding-status';
 import { AutoSubmitSelect } from '../../../components/ui/auto-submit-select';
 import { setLeakStatusAction, deleteLeakAction, bulkSetLeakStatusByIdsAction } from '../../../lib/status-actions';
+import { tx, type Locale } from '../../../lib/i18n';
 
 export interface LeakRow {
   id: string;
@@ -36,11 +37,13 @@ export function LeakTable({
   leaks,
   canTriage,
   initialStatus = 'all',
+  locale = 'en',
 }: {
   leaks: LeakRow[];
   canTriage: boolean;
   /** Pre-applied status filter (deep links like the dashboard's "New leaked creds" tile). */
   initialStatus?: string;
+  locale?: Locale;
 }) {
   const [query, setQuery] = React.useState('');
   const [statusFilter, setStatusFilter] = React.useState(initialStatus);
@@ -88,7 +91,11 @@ export function LeakTable({
             setQuery(e.target.value);
             setPage(1);
           }}
-          placeholder="Search leaks (identifier, source, origin)…"
+          placeholder={tx(
+            locale,
+            'Search leaks (identifier, source, origin)…',
+            'Cari leaks (identifier, source, origin)…',
+          )}
           className="h-8 w-72 text-xs"
           aria-label="Search leaked credentials"
         />
@@ -101,7 +108,7 @@ export function LeakTable({
           className="h-8 w-40 text-xs"
           aria-label="Filter leaks by status"
         >
-          <option value="all">All statuses</option>
+          <option value="all">{tx(locale, 'All statuses', 'Semua status')}</option>
           {STATUS_OPTIONS.map(([val, label]) => (
             <option key={val} value={val}>
               {label}
@@ -109,7 +116,7 @@ export function LeakTable({
           ))}
         </Select>
         <span className="text-xs text-fg-subtle">
-          {filtered.length} of {leaks.length}
+          {filtered.length} {tx(locale, 'of', 'dari')} {leaks.length}
         </span>
       </div>
 
@@ -122,25 +129,29 @@ export function LeakTable({
           {selectedIds.map((id) => (
             <input key={id} type="hidden" name="ids" value={id} />
           ))}
-          <span className="text-xs font-medium">{selected.size} selected</span>
+          <span className="text-xs font-medium">
+            {selected.size} {tx(locale, 'selected', 'dipilih')}
+          </span>
           <Select name="status" defaultValue="investigating" className="h-8 w-40 text-xs" aria-label="Bulk set status">
             {STATUS_OPTIONS.map(([val, label]) => (
               <option key={val} value={val}>
-                Set: {label}
+                {tx(locale, 'Set', 'Atur')}: {label}
               </option>
             ))}
           </Select>
           <ActionSubmit size="sm" variant="primary">
-            Apply to selected
+            {tx(locale, 'Apply to selected', 'Terapkan ke yang dipilih')}
           </ActionSubmit>
           <Button type="button" size="sm" variant="ghost" onClick={() => setSelected(new Set())}>
-            Clear
+            {tx(locale, 'Clear', 'Bersihkan')}
           </Button>
         </ActionForm>
       ) : null}
 
       {filtered.length === 0 ? (
-        <p className="text-sm text-fg-subtle">No leaks match your search/filter.</p>
+        <p className="text-sm text-fg-subtle">
+          {tx(locale, 'No leaks match your search/filter.', 'Tidak ada leaks yang cocok dengan pencarian/filter Anda.')}
+        </p>
       ) : (
         <Table>
           <THead>
@@ -154,8 +165,8 @@ export function LeakTable({
               <TH>Password</TH>
               <TH className="hidden md:table-cell">Origin</TH>
               <TH className="hidden md:table-cell">Source</TH>
-              <TH className="hidden sm:table-cell">Type</TH>
-              <TH className="text-right">Triage status</TH>
+              <TH className="hidden sm:table-cell">{tx(locale, 'Type', 'Tipe')}</TH>
+              <TH className="text-right">{tx(locale, 'Triage status', 'Status triase')}</TH>
             </TR>
           </THead>
           <TBody>
@@ -203,10 +214,13 @@ export function LeakTable({
                         ))}
                       </AutoSubmitSelect>
                     </ActionForm>
-                    <ActionForm action={deleteLeakAction} confirm="Delete this leaked-credential row?">
+                    <ActionForm
+                      action={deleteLeakAction}
+                      confirm={tx(locale, 'Delete this leaked-credential row?', 'Hapus baris leaked-credential ini?')}
+                    >
                       <input type="hidden" name="id" value={l.id} />
                       <ActionSubmit size="sm" variant="ghost" className="text-danger hover:bg-danger/10">
-                        Delete
+                        {tx(locale, 'Delete', 'Hapus')}
                       </ActionSubmit>
                     </ActionForm>
                   </div>
@@ -220,14 +234,14 @@ export function LeakTable({
       {totalPages > 1 ? (
         <div className="flex items-center justify-between text-xs text-fg-subtle">
           <span>
-            Page {safePage} of {totalPages} · {filtered.length} leaks
+            {tx(locale, 'Page', 'Halaman')} {safePage} {tx(locale, 'of', 'dari')} {totalPages} · {filtered.length} leaks
           </span>
           <div className="flex gap-1.5">
             <Button size="sm" variant="outline" disabled={safePage <= 1} onClick={() => setPage(safePage - 1)}>
-              Prev
+              {tx(locale, 'Prev', 'Sebelumnya')}
             </Button>
             <Button size="sm" variant="outline" disabled={safePage >= totalPages} onClick={() => setPage(safePage + 1)}>
-              Next
+              {tx(locale, 'Next', 'Berikutnya')}
             </Button>
           </div>
         </div>

@@ -3,21 +3,25 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '../lib/cn';
+import { tx, type Locale } from '../lib/i18n';
 
-const tabs = [
-  { label: 'Account', href: '/settings/account' },
-  { label: 'Projects', href: '/settings/projects' },
-  { label: 'Schedules', href: '/settings/schedules' },
-  { label: 'API Tokens', href: '/settings/tokens' },
-  { label: 'Scan Profiles', href: '/settings/profiles' },
-  { label: 'Reports', href: '/settings/reports' },
-  { label: 'Integrations', href: '/settings/integrations' },
-  { label: 'Users', href: '/settings/users', sysAdminOnly: true },
-  { label: 'Audit log', href: '/settings/audit', sysAdminOnly: true },
-];
+function buildTabs(locale: Locale) {
+  return [
+    { label: tx(locale, 'Account', 'Akun'), href: '/settings/account' },
+    { label: tx(locale, 'Projects', 'Project'), href: '/settings/projects' },
+    { label: tx(locale, 'Schedules', 'Jadwal'), href: '/settings/schedules' },
+    { label: tx(locale, 'API Tokens', 'API Token'), href: '/settings/tokens' },
+    { label: tx(locale, 'Scan Profiles', 'Scan Profile'), href: '/settings/profiles' },
+    { label: tx(locale, 'Reports', 'Laporan'), href: '/settings/reports' },
+    { label: tx(locale, 'Integrations', 'Integrasi'), href: '/settings/integrations' },
+    { label: tx(locale, 'Users', 'Pengguna'), href: '/settings/users', sysAdminOnly: true },
+    { label: tx(locale, 'Audit log', 'Log audit'), href: '/settings/audit', sysAdminOnly: true },
+  ];
+}
 
-export function SettingsTabs({ isSysAdmin = true }: { isSysAdmin?: boolean }) {
+export function SettingsTabs({ isSysAdmin = true, locale = 'en' }: { isSysAdmin?: boolean; locale?: Locale }) {
   const pathname = usePathname();
+  const tabs = buildTabs(locale);
   return (
     <div className="mb-6 flex gap-1 overflow-x-auto border-b border-border">
       {tabs

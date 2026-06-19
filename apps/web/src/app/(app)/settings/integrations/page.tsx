@@ -22,16 +22,22 @@ import {
 } from '../../../../lib/integration-actions';
 import { saveAiSettingsAction, saveAiDefaultsAction } from '../../../../lib/ai-actions';
 import { saveProjectKeyAction, clearProjectKeyAction, testProjectKeyAction } from '../../../../lib/vault-actions';
+import { getLocale } from '../../../../lib/locale';
+import { tx, type Locale } from '../../../../lib/i18n';
 
-const VAULT_KEYS: { name: string; label: string; hint: string }[] = [
-  { name: 'otx', label: 'OTX (AlienVault)', hint: 'Threat-intel pulses' },
-  { name: 'leakcheck', label: 'LeakCheck', hint: 'Leaked credentials' },
-  { name: 'virustotal', label: 'VirusTotal', hint: 'Passive DNS, subdomains & URLs' },
-  { name: 'urlscan', label: 'URLScan', hint: 'Passive URL / IoC lookups' },
-  { name: 'anthropic', label: 'Anthropic (Claude)', hint: 'AI enrichment' },
-  { name: 'openai', label: 'OpenAI', hint: 'AI enrichment' },
-  { name: 'deepseek', label: 'DeepSeek', hint: 'AI enrichment' },
-  { name: 'kimi', label: 'Kimi (Moonshot)', hint: 'AI enrichment' },
+const vaultKeys = (locale: Locale): { name: string; label: string; hint: string }[] => [
+  { name: 'otx', label: 'OTX (AlienVault)', hint: tx(locale, 'Threat-intel pulses', 'Threat-intel pulses') },
+  { name: 'leakcheck', label: 'LeakCheck', hint: tx(locale, 'Leaked credentials', 'Kredensial bocor') },
+  {
+    name: 'virustotal',
+    label: 'VirusTotal',
+    hint: tx(locale, 'Passive DNS, subdomains & URLs', 'Passive DNS, subdomain & URL'),
+  },
+  { name: 'urlscan', label: 'URLScan', hint: tx(locale, 'Passive URL / IoC lookups', 'Lookup URL / IoC pasif') },
+  { name: 'anthropic', label: 'Anthropic (Claude)', hint: tx(locale, 'AI enrichment', 'AI enrichment') },
+  { name: 'openai', label: 'OpenAI', hint: tx(locale, 'AI enrichment', 'AI enrichment') },
+  { name: 'deepseek', label: 'DeepSeek', hint: tx(locale, 'AI enrichment', 'AI enrichment') },
+  { name: 'kimi', label: 'Kimi (Moonshot)', hint: tx(locale, 'AI enrichment', 'AI enrichment') },
 ];
 
 // Provider options shared by the per-project and the system-default AI forms.
@@ -48,6 +54,8 @@ export const dynamic = 'force-dynamic';
 export default async function IntegrationsPage({ searchParams }: { searchParams: Promise<{ project?: string }> }) {
   const user = await getCurrentUser();
   if (!user) redirect('/login');
+  const locale = await getLocale();
+  const VAULT_KEYS = vaultKeys(locale);
   const db = getDb();
   const projectRows = await db.select().from(projects).orderBy(desc(projects.createdAt));
   const sp = await searchParams;
@@ -65,7 +73,7 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
     <>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-fg-muted">
-          Public REST API docs:{' '}
+          {tx(locale, 'Public REST API docs:', 'Dokumentasi REST API publik:')}{' '}
           <a href="/api/docs" target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">
             /api/docs
           </a>{' '}
@@ -78,18 +86,20 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
       </div>
 
       {!projectId ? (
-        <p className="text-sm text-fg-muted">Create a project first.</p>
+        <p className="text-sm text-fg-muted">
+          {tx(locale, 'Create a project first.', 'Buat project terlebih dahulu.')}
+        </p>
       ) : (
         <div className="grid gap-4 lg:grid-cols-[380px_1fr]">
           <Card>
             <CardHeader>
-              <CardTitle>Add webhook</CardTitle>
+              <CardTitle>{tx(locale, 'Add webhook', 'Tambah webhook')}</CardTitle>
             </CardHeader>
             <CardContent>
               <ActionForm action={addWebhookAction} className="space-y-3">
                 <input type="hidden" name="projectId" value={projectId} />
                 <div className="space-y-1">
-                  <Label htmlFor="channel">Channel</Label>
+                  <Label htmlFor="channel">{tx(locale, 'Channel', 'Channel')}</Label>
                   <Select id="channel" name="channel">
                     <option value="discord">Discord</option>
                     <option value="slack">Slack</option>
@@ -99,25 +109,25 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
                   </Select>
                 </div>
                 <div className="space-y-1">
-                  <Label htmlFor="label">Label</Label>
+                  <Label htmlFor="label">{tx(locale, 'Label', 'Label')}</Label>
                   <Input id="label" name="label" placeholder="Team alerts" />
                 </div>
                 <div className="space-y-1">
-                  <Label htmlFor="url">Webhook URL</Label>
+                  <Label htmlFor="url">{tx(locale, 'Webhook URL', 'Webhook URL')}</Label>
                   <Input id="url" name="url" placeholder="https://… (Discord/Slack/GChat/Generic)" />
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div className="space-y-1">
-                    <Label htmlFor="tgtoken">Telegram bot token</Label>
+                    <Label htmlFor="tgtoken">{tx(locale, 'Telegram bot token', 'Telegram bot token')}</Label>
                     <Input id="tgtoken" name="telegramToken" placeholder="for Telegram" />
                   </div>
                   <div className="space-y-1">
-                    <Label htmlFor="tgchat">Telegram chat id</Label>
+                    <Label htmlFor="tgchat">{tx(locale, 'Telegram chat id', 'Telegram chat id')}</Label>
                     <Input id="tgchat" name="telegramChatId" />
                   </div>
                 </div>
                 <div className="space-y-1">
-                  <Label>Events (none = all)</Label>
+                  <Label>{tx(locale, 'Events (none = all)', 'Event (kosong = semua)')}</Label>
                   <div className="flex flex-wrap gap-2 text-xs">
                     {ALL_EVENT_TYPES.map((e) => (
                       <label key={e} className="flex items-center gap-1 rounded-md border border-border px-2 py-1">
@@ -127,7 +137,7 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
                   </div>
                 </div>
                 <ActionSubmit className="w-full" data-testid="webhook-add">
-                  Add webhook
+                  {tx(locale, 'Add webhook', 'Tambah webhook')}
                 </ActionSubmit>
               </ActionForm>
             </CardContent>
@@ -135,7 +145,14 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
 
           <div className="space-y-2">
             {hooks.length === 0 ? (
-              <EmptyState title="No webhooks" description="Add a webhook to get scan & finding notifications." />
+              <EmptyState
+                title={tx(locale, 'No webhooks', 'Belum ada webhook')}
+                description={tx(
+                  locale,
+                  'Add a webhook to get scan & finding notifications.',
+                  'Tambahkan webhook untuk menerima notifikasi scan & temuan.',
+                )}
+              />
             ) : (
               hooks.map((w) => (
                 <Card key={w.id}>
@@ -145,26 +162,35 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
                         <span className="font-medium">{w.label ?? w.channel}</span>{' '}
                         <Badge variant="neutral">{w.channel}</Badge>{' '}
                         <span className="text-xs text-fg-subtle">
-                          {w.events.length ? w.events.join(', ') : 'all events'}
+                          {w.events.length ? w.events.join(', ') : tx(locale, 'all events', 'semua event')}
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
                         <ActionForm action={testWebhookAction}>
                           <input type="hidden" name="id" value={w.id} />
                           <ActionSubmit variant="outline" size="sm">
-                            Test
+                            {tx(locale, 'Test', 'Tes')}
                           </ActionSubmit>
                         </ActionForm>
-                        <ActionForm action={deleteWebhookAction} confirm="Remove this webhook? This cannot be undone.">
+                        <ActionForm
+                          action={deleteWebhookAction}
+                          confirm={tx(
+                            locale,
+                            'Remove this webhook? This cannot be undone.',
+                            'Hapus webhook ini? Tindakan ini tidak dapat dibatalkan.',
+                          )}
+                        >
                           <input type="hidden" name="id" value={w.id} />
                           <ActionSubmit variant="ghost" size="sm" className="text-danger hover:bg-danger/10">
-                            Remove
+                            {tx(locale, 'Remove', 'Hapus')}
                           </ActionSubmit>
                         </ActionForm>
                       </div>
                     </div>
                     <details className="mt-2">
-                      <summary className="cursor-pointer text-xs text-accent hover:underline">Edit</summary>
+                      <summary className="cursor-pointer text-xs text-accent hover:underline">
+                        {tx(locale, 'Edit', 'Ubah')}
+                      </summary>
                       <ActionForm
                         action={editWebhookAction}
                         className="mt-3 space-y-3"
@@ -172,7 +198,7 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
                       >
                         <input type="hidden" name="id" value={w.id} />
                         <div className="space-y-1">
-                          <Label htmlFor={`channel-${w.id}`}>Channel</Label>
+                          <Label htmlFor={`channel-${w.id}`}>{tx(locale, 'Channel', 'Channel')}</Label>
                           <Select id={`channel-${w.id}`} name="channel" defaultValue={w.channel}>
                             <option value="discord">Discord</option>
                             <option value="slack">Slack</option>
@@ -182,7 +208,7 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
                           </Select>
                         </div>
                         <div className="space-y-1">
-                          <Label htmlFor={`label-${w.id}`}>Label</Label>
+                          <Label htmlFor={`label-${w.id}`}>{tx(locale, 'Label', 'Label')}</Label>
                           <Input
                             id={`label-${w.id}`}
                             name="label"
@@ -191,7 +217,7 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
                           />
                         </div>
                         <div className="space-y-1">
-                          <Label htmlFor={`url-${w.id}`}>Webhook URL</Label>
+                          <Label htmlFor={`url-${w.id}`}>{tx(locale, 'Webhook URL', 'Webhook URL')}</Label>
                           <Input
                             id={`url-${w.id}`}
                             name="url"
@@ -201,7 +227,9 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
                         </div>
                         <div className="grid grid-cols-2 gap-2">
                           <div className="space-y-1">
-                            <Label htmlFor={`tgtoken-${w.id}`}>Telegram bot token</Label>
+                            <Label htmlFor={`tgtoken-${w.id}`}>
+                              {tx(locale, 'Telegram bot token', 'Telegram bot token')}
+                            </Label>
                             <Input
                               id={`tgtoken-${w.id}`}
                               name="telegramToken"
@@ -210,12 +238,14 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
                             />
                           </div>
                           <div className="space-y-1">
-                            <Label htmlFor={`tgchat-${w.id}`}>Telegram chat id</Label>
+                            <Label htmlFor={`tgchat-${w.id}`}>
+                              {tx(locale, 'Telegram chat id', 'Telegram chat id')}
+                            </Label>
                             <Input id={`tgchat-${w.id}`} name="telegramChatId" defaultValue={w.telegramChatId ?? ''} />
                           </div>
                         </div>
                         <div className="space-y-1">
-                          <Label>Events (none = all)</Label>
+                          <Label>{tx(locale, 'Events (none = all)', 'Event (kosong = semua)')}</Label>
                           <div className="flex flex-wrap gap-2 text-xs">
                             {ALL_EVENT_TYPES.map((e) => (
                               <label
@@ -228,10 +258,10 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
                           </div>
                         </div>
                         <label className="flex items-center gap-2 text-sm">
-                          <Checkbox name="enabled" defaultChecked={w.enabled} /> Enabled
+                          <Checkbox name="enabled" defaultChecked={w.enabled} /> {tx(locale, 'Enabled', 'Aktif')}
                         </label>
                         <ActionSubmit size="sm" data-testid={`webhook-edit-save-${w.id}`}>
-                          Save changes
+                          {tx(locale, 'Save changes', 'Simpan perubahan')}
                         </ActionSubmit>
                       </ActionForm>
                     </details>
@@ -245,18 +275,21 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
 
       <div className="mt-8">
         <h2 className="mb-3 font-display text-sm font-semibold uppercase tracking-wider text-fg-subtle">
-          Default AI enrichment (system)
+          {tx(locale, 'Default AI enrichment (system)', 'AI enrichment default (sistem)')}
         </h2>
         <Card className="max-w-xl">
           <CardContent className="pt-5">
             <p className="mb-3 text-sm text-fg-muted">
-              The default provider used for AI enrichment when a project has not chosen its own below. The system API
-              key works across all projects; a key stored in a project vault overrides it for that project.
+              {tx(
+                locale,
+                'The default provider used for AI enrichment when a project has not chosen its own below. The system API key works across all projects; a key stored in a project vault overrides it for that project.',
+                'Provider default untuk AI enrichment ketika sebuah project belum memilih sendiri di bawah. System API key berlaku untuk semua project; key yang disimpan di vault project menggantikannya untuk project tersebut.',
+              )}
             </p>
             <ActionForm action={saveAiDefaultsAction} className="space-y-3">
               <div className="flex items-end gap-3">
                 <div className="flex-1 space-y-1">
-                  <Label htmlFor="default-provider">Provider</Label>
+                  <Label htmlFor="default-provider">{tx(locale, 'Provider', 'Provider')}</Label>
                   <Select
                     id="default-provider"
                     name="provider"
@@ -271,7 +304,7 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
                   </Select>
                 </div>
                 <div className="flex-1 space-y-1">
-                  <Label htmlFor="default-model">Model</Label>
+                  <Label htmlFor="default-model">{tx(locale, 'Model', 'Model')}</Label>
                   <Input
                     id="default-model"
                     name="model"
@@ -281,7 +314,7 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
                 </div>
               </div>
               <div className="space-y-1">
-                <Label htmlFor="default-baseUrl">Base URL (optional)</Label>
+                <Label htmlFor="default-baseUrl">{tx(locale, 'Base URL (optional)', 'Base URL (opsional)')}</Label>
                 <Input
                   id="default-baseUrl"
                   name="baseUrl"
@@ -296,7 +329,14 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
                   {aiDefault?.apiKeyCiphertext ? (
                     <Badge variant="success">set</Badge>
                   ) : (
-                    <span className="text-xs text-fg-subtle">· used by every project without its own key</span>
+                    <span className="text-xs text-fg-subtle">
+                      ·{' '}
+                      {tx(
+                        locale,
+                        'used by every project without its own key',
+                        'dipakai setiap project yang tidak punya key sendiri',
+                      )}
+                    </span>
                   )}{' '}
                   {aiDefault?.apiKeyCiphertext && aiDefault?.lastCheckStatus ? (
                     <Badge
@@ -316,7 +356,7 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
                         ? 'valid'
                         : aiDefault.lastCheckStatus === 'invalid'
                           ? 'invalid'
-                          : 'check failed'}
+                          : tx(locale, 'check failed', 'cek gagal')}
                     </Badge>
                   ) : null}
                 </Label>
@@ -325,17 +365,25 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
                   name="apiKey"
                   type="password"
                   autoComplete="off"
-                  placeholder={aiDefault?.apiKeyCiphertext ? 'Leave blank to keep the stored key' : 'sk-...'}
+                  placeholder={
+                    aiDefault?.apiKeyCiphertext
+                      ? tx(locale, 'Leave blank to keep the stored key', 'Kosongkan untuk mempertahankan key tersimpan')
+                      : 'sk-...'
+                  }
                   data-testid="ai-default-key"
                 />
                 {aiDefault?.apiKeyCiphertext ? (
                   <label className="flex items-center gap-2 pt-1 text-xs text-fg-subtle">
-                    <Checkbox name="clearKey" className="size-3.5" /> Remove the stored system key
+                    <Checkbox name="clearKey" className="size-3.5" />{' '}
+                    {tx(locale, 'Remove the stored system key', 'Hapus system key tersimpan')}
                   </label>
                 ) : null}
               </div>
-              <ActionSubmit data-testid="ai-default-save" pendingText="Saving + testing key...">
-                Save default
+              <ActionSubmit
+                data-testid="ai-default-save"
+                pendingText={tx(locale, 'Saving + testing key...', 'Menyimpan + menguji key...')}
+              >
+                {tx(locale, 'Save default', 'Simpan default')}
               </ActionSubmit>
             </ActionForm>
           </CardContent>
@@ -345,22 +393,24 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
       {projectId ? (
         <div className="mt-8">
           <h2 className="mb-3 font-display text-sm font-semibold uppercase tracking-wider text-fg-subtle">
-            AI enrichment (this project)
+            {tx(locale, 'AI enrichment (this project)', 'AI enrichment (project ini)')}
           </h2>
           <Card className="max-w-xl">
             <CardContent className="pt-5">
               <p className="mb-3 text-sm text-fg-muted">
-                Provider for vulnerability enrichment (description/impact/remediation) for this project. This OVERRIDES
-                the system default above. Choose &quot;Use system default&quot; to follow it. Set the matching API key
-                in the vault below (or environment); features degrade gracefully without a key.
+                {tx(
+                  locale,
+                  'Provider for vulnerability enrichment (description/impact/remediation) for this project. This OVERRIDES the system default above. Choose "Use system default" to follow it. Set the matching API key in the vault below (or environment); features degrade gracefully without a key.',
+                  'Provider untuk vulnerability enrichment (deskripsi/dampak/remediasi) untuk project ini. Ini MENGGANTIKAN system default di atas. Pilih "Pakai system default" untuk mengikutinya. Set API key yang sesuai di vault bawah (atau environment); fitur tetap berjalan dengan baik tanpa key.',
+                )}
               </p>
               <ActionForm action={saveAiSettingsAction} className="space-y-3">
                 <input type="hidden" name="projectId" value={projectId} />
                 <div className="flex items-end gap-3">
                   <div className="flex-1 space-y-1">
-                    <Label htmlFor="provider">Provider</Label>
+                    <Label htmlFor="provider">{tx(locale, 'Provider', 'Provider')}</Label>
                     <Select id="provider" name="provider" defaultValue={ai?.provider ?? ''}>
-                      <option value="">Use system default</option>
+                      <option value="">{tx(locale, 'Use system default', 'Pakai system default')}</option>
                       {AI_PROVIDER_OPTIONS.map((o) => (
                         <option key={o.value} value={o.value}>
                           {o.label}
@@ -369,7 +419,7 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
                     </Select>
                   </div>
                   <div className="flex-1 space-y-1">
-                    <Label htmlFor="model">Model</Label>
+                    <Label htmlFor="model">{tx(locale, 'Model', 'Model')}</Label>
                     <Input
                       id="model"
                       name="model"
@@ -379,7 +429,7 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
                   </div>
                 </div>
                 <div className="space-y-1">
-                  <Label htmlFor="baseUrl">Base URL (optional)</Label>
+                  <Label htmlFor="baseUrl">{tx(locale, 'Base URL (optional)', 'Base URL (opsional)')}</Label>
                   <Input
                     id="baseUrl"
                     name="baseUrl"
@@ -388,12 +438,14 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
                     defaultValue={ai?.baseUrl ?? ''}
                   />
                   <p className="text-xs text-fg-subtle">
-                    DeepSeek and Kimi are OpenAI-compatible (no base URL needed). Point Anthropic/OpenAI at a compatible
-                    endpoint (local proxy, LiteLLM, gateway) if you use one. Leave blank for the official cloud API.
-                    (Ollama uses OLLAMA_BASE_URL.)
+                    {tx(
+                      locale,
+                      'DeepSeek and Kimi are OpenAI-compatible (no base URL needed). Point Anthropic/OpenAI at a compatible endpoint (local proxy, LiteLLM, gateway) if you use one. Leave blank for the official cloud API. (Ollama uses OLLAMA_BASE_URL.)',
+                      'DeepSeek dan Kimi kompatibel dengan OpenAI (tidak perlu base URL). Arahkan Anthropic/OpenAI ke endpoint yang kompatibel (proxy lokal, LiteLLM, gateway) jika Anda memakainya. Kosongkan untuk cloud API resmi. (Ollama memakai OLLAMA_BASE_URL.)',
+                    )}
                   </p>
                 </div>
-                <ActionSubmit data-testid="ai-save">Save</ActionSubmit>
+                <ActionSubmit data-testid="ai-save">{tx(locale, 'Save', 'Simpan')}</ActionSubmit>
               </ActionForm>
             </CardContent>
           </Card>
@@ -403,13 +455,16 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
       {projectId ? (
         <div className="mt-8">
           <h2 className="mb-3 font-display text-sm font-semibold uppercase tracking-wider text-fg-subtle">
-            API keys (encrypted vault)
+            {tx(locale, 'API keys (encrypted vault)', 'API key (vault terenkripsi)')}
           </h2>
           <Card className="max-w-2xl">
             <CardContent className="space-y-3 pt-5">
               <p className="text-sm text-fg-muted">
-                Per-project keys, encrypted at rest (AES-256-GCM). When set, they override the environment defaults.
-                Values are never displayed after saving.
+                {tx(
+                  locale,
+                  'Per-project keys, encrypted at rest (AES-256-GCM). When set, they override the environment defaults. Values are never displayed after saving.',
+                  'Key per project, terenkripsi saat disimpan (AES-256-GCM). Ketika diset, key menggantikan default dari environment. Nilai tidak pernah ditampilkan setelah disimpan.',
+                )}
               </p>
               {VAULT_KEYS.map((k) => (
                 <div
@@ -444,7 +499,7 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
                             ? 'valid'
                             : keyChecks.get(k.name)!.status === 'invalid'
                               ? 'invalid'
-                              : 'check failed'}
+                              : tx(locale, 'check failed', 'cek gagal')}
                         </Badge>
                       ) : null}
                     </Label>
@@ -456,10 +511,14 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
                         name="value"
                         type="password"
                         data-testid={`vault-input-${k.name}`}
-                        placeholder={setKeys.has(k.name) ? '•••••••• (replace)' : 'Paste key…'}
+                        placeholder={
+                          setKeys.has(k.name)
+                            ? tx(locale, '•••••••• (replace)', '•••••••• (ganti)')
+                            : tx(locale, 'Paste key…', 'Tempel key…')
+                        }
                       />
                       <ActionSubmit variant="outline" size="sm" data-testid={`vault-save-${k.name}`}>
-                        Save
+                        {tx(locale, 'Save', 'Simpan')}
                       </ActionSubmit>
                     </ActionForm>
                   </div>
@@ -471,10 +530,10 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
                         <ActionSubmit
                           variant="outline"
                           size="sm"
-                          pendingText="Testing..."
+                          pendingText={tx(locale, 'Testing...', 'Menguji...')}
                           data-testid={`vault-test-${k.name}`}
                         >
-                          Test
+                          {tx(locale, 'Test', 'Tes')}
                         </ActionSubmit>
                       </ActionForm>
                       <ActionForm action={clearProjectKeyAction}>
@@ -486,7 +545,7 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
                           className="text-danger hover:bg-danger/10"
                           data-testid={`vault-clear-${k.name}`}
                         >
-                          Clear
+                          {tx(locale, 'Clear', 'Hapus')}
                         </ActionSubmit>
                       </ActionForm>
                     </>

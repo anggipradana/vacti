@@ -6,6 +6,8 @@ import { PageHeader } from '../../../components/ui/page-header';
 import { EmptyState } from '../../../components/ui/empty-state';
 import { BookOpen } from 'lucide-react';
 import { getCurrentUser } from '../../../lib/session';
+import { getLocale } from '../../../lib/locale';
+import { tx } from '../../../lib/i18n';
 import { DocsViewer, type Doc } from './docs-viewer';
 
 export const dynamic = 'force-dynamic';
@@ -39,28 +41,37 @@ async function loadDocs(): Promise<Doc[]> {
 export default async function DocsPage() {
   const user = await getCurrentUser();
   if (!user) redirect('/login');
+  const locale = await getLocale();
   const docs = await loadDocs();
 
   return (
     <>
       <PageHeader
-        title="Documentation"
-        description="How to use vacti. For the scriptable REST API, see the API reference."
+        title={tx(locale, 'Documentation', 'Dokumentasi')}
+        description={tx(
+          locale,
+          'How to use vacti. For the scriptable REST API, see the API reference.',
+          'Cara menggunakan vacti. Untuk REST API yang dapat di-script, lihat API reference.',
+        )}
         actions={
           <Button asChild variant="secondary">
             <a href="/api/docs" target="_blank" rel="noopener noreferrer">
-              API reference (Redoc) →
+              {tx(locale, 'API reference (Redoc) →', 'API reference (Redoc) →')}
             </a>
           </Button>
         }
       />
       {docs.length ? (
-        <DocsViewer docs={docs} repoBase={REPO_BLOB} />
+        <DocsViewer docs={docs} repoBase={REPO_BLOB} locale={locale} />
       ) : (
         <EmptyState
           icon={<BookOpen />}
-          title="No docs found"
-          description="The documentation markdown wasn't bundled in this build."
+          title={tx(locale, 'No docs found', 'Dokumentasi tidak ditemukan')}
+          description={tx(
+            locale,
+            "The documentation markdown wasn't bundled in this build.",
+            'Markdown dokumentasi tidak disertakan dalam build ini.',
+          )}
         />
       )}
     </>

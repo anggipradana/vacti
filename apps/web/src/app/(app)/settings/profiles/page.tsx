@@ -14,6 +14,8 @@ import { scanProfiles } from '@vacti/db';
 import { getDb } from '../../../../lib/db';
 import { getCurrentUser } from '../../../../lib/session';
 import { saveProfileAction, editProfileAction, deleteProfileAction } from '../../../../lib/recon-actions';
+import { getLocale } from '../../../../lib/locale';
+import { tx } from '../../../../lib/i18n';
 
 export const dynamic = 'force-dynamic';
 
@@ -26,28 +28,37 @@ export default async function ProfilesPage({
 }) {
   const user = await getCurrentUser();
   if (!user) redirect('/login');
+  const locale = await getLocale();
   const canEdit = userCan(user, Permission.ModifyScanConfig);
   const rows = await getDb().select().from(scanProfiles).orderBy(desc(scanProfiles.createdAt));
   const sp = await searchParams;
 
   return (
     <>
-      <FormBanner ok={sp.ok} error={sp.error} messages={{ invalid: 'A scan profile needs a name.' }} />
+      <FormBanner
+        ok={sp.ok}
+        error={sp.error}
+        messages={{ invalid: tx(locale, 'A scan profile needs a name.', 'Scan profile membutuhkan nama.') }}
+      />
       <div className="grid gap-6 lg:grid-cols-[440px_1fr]">
         {canEdit ? (
           <Card>
             <CardHeader>
-              <CardTitle>New scan profile</CardTitle>
+              <CardTitle>{tx(locale, 'New scan profile', 'Scan profile baru')}</CardTitle>
             </CardHeader>
             <CardContent>
               <form action={saveProfileAction} className="space-y-4">
                 <div className="space-y-1.5">
-                  <Label htmlFor="name">Name</Label>
+                  <Label htmlFor="name">{tx(locale, 'Name', 'Nama')}</Label>
                   <Input id="name" name="name" placeholder="e.g. Deep w/ custom UA" required />
                 </div>
 
                 <p className="text-xs text-fg-subtle">
-                  Each tool runs in order and has its own options below. Untick a tool to skip its stage.
+                  {tx(
+                    locale,
+                    'Each tool runs in order and has its own options below. Untick a tool to skip its stage.',
+                    'Setiap tool berjalan berurutan dan punya opsi sendiri di bawah. Hapus centang sebuah tool untuk melewati tahapnya.',
+                  )}
                 </p>
 
                 {/* subfinder - subdomain discovery */}
@@ -56,7 +67,11 @@ export default async function ProfilesPage({
                     <Checkbox name="tools" value="subfinder" defaultChecked /> subfinder
                   </legend>
                   <p className="text-xs text-fg-subtle">
-                    Subdomain discovery. Untick to skip and use the target&apos;s predefined subdomains.
+                    {tx(
+                      locale,
+                      "Subdomain discovery. Untick to skip and use the target's predefined subdomains.",
+                      'Penemuan subdomain. Hapus centang untuk melewati dan memakai subdomain yang sudah ditentukan untuk target.',
+                    )}
                   </p>
                 </fieldset>
 
@@ -141,7 +156,11 @@ export default async function ProfilesPage({
                     <Label htmlFor="nucleiExtraArgs">extra args (advanced, allow-listed)</Label>
                     <Input id="nucleiExtraArgs" name="nucleiExtraArgs" placeholder="-follow-redirects -timeout 10" />
                     <p className="text-xs text-fg-subtle">
-                      Only safe flags pass; unknown flags are dropped server-side.
+                      {tx(
+                        locale,
+                        'Only safe flags pass; unknown flags are dropped server-side.',
+                        'Hanya flag aman yang lolos; flag tak dikenal dibuang di sisi server.',
+                      )}
                     </p>
                   </div>
                 </fieldset>
@@ -152,15 +171,21 @@ export default async function ProfilesPage({
                     <Checkbox name="tools" value="wordfence" /> wordfence
                   </legend>
                   <p className="text-xs text-fg-subtle">
-                    WordPress-focused nuclei templates, run automatically on hosts detected as WordPress.
+                    {tx(
+                      locale,
+                      'WordPress-focused nuclei templates, run automatically on hosts detected as WordPress.',
+                      'Template nuclei khusus WordPress, dijalankan otomatis pada host yang terdeteksi sebagai WordPress.',
+                    )}
                   </p>
                 </fieldset>
 
                 {/* Scope - applies across tools */}
                 <fieldset className="space-y-2 rounded-md border border-border p-3">
-                  <legend className="px-1 text-sm font-medium">Scope</legend>
+                  <legend className="px-1 text-sm font-medium">{tx(locale, 'Scope', 'Scope')}</legend>
                   <div className="space-y-1.5">
-                    <Label htmlFor="excludeSubdomains">Exclude subdomains</Label>
+                    <Label htmlFor="excludeSubdomains">
+                      {tx(locale, 'Exclude subdomains', 'Kecualikan subdomain')}
+                    </Label>
                     <Textarea
                       id="excludeSubdomains"
                       name="excludeSubdomains"
@@ -170,8 +195,8 @@ export default async function ProfilesPage({
                   </div>
                 </fieldset>
 
-                <SubmitButton pendingText="Saving…" className="w-full">
-                  Create profile
+                <SubmitButton pendingText={tx(locale, 'Saving…', 'Menyimpan…')} className="w-full">
+                  {tx(locale, 'Create profile', 'Buat profile')}
                 </SubmitButton>
               </form>
             </CardContent>
@@ -180,7 +205,14 @@ export default async function ProfilesPage({
 
         <div className="space-y-2">
           {rows.length === 0 ? (
-            <EmptyState title="No scan profiles" description="Create a profile to customise tools & scope." />
+            <EmptyState
+              title={tx(locale, 'No scan profiles', 'Belum ada scan profile')}
+              description={tx(
+                locale,
+                'Create a profile to customise tools & scope.',
+                'Buat profile untuk menyesuaikan tools & scope.',
+              )}
+            />
           ) : (
             rows.map((p) => {
               const tools = (p.tools ?? {}) as Record<string, boolean>;
@@ -201,12 +233,12 @@ export default async function ProfilesPage({
                     <div className="flex items-center justify-between">
                       <span className="font-medium">{p.name}</span>
                       <div className="flex items-center gap-2">
-                        {p.projectId ? null : <Badge variant="neutral">global</Badge>}
+                        {p.projectId ? null : <Badge variant="neutral">{tx(locale, 'global', 'global')}</Badge>}
                         {canEdit ? (
                           <form action={deleteProfileAction}>
                             <input type="hidden" name="id" value={p.id} />
                             <SubmitButton variant="ghost" size="sm" className="text-danger hover:bg-danger/10">
-                              Delete
+                              {tx(locale, 'Delete', 'Hapus')}
                             </SubmitButton>
                           </form>
                         ) : null}
@@ -224,16 +256,18 @@ export default async function ProfilesPage({
                     </div>
                     {canEdit ? (
                       <details className="mt-3">
-                        <summary className="cursor-pointer text-xs text-fg-muted hover:text-fg">Edit</summary>
+                        <summary className="cursor-pointer text-xs text-fg-muted hover:text-fg">
+                          {tx(locale, 'Edit', 'Ubah')}
+                        </summary>
                         <form action={editProfileAction} className="mt-3 space-y-4">
                           <input type="hidden" name="id" value={p.id} />
                           <div className="space-y-1.5">
-                            <Label htmlFor={`name-${p.id}`}>Name</Label>
+                            <Label htmlFor={`name-${p.id}`}>{tx(locale, 'Name', 'Nama')}</Label>
                             <Input id={`name-${p.id}`} name="name" defaultValue={p.name} required />
                           </div>
 
                           <fieldset className="space-y-2 rounded-md border border-border p-3">
-                            <legend className="px-1 text-sm font-medium">Tools</legend>
+                            <legend className="px-1 text-sm font-medium">{tx(locale, 'Tools', 'Tools')}</legend>
                             <div className="flex flex-wrap gap-3 text-sm">
                               {(['subfinder', 'httpx', 'naabu', 'nuclei', 'wordfence'] as const).map((tk) => (
                                 <label key={tk} className="flex items-center gap-1.5">
@@ -377,9 +411,11 @@ export default async function ProfilesPage({
                           </fieldset>
 
                           <fieldset className="space-y-2 rounded-md border border-border p-3">
-                            <legend className="px-1 text-sm font-medium">Scope</legend>
+                            <legend className="px-1 text-sm font-medium">{tx(locale, 'Scope', 'Scope')}</legend>
                             <div className="space-y-1.5">
-                              <Label htmlFor={`excludeSubdomains-${p.id}`}>Exclude subdomains</Label>
+                              <Label htmlFor={`excludeSubdomains-${p.id}`}>
+                                {tx(locale, 'Exclude subdomains', 'Kecualikan subdomain')}
+                              </Label>
                               <Textarea
                                 id={`excludeSubdomains-${p.id}`}
                                 name="excludeSubdomains"
@@ -394,8 +430,8 @@ export default async function ProfilesPage({
                             </div>
                           </fieldset>
 
-                          <SubmitButton size="sm" pendingText="Saving…">
-                            Save changes
+                          <SubmitButton size="sm" pendingText={tx(locale, 'Saving…', 'Menyimpan…')}>
+                            {tx(locale, 'Save changes', 'Simpan perubahan')}
                           </SubmitButton>
                         </form>
                       </details>

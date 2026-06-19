@@ -13,6 +13,8 @@ import { getActiveProjectId } from '../../../lib/active-project';
 import { scans, targets, projects } from '@vacti/db';
 import { getDb } from '../../../lib/db';
 import { getCurrentUser } from '../../../lib/session';
+import { getLocale } from '../../../lib/locale';
+import { tx } from '../../../lib/i18n';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,6 +29,7 @@ function fmt(d: Date | null): string {
 export default async function ReportsPage({ searchParams }: { searchParams: Promise<{ project?: string }> }) {
   const user = await getCurrentUser();
   if (!user) redirect('/login');
+  const locale = await getLocale();
   const db = getDb();
   const sp = await searchParams;
   const projectRows = await db.select().from(projects).orderBy(desc(projects.createdAt));
@@ -49,13 +52,17 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
     <>
       <PageHeader
         title="Reports"
-        description="Generate and download PDF reports for vulnerability assessments and threat intelligence."
+        description={tx(
+          locale,
+          'Generate and download PDF reports for vulnerability assessments and threat intelligence.',
+          'Buat dan unduh laporan PDF untuk vulnerability assessment dan threat intelligence.',
+        )}
         actions={
           <div className="flex items-center gap-2">
             <ProjectSwitcher projects={projectRows} current={projectId} basePath="/reports" />
             <Button asChild variant="outline" size="sm">
               <Link href={`/settings/reports?project=${projectId ?? ''}`}>
-                <Settings2 /> Report settings
+                <Settings2 /> {tx(locale, 'Report settings', 'Pengaturan report')}
               </Link>
             </Button>
           </div>
@@ -64,17 +71,20 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
 
       <Card className="mb-6">
         <CardHeader>
-          <CardTitle>Threat Intelligence report</CardTitle>
+          <CardTitle>{tx(locale, 'Threat Intelligence report', 'Report Threat Intelligence')}</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-wrap items-center justify-between gap-3 pt-0">
           <p className="text-sm text-fg-muted">
-            Project-wide CTI summary: risk score, OTX pulses, leaked credentials, indicators, sector news and the AI
-            risk analysis. Language and branding follow your report settings.
+            {tx(
+              locale,
+              'Project-wide CTI summary: risk score, OTX pulses, leaked credentials, indicators, sector news and the AI risk analysis. Language and branding follow your report settings.',
+              'Ringkasan CTI seluruh project: risk score, OTX pulses, leaked credentials, indikator, berita sektor dan analisis risiko AI. Bahasa dan branding mengikuti pengaturan report Anda.',
+            )}
           </p>
           {projectId ? (
             <Button asChild variant="secondary" size="sm">
               <a href={`/reports/ti/${projectId}`} target="_blank" rel="noopener noreferrer">
-                <FileText /> Download PDF
+                <FileText /> {tx(locale, 'Download PDF', 'Unduh PDF')}
               </a>
             </Button>
           ) : null}
@@ -83,21 +93,28 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
 
       <Card>
         <CardHeader>
-          <CardTitle>Vulnerability Assessment reports</CardTitle>
+          <CardTitle>{tx(locale, 'Vulnerability Assessment reports', 'Report Vulnerability Assessment')}</CardTitle>
         </CardHeader>
         <CardContent className="pt-0">
           <p className="mb-4 text-sm text-fg-muted">
-            One report per finished scan. Full includes recon and findings; Recon and Findings are scoped variants.
-            AI-enriched analysis is included automatically.
+            {tx(
+              locale,
+              'One report per finished scan. Full includes recon and findings; Recon and Findings are scoped variants. AI-enriched analysis is included automatically.',
+              'Satu report per scan selesai. Full mencakup recon dan findings; Recon dan Findings adalah varian terbatas. Analisis yang diperkaya AI disertakan otomatis.',
+            )}
           </p>
           {scanRows.length === 0 ? (
             <EmptyState
               icon={<FileText />}
-              title="No finished scans"
-              description="Reports become available once a scan completes."
+              title={tx(locale, 'No finished scans', 'Belum ada scan selesai')}
+              description={tx(
+                locale,
+                'Reports become available once a scan completes.',
+                'Report tersedia setelah sebuah scan selesai.',
+              )}
               action={
                 <Button asChild variant="secondary">
-                  <Link href="/scans">Go to VA scans</Link>
+                  <Link href="/scans">{tx(locale, 'Go to VA scans', 'Buka VA scans')}</Link>
                 </Button>
               }
             />
@@ -105,11 +122,11 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
             <Table>
               <THead>
                 <TR>
-                  <TH>Target</TH>
-                  <TH>Status</TH>
-                  <TH>Findings</TH>
-                  <TH>Finished</TH>
-                  <TH>Download</TH>
+                  <TH>{tx(locale, 'Target', 'Target')}</TH>
+                  <TH>{tx(locale, 'Status', 'Status')}</TH>
+                  <TH>{tx(locale, 'Findings', 'Findings')}</TH>
+                  <TH>{tx(locale, 'Finished', 'Selesai')}</TH>
+                  <TH>{tx(locale, 'Download', 'Unduh')}</TH>
                 </TR>
               </THead>
               <TBody>

@@ -46,6 +46,8 @@ import { BrandNews } from './brand-news';
 import { LeakTable } from './leak-table';
 import { SectorNewsList } from './sector-news-list';
 import { getActiveProjectId } from '../../../lib/active-project';
+import { getLocale } from '../../../lib/locale';
+import { tx } from '../../../lib/i18n';
 
 export const dynamic = 'force-dynamic';
 
@@ -56,6 +58,7 @@ export default async function ThreatPage({
 }) {
   const user = await getCurrentUser();
   if (!user) redirect('/login');
+  const locale = await getLocale();
   const db = getDb();
   const projectRows = await db.select().from(projects).orderBy(desc(projects.createdAt));
   const sp = await searchParams;
@@ -71,8 +74,12 @@ export default async function ThreatPage({
         <PageHeader title="Cyber Threat Intelligence" />
         <EmptyState
           icon={<ShieldCheck />}
-          title="No project yet"
-          description="Create a project to gather threat intel."
+          title={tx(locale, 'No project yet', 'Belum ada project')}
+          description={tx(
+            locale,
+            'Create a project to gather threat intel.',
+            'Buat project untuk mengumpulkan threat intel.',
+          )}
         />
       </>
     );
@@ -119,18 +126,22 @@ export default async function ThreatPage({
     <>
       <PageHeader
         title="Cyber Threat Intelligence"
-        description="OTX AlienVault, leaked credentials, manual indicators & unified risk score."
+        description={tx(
+          locale,
+          'OTX AlienVault, leaked credentials, manual indicators & unified risk score.',
+          'OTX AlienVault, leaked credentials, indikator manual & skor risiko terpadu.',
+        )}
         actions={
           <div className="flex items-center gap-2">
             <Button asChild variant="secondary">
               <a href={`/reports/ti/${projectId}`} target="_blank" rel="noopener noreferrer">
-                Generate report
+                {tx(locale, 'Generate report', 'Buat laporan')}
               </a>
             </Button>
             <ActionForm action={refreshTiAction}>
               <input type="hidden" name="projectId" value={projectId} />
-              <ActionSubmit pendingText="Refreshing...">
-                <RefreshCw /> Refresh
+              <ActionSubmit pendingText={tx(locale, 'Refreshing...', 'Menyegarkan...')}>
+                <RefreshCw /> {tx(locale, 'Refresh', 'Segarkan')}
               </ActionSubmit>
             </ActionForm>
           </div>
@@ -141,14 +152,20 @@ export default async function ThreatPage({
         <ProjectSwitcher projects={projectRows} current={projectId} basePath="/threat" />
         {status ? (
           <Badge variant={status.state === 'running' ? 'accent' : status.state === 'failed' ? 'danger' : 'neutral'}>
-            {status.state === 'running' ? `refreshing ${status.progress}%` : `last refresh: ${status.state}`}
+            {status.state === 'running'
+              ? `${tx(locale, 'refreshing', 'menyegarkan')} ${status.progress}%`
+              : `${tx(locale, 'last refresh', 'penyegaran terakhir')}: ${status.state}`}
           </Badge>
         ) : (
-          <Badge variant="neutral">never refreshed</Badge>
+          <Badge variant="neutral">{tx(locale, 'never refreshed', 'belum pernah disegarkan')}</Badge>
         )}
         {!otx.length && leakTotal === 0 ? (
           <span className="text-xs text-fg-subtle">
-            Set OTX_API_KEY / LEAKCHECK_API_KEY to populate live data - features degrade gracefully.
+            {tx(
+              locale,
+              'Set OTX_API_KEY / LEAKCHECK_API_KEY to populate live data - features degrade gracefully.',
+              'Atur OTX_API_KEY / LEAKCHECK_API_KEY untuk mengisi data live - fitur tetap berjalan tanpanya.',
+            )}
           </span>
         ) : null}
       </div>
@@ -156,7 +173,7 @@ export default async function ThreatPage({
       <div className="grid gap-4 lg:grid-cols-[280px_1fr]">
         <Card>
           <CardHeader>
-            <CardTitle>Unified risk score</CardTitle>
+            <CardTitle>{tx(locale, 'Unified risk score', 'Skor risiko terpadu')}</CardTitle>
           </CardHeader>
           <CardContent className="flex justify-center py-4">
             <RiskGauge score={risk.score} />
@@ -164,7 +181,7 @@ export default async function ThreatPage({
         </Card>
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
           <StatCard label="OTX pulses" value={pulses} icon={<Activity />} />
-          <StatCard label="Malware refs" value={malware} icon={<Bug />} />
+          <StatCard label={tx(locale, 'Malware refs', 'Referensi malware')} value={malware} icon={<Bug />} />
           <StatCard
             label="Leaked creds"
             value={leakTotal}
@@ -172,39 +189,62 @@ export default async function ThreatPage({
             hint={
               status?.leakTruncated
                 ? `LeakCheck reports ${status.leakFound ?? leakTotal}+ - capped`
-                : `${unchecked} unchecked`
+                : `${unchecked} ${tx(locale, 'unchecked', 'belum dicek')}`
             }
           />
-          <StatCard label="Indicators" value={indicators.length} icon={<Plus />} />
+          <StatCard label={tx(locale, 'Indicators', 'Indikator')} value={indicators.length} icon={<Plus />} />
         </div>
       </div>
       {status?.leakTruncated ? (
         <p className="mt-2 text-xs text-fg-subtle">
-          LeakCheck found {status.leakFound ?? leakTotal} breached credential(s) for this project but returns at most
-          1000 per query, so the stored list is truncated. The newest 1000 are kept; treat the count as a floor.
+          {tx(
+            locale,
+            `LeakCheck found ${status.leakFound ?? leakTotal} breached credential(s) for this project but returns at most 1000 per query, so the stored list is truncated. The newest 1000 are kept; treat the count as a floor.`,
+            `LeakCheck menemukan ${status.leakFound ?? leakTotal} breached credential untuk project ini tetapi hanya mengembalikan maksimal 1000 per query, sehingga daftar yang tersimpan terpotong. 1000 terbaru disimpan; anggap jumlah ini sebagai batas bawah.`,
+          )}
         </p>
       ) : null}
 
       <Suspense
-        fallback={<div className="mt-4 text-sm text-fg-subtle">Loading threat landscape (KEV, EPSS, ransomware)…</div>}
+        fallback={
+          <div className="mt-4 text-sm text-fg-subtle">
+            {tx(
+              locale,
+              'Loading threat landscape (KEV, EPSS, ransomware)…',
+              'Memuat threat landscape (KEV, EPSS, ransomware)…',
+            )}
+          </div>
+        }
       >
-        <CtiCards projectId={projectId} />
+        <CtiCards projectId={projectId} locale={locale} />
       </Suspense>
 
-      <Suspense fallback={<div className="mt-4 text-sm text-fg-subtle">Loading brand news…</div>}>
+      <Suspense
+        fallback={
+          <div className="mt-4 text-sm text-fg-subtle">{tx(locale, 'Loading brand news…', 'Memuat brand news…')}</div>
+        }
+      >
         <BrandNews
           projectId={projectId}
           brand={project?.brandQuery || project?.name || 'brand'}
           canTriage={canTriage}
           filter={brandFilter}
+          locale={locale}
         />
       </Suspense>
 
-      <NarrativeCard projectId={projectId} initial={status?.aiNarrative ?? null} canTriage={canTriage} />
+      <NarrativeCard
+        projectId={projectId}
+        initial={status?.aiNarrative ?? null}
+        canTriage={canTriage}
+        locale={locale}
+      />
 
       <Card className="mt-4">
         <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3">
-          <CardTitle>Security news · {sector}</CardTitle>
+          <CardTitle>
+            {tx(locale, 'Security news', 'Security news')} · {sector}
+          </CardTitle>
           <div className="flex flex-wrap items-center gap-2">
             {canTriage ? (
               <>
@@ -214,18 +254,22 @@ export default async function ThreatPage({
                   <Select name="status" defaultValue="reviewed" className="h-8 w-36 text-xs" aria-label="Bulk status">
                     {Object.entries(NEWS_STATUS_LABEL).map(([val, label]) => (
                       <option key={val} value={val}>
-                        Mark all: {label}
+                        {tx(locale, 'Mark all', 'Tandai semua')}: {label}
                       </option>
                     ))}
                   </Select>
                   <ActionSubmit variant="outline" size="sm">
-                    Apply
+                    {tx(locale, 'Apply', 'Terapkan')}
                   </ActionSubmit>
                 </ActionForm>
                 <ActionForm
                   action={setSectorAction}
                   className="flex items-center gap-2"
-                  confirm="Fetching this sector's news keeps only the newest 15 headlines and removes older stored ones. Continue?"
+                  confirm={tx(
+                    locale,
+                    "Fetching this sector's news keeps only the newest 15 headlines and removes older stored ones. Continue?",
+                    'Mengambil news sektor ini hanya menyimpan 15 headline terbaru dan menghapus yang lebih lama. Lanjutkan?',
+                  )}
                 >
                   <input type="hidden" name="projectId" value={projectId} />
                   <Select name="sector" defaultValue={sector} className="w-40">
@@ -236,10 +280,10 @@ export default async function ThreatPage({
                     ))}
                   </Select>
                   <ActionSubmit variant="outline" size="sm">
-                    Apply sector
+                    {tx(locale, 'Apply sector', 'Terapkan sektor')}
                   </ActionSubmit>
                 </ActionForm>
-                <NewsTriageButton projectId={projectId} kind="sector" />
+                <NewsTriageButton projectId={projectId} kind="sector" locale={locale} />
               </>
             ) : null}
           </div>
@@ -247,11 +291,16 @@ export default async function ThreatPage({
         <CardContent className="pt-0">
           {news.length === 0 ? (
             <p className="py-2 text-sm text-fg-muted">
-              No news yet - pick a sector and refresh to pull the latest security headlines.
+              {tx(
+                locale,
+                'No news yet - pick a sector and refresh to pull the latest security headlines.',
+                'Belum ada news - pilih sektor dan segarkan untuk menarik security headline terbaru.',
+              )}
             </p>
           ) : (
             <SectorNewsList
               initialStatus={newsFilter}
+              locale={locale}
               items={news.map((n) => ({
                 id: n.id,
                 title: n.title,
@@ -273,13 +322,17 @@ export default async function ThreatPage({
             <Bug className="size-4 text-accent" /> Exposure (passive) · {exposureTotal}
           </CardTitle>
           <Link href={`/surface?project=${projectId}`} className="text-xs text-accent hover:underline">
-            View in Attack Surface →
+            {tx(locale, 'View in Attack Surface', 'Lihat di Attack Surface')} →
           </Link>
         </CardHeader>
         <CardContent className="pt-0">
           {exposureTotal === 0 ? (
             <p className="py-1 text-sm text-fg-muted">
-              No passive exposure findings yet - run a passive or full scan from Scans.
+              {tx(
+                locale,
+                'No passive exposure findings yet - run a passive or full scan from Scans.',
+                'Belum ada passive exposure findings - jalankan passive atau full scan dari Scans.',
+              )}
             </p>
           ) : (
             <div className="space-y-2">
@@ -298,8 +351,11 @@ export default async function ThreatPage({
               </div>
               {exposureCredTotal > 0 ? (
                 <p className="text-xs text-fg-muted">
-                  {exposureCredTotal} credential-class finding(s) overlap leaked credentials below - feeds the Exposure
-                  component of the risk score.
+                  {tx(
+                    locale,
+                    `${exposureCredTotal} credential-class finding(s) overlap leaked credentials below - feeds the Exposure component of the risk score.`,
+                    `${exposureCredTotal} credential-class finding tumpang tindih dengan leaked credentials di bawah - menjadi masukan komponen Exposure pada skor risiko.`,
+                  )}
                 </p>
               ) : null}
             </div>
@@ -309,7 +365,7 @@ export default async function ThreatPage({
 
       <div className="mb-3 mt-8 flex flex-wrap items-center justify-between gap-3">
         <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-fg-subtle">
-          Leaked credentials
+          {tx(locale, 'Leaked credentials', 'Leaked credentials')}
         </h2>
         {leakTotal > 0 && canTriage ? (
           <ActionForm action={bulkReviewLeaksAction} className="flex items-center gap-1.5">
@@ -318,23 +374,26 @@ export default async function ThreatPage({
             <Select name="status" defaultValue="investigating" className="h-8 w-40 text-xs" aria-label="Bulk status">
               {Object.entries(LEAK_STATUS_LABEL).map(([val, label]) => (
                 <option key={val} value={val}>
-                  Mark all: {label}
+                  {tx(locale, 'Mark all', 'Tandai semua')}: {label}
                 </option>
               ))}
             </Select>
             <ActionSubmit variant="outline" size="sm">
-              Apply
+              {tx(locale, 'Apply', 'Terapkan')}
             </ActionSubmit>
           </ActionForm>
         ) : null}
       </div>
       {leakTotal === 0 ? (
         <Card>
-          <CardContent className="py-5 text-sm text-fg-muted">No leaked credentials found.</CardContent>
+          <CardContent className="py-5 text-sm text-fg-muted">
+            {tx(locale, 'No leaked credentials found.', 'Tidak ada leaked credentials ditemukan.')}
+          </CardContent>
         </Card>
       ) : (
         <LeakTable
           initialStatus={leakFilter}
+          locale={locale}
           leaks={leaks.map((l) => ({
             id: l.id,
             identifier: l.identifier,
@@ -349,11 +408,14 @@ export default async function ThreatPage({
       )}
 
       <h2 className="mb-1 mt-8 font-display text-sm font-semibold uppercase tracking-wider text-fg-subtle">
-        Monitored assets (manual indicators)
+        {tx(locale, 'Monitored assets (manual indicators)', 'Aset yang dimonitor (indikator manual)')}
       </h2>
       <p className="mb-3 text-sm text-fg-muted">
-        Your public IPs and domains, checked against VirusTotal engines and OTX pulses on every refresh: a flagged asset
-        usually means compromise, blacklisting, or abuse of your infrastructure.
+        {tx(
+          locale,
+          'Your public IPs and domains, checked against VirusTotal engines and OTX pulses on every refresh: a flagged asset usually means compromise, blacklisting, or abuse of your infrastructure.',
+          'IP publik dan domain Anda, dicek terhadap engine VirusTotal dan OTX pulses pada setiap penyegaran: aset yang ditandai biasanya berarti kompromi, blacklisting, atau penyalahgunaan infrastruktur Anda.',
+        )}
       </p>
       <div className="grid gap-4 lg:grid-cols-[360px_1fr]">
         <Card>
@@ -361,7 +423,7 @@ export default async function ThreatPage({
             <ActionForm action={addIndicatorAction} className="space-y-3">
               <input type="hidden" name="projectId" value={projectId} />
               <div className="space-y-1.5">
-                <Label htmlFor="type">Type</Label>
+                <Label htmlFor="type">{tx(locale, 'Type', 'Tipe')}</Label>
                 <Select id="type" name="type">
                   <option value="domain">domain</option>
                   <option value="subdomain">subdomain</option>
@@ -369,7 +431,7 @@ export default async function ThreatPage({
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="value">Value(s)</Label>
+                <Label htmlFor="value">{tx(locale, 'Value(s)', 'Nilai')}</Label>
                 <Textarea
                   id="value"
                   name="value"
@@ -377,10 +439,16 @@ export default async function ThreatPage({
                   placeholder={'evil.example.com\nbad.example.com\n34.1.2.3'}
                   required
                 />
-                <p className="text-xs text-fg-subtle">One per line (or comma/space separated) for bulk add.</p>
+                <p className="text-xs text-fg-subtle">
+                  {tx(
+                    locale,
+                    'One per line (or comma/space separated) for bulk add.',
+                    'Satu per baris (atau dipisah koma/spasi) untuk tambah massal.',
+                  )}
+                </p>
               </div>
               <ActionSubmit className="w-full">
-                <Plus /> Add indicator(s)
+                <Plus /> {tx(locale, 'Add indicator(s)', 'Tambah indikator')}
               </ActionSubmit>
             </ActionForm>
           </CardContent>
@@ -388,7 +456,9 @@ export default async function ThreatPage({
         <div className="space-y-2">
           {indicators.length === 0 ? (
             <Card>
-              <CardContent className="py-5 text-sm text-fg-muted">No manual indicators.</CardContent>
+              <CardContent className="py-5 text-sm text-fg-muted">
+                {tx(locale, 'No manual indicators.', 'Tidak ada indikator manual.')}
+              </CardContent>
             </Card>
           ) : (
             indicators.map((ind) => (
@@ -408,18 +478,23 @@ export default async function ThreatPage({
                                 : 'neutral'
                         }
                         title={
-                          ind.lastCheckedAt ? `Last checked ${ind.lastCheckedAt.toISOString()}` : 'Not checked yet'
+                          ind.lastCheckedAt
+                            ? `${tx(locale, 'Last checked', 'Terakhir dicek')} ${ind.lastCheckedAt.toISOString()}`
+                            : tx(locale, 'Not checked yet', 'Belum dicek')
                         }
                         data-testid={`indicator-verdict-${ind.id}`}
                       >
-                        {ind.verdict === 'unknown' ? 'not checked' : ind.verdict}
+                        {ind.verdict === 'unknown' ? tx(locale, 'not checked', 'belum dicek') : ind.verdict}
                       </Badge>
                       <Badge variant="accent">{ind.type}</Badge>
                       {canTriage ? (
-                        <ActionForm action={deleteIndicatorAction} confirm="Delete this indicator?">
+                        <ActionForm
+                          action={deleteIndicatorAction}
+                          confirm={tx(locale, 'Delete this indicator?', 'Hapus indikator ini?')}
+                        >
                           <input type="hidden" name="id" value={ind.id} />
                           <ActionSubmit size="sm" variant="ghost" className="text-danger hover:bg-danger/10">
-                            Delete
+                            {tx(locale, 'Delete', 'Hapus')}
                           </ActionSubmit>
                         </ActionForm>
                       ) : null}
@@ -433,7 +508,9 @@ export default async function ThreatPage({
                   ) : null}
                   {canTriage ? (
                     <details className="mt-2">
-                      <summary className="cursor-pointer text-xs text-fg-subtle hover:text-fg-muted">Edit</summary>
+                      <summary className="cursor-pointer text-xs text-fg-subtle hover:text-fg-muted">
+                        {tx(locale, 'Edit', 'Ubah')}
+                      </summary>
                       <ActionForm action={editIndicatorAction} className="mt-2 space-y-2">
                         <input type="hidden" name="id" value={ind.id} />
                         <Select name="type" defaultValue={ind.type} aria-label="Type">
@@ -441,10 +518,19 @@ export default async function ThreatPage({
                           <option value="subdomain">subdomain</option>
                           <option value="ip">ip</option>
                         </Select>
-                        <Input name="value" defaultValue={ind.value} placeholder="Value" required />
-                        <Input name="note" defaultValue={ind.note ?? ''} placeholder="Note (optional)" />
+                        <Input
+                          name="value"
+                          defaultValue={ind.value}
+                          placeholder={tx(locale, 'Value', 'Nilai')}
+                          required
+                        />
+                        <Input
+                          name="note"
+                          defaultValue={ind.note ?? ''}
+                          placeholder={tx(locale, 'Note (optional)', 'Catatan (opsional)')}
+                        />
                         <ActionSubmit size="sm" variant="outline">
-                          Save
+                          {tx(locale, 'Save', 'Simpan')}
                         </ActionSubmit>
                       </ActionForm>
                     </details>

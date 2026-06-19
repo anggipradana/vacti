@@ -8,6 +8,8 @@ import { userCan, Permission } from '@vacti/core';
 import { auditLog, users } from '@vacti/db';
 import { getDb } from '../../../../lib/db';
 import { getCurrentUser } from '../../../../lib/session';
+import { getLocale } from '../../../../lib/locale';
+import { tx } from '../../../../lib/i18n';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,6 +17,7 @@ export default async function AuditPage() {
   const me = await getCurrentUser();
   if (!me) redirect('/login');
   if (!userCan(me, Permission.ModifySystemConfig)) redirect('/dashboard');
+  const locale = await getLocale();
   const db = getDb();
   // Join the actor's email in SQL rather than fetching all users and mapping in JS.
   const rows = await db
@@ -28,8 +31,12 @@ export default async function AuditPage() {
     <>
       {rows.length === 0 ? (
         <EmptyState
-          title="No audit entries yet"
-          description="Actions like scans, role changes and key updates appear here."
+          title={tx(locale, 'No audit entries yet', 'Belum ada entri audit')}
+          description={tx(
+            locale,
+            'Actions like scans, role changes and key updates appear here.',
+            'Aksi seperti scan, perubahan peran, dan pembaruan key muncul di sini.',
+          )}
         />
       ) : (
         <Card>
@@ -37,10 +44,10 @@ export default async function AuditPage() {
             <Table>
               <THead>
                 <TR>
-                  <TH>When</TH>
-                  <TH>Actor</TH>
-                  <TH>Action</TH>
-                  <TH>Resource</TH>
+                  <TH>{tx(locale, 'When', 'Waktu')}</TH>
+                  <TH>{tx(locale, 'Actor', 'Pelaku')}</TH>
+                  <TH>{tx(locale, 'Action', 'Aksi')}</TH>
+                  <TH>{tx(locale, 'Resource', 'Sumber Daya')}</TH>
                 </TR>
               </THead>
               <TBody>
@@ -53,7 +60,7 @@ export default async function AuditPage() {
                       {r.actorId ? (
                         (r.actorEmail ?? r.actorId.slice(0, 8))
                       ) : (
-                        <span className="text-fg-subtle">system</span>
+                        <span className="text-fg-subtle">{tx(locale, 'system', 'sistem')}</span>
                       )}
                     </TD>
                     <TD>

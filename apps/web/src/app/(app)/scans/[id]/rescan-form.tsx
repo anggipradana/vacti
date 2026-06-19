@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { Button } from '../../../../components/ui/button';
 import { Checkbox } from '../../../../components/ui/checkbox';
+import { tx, type Locale } from '../../../../lib/i18n';
 
 const STAGES = ['subfinder', 'httpx', 'naabu', 'nuclei', 'wordfence'];
 
@@ -11,7 +12,7 @@ const STAGES = ['subfinder', 'httpx', 'naabu', 'nuclei', 'wordfence'];
  * scan, and that redirect is dropped on this heavy page (the same bug as the New-scan dialog). For
  * an active scan the tool checkboxes allow a sub-scan; a passive rescan re-runs OSINT only.
  */
-export function RescanForm({ scanId, passive }: { scanId: string; passive: boolean }) {
+export function RescanForm({ scanId, passive, locale = 'en' }: { scanId: string; passive: boolean; locale?: Locale }) {
   const [starting, setStarting] = React.useState(false);
   const [err, setErr] = React.useState('');
 
@@ -32,10 +33,10 @@ export function RescanForm({ scanId, passive }: { scanId: string; passive: boole
         window.location.assign(`/scans/${data.scanId}`);
         return;
       }
-      setErr('Could not start the rescan, try again.');
+      setErr(tx(locale, 'Could not start the rescan, try again.', 'Tidak dapat memulai rescan, coba lagi.'));
       setStarting(false);
     } catch {
-      setErr('Request failed, try again.');
+      setErr(tx(locale, 'Request failed, try again.', 'Permintaan gagal, coba lagi.'));
       setStarting(false);
     }
   };
@@ -43,10 +44,14 @@ export function RescanForm({ scanId, passive }: { scanId: string; passive: boole
   return (
     <form onSubmit={submit} className="flex flex-wrap items-center gap-3 border-t border-border pt-4">
       {passive ? (
-        <span className="text-xs font-medium text-fg-subtle">Re-run passive recon for this target:</span>
+        <span className="text-xs font-medium text-fg-subtle">
+          {tx(locale, 'Re-run passive recon for this target:', 'Jalankan ulang passive recon untuk target ini:')}
+        </span>
       ) : (
         <>
-          <span className="text-xs font-medium text-fg-subtle">Rescan (uncheck tools for a sub-scan):</span>
+          <span className="text-xs font-medium text-fg-subtle">
+            {tx(locale, 'Rescan (uncheck tools for a sub-scan):', 'Rescan (hapus centang tool untuk sub-scan):')}
+          </span>
           {STAGES.map((t) => (
             <label key={t} className="flex items-center gap-1 text-xs">
               <Checkbox name="tools" value={t} defaultChecked /> {t}
@@ -55,7 +60,7 @@ export function RescanForm({ scanId, passive }: { scanId: string; passive: boole
         </>
       )}
       <Button type="submit" size="sm" loading={starting}>
-        {starting ? 'Starting...' : 'Rescan'}
+        {starting ? tx(locale, 'Starting...', 'Memulai...') : tx(locale, 'Rescan', 'Rescan')}
       </Button>
       {err ? <span className="text-xs text-danger">{err}</span> : null}
     </form>

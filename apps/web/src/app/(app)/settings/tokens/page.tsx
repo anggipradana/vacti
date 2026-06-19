@@ -9,12 +9,15 @@ import { getDb } from '../../../../lib/db';
 import { getCurrentUser } from '../../../../lib/session';
 import { revokeTokenAction } from '../../../../lib/actions';
 import CreateToken from './create-token';
+import { getLocale } from '../../../../lib/locale';
+import { tx } from '../../../../lib/i18n';
 
 export const dynamic = 'force-dynamic';
 
 export default async function TokensPage() {
   const user = await getCurrentUser();
   if (!user) redirect('/login');
+  const locale = await getLocale();
   const rows = await getDb()
     .select()
     .from(apiTokens)
@@ -24,30 +27,40 @@ export default async function TokensPage() {
     <>
       <div className="space-y-6">
         <div className="rounded-lg border border-border bg-surface-2 px-4 py-3 text-sm">
-          <span className="font-medium">API reference:</span> every action is scriptable via the typed REST API (Bearer
-          token).{' '}
+          <span className="font-medium">{tx(locale, 'API reference:', 'Referensi API:')}</span>{' '}
+          {tx(
+            locale,
+            'every action is scriptable via the typed REST API (Bearer token).',
+            'setiap aksi dapat di-script via REST API bertipe (Bearer token).',
+          )}{' '}
           <a href="/api/docs" target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">
-            Open API docs (Redoc) →
+            {tx(locale, 'Open API docs (Redoc) →', 'Buka dokumentasi API (Redoc) →')}
           </a>{' '}
           ·{' '}
           <a href="/api/openapi.json" target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">
             OpenAPI JSON
           </a>
           <div className="mt-1 text-xs text-fg-subtle">
-            Usage guide: see <span className="font-mono">docs/tutorials/getting-started.md</span> in the repository.
+            {tx(locale, 'Usage guide: see', 'Panduan penggunaan: lihat')}{' '}
+            <span className="font-mono">docs/tutorials/getting-started.md</span>{' '}
+            {tx(locale, 'in the repository.', 'di repository.')}
           </div>
         </div>
-        <CreateToken />
+        <CreateToken locale={locale} />
         <div data-testid="token-list">
           {rows.length === 0 ? (
-            <EmptyState icon={<KeyRound />} title="No tokens yet" description="Create a token to call the vacti API." />
+            <EmptyState
+              icon={<KeyRound />}
+              title={tx(locale, 'No tokens yet', 'Belum ada token')}
+              description={tx(locale, 'Create a token to call the vacti API.', 'Buat token untuk memanggil API vacti.')}
+            />
           ) : (
             <Table>
               <THead>
                 <TR>
-                  <TH>Label</TH>
-                  <TH>Created</TH>
-                  <TH className="text-right">Actions</TH>
+                  <TH>{tx(locale, 'Label', 'Label')}</TH>
+                  <TH>{tx(locale, 'Created', 'Dibuat')}</TH>
+                  <TH className="text-right">{tx(locale, 'Actions', 'Aksi')}</TH>
                 </TR>
               </THead>
               <TBody>
@@ -59,12 +72,16 @@ export default async function TokensPage() {
                       <form action={revokeTokenAction} className="inline">
                         <input type="hidden" name="id" value={t.id} />
                         <ConfirmButton
-                          confirm="Revoke this API token? Any client using it will stop working."
+                          confirm={tx(
+                            locale,
+                            'Revoke this API token? Any client using it will stop working.',
+                            'Cabut API token ini? Klien yang memakainya akan berhenti bekerja.',
+                          )}
                           variant="ghost"
                           size="sm"
                           className="text-danger hover:bg-danger/10"
                         >
-                          Revoke
+                          {tx(locale, 'Revoke', 'Cabut')}
                         </ConfirmButton>
                       </form>
                     </TD>

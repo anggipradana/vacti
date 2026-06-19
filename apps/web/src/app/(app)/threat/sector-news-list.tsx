@@ -11,6 +11,7 @@ import { Badge } from '../../../components/ui/badge';
 import { NewsStatusBadge } from '../../../components/ui/finding-status';
 import { AutoSubmitSelect } from '../../../components/ui/auto-submit-select';
 import { setNewsStatusAction, bulkSetNewsStatusByIdsAction } from '../../../lib/threat-actions';
+import { tx, type Locale } from '../../../lib/i18n';
 
 export interface SectorNewsItem {
   id: string;
@@ -32,11 +33,13 @@ export function SectorNewsList({
   items,
   canTriage,
   initialStatus = 'all',
+  locale = 'en',
 }: {
   items: SectorNewsItem[];
   canTriage: boolean;
   /** Pre-applied status filter (deep links like the dashboard's "New sector news" tile). */
   initialStatus?: string;
+  locale?: Locale;
 }) {
   const [query, setQuery] = React.useState('');
   const [statusFilter, setStatusFilter] = React.useState(initialStatus);
@@ -87,7 +90,7 @@ export function SectorNewsList({
             setQuery(e.target.value);
             setPage(1);
           }}
-          placeholder="Search news (title, source)…"
+          placeholder={tx(locale, 'Search news (title, source)…', 'Cari news (judul, source)…')}
           className="h-8 w-72 text-xs"
           aria-label="Search security news"
         />
@@ -100,7 +103,7 @@ export function SectorNewsList({
           className="h-8 w-36 text-xs"
           aria-label="Filter news by status"
         >
-          <option value="all">All statuses</option>
+          <option value="all">{tx(locale, 'All statuses', 'Semua status')}</option>
           {STATUS_OPTIONS.map(([val, label]) => (
             <option key={val} value={val}>
               {label}
@@ -108,7 +111,7 @@ export function SectorNewsList({
           ))}
         </Select>
         <span className="text-xs text-fg-subtle">
-          {filtered.length} of {items.length}
+          {filtered.length} {tx(locale, 'of', 'dari')} {items.length}
         </span>
       </div>
 
@@ -121,25 +124,33 @@ export function SectorNewsList({
           {selectedIds.map((id) => (
             <input key={id} type="hidden" name="ids" value={id} />
           ))}
-          <span className="text-xs font-medium">{selected.size} selected</span>
+          <span className="text-xs font-medium">
+            {selected.size} {tx(locale, 'selected', 'dipilih')}
+          </span>
           <Select name="status" defaultValue="reviewed" className="h-8 w-36 text-xs" aria-label="Bulk set status">
             {STATUS_OPTIONS.map(([val, label]) => (
               <option key={val} value={val}>
-                Set: {label}
+                {tx(locale, 'Set', 'Atur')}: {label}
               </option>
             ))}
           </Select>
           <ActionSubmit size="sm" variant="primary">
-            Apply to selected
+            {tx(locale, 'Apply to selected', 'Terapkan ke yang dipilih')}
           </ActionSubmit>
           <Button type="button" size="sm" variant="ghost" onClick={() => setSelected(new Set())}>
-            Clear
+            {tx(locale, 'Clear', 'Bersihkan')}
           </Button>
         </ActionForm>
       ) : null}
 
       {filtered.length === 0 ? (
-        <p className="py-2 text-sm text-fg-muted">No headlines match your search/filter.</p>
+        <p className="py-2 text-sm text-fg-muted">
+          {tx(
+            locale,
+            'No headlines match your search/filter.',
+            'Tidak ada headline yang cocok dengan pencarian/filter Anda.',
+          )}
+        </p>
       ) : (
         <ul className="divide-y divide-border">
           {shown.map((n) => (
@@ -201,14 +212,15 @@ export function SectorNewsList({
       {totalPages > 1 ? (
         <div className="flex items-center justify-between text-xs text-fg-subtle">
           <span>
-            Page {safePage} of {totalPages} · {filtered.length} headlines
+            {tx(locale, 'Page', 'Halaman')} {safePage} {tx(locale, 'of', 'dari')} {totalPages} · {filtered.length}{' '}
+            {tx(locale, 'headlines', 'headline')}
           </span>
           <div className="flex gap-1.5">
             <Button size="sm" variant="outline" disabled={safePage <= 1} onClick={() => setPage(safePage - 1)}>
-              Prev
+              {tx(locale, 'Prev', 'Sebelumnya')}
             </Button>
             <Button size="sm" variant="outline" disabled={safePage >= totalPages} onClick={() => setPage(safePage + 1)}>
-              Next
+              {tx(locale, 'Next', 'Berikutnya')}
             </Button>
           </div>
         </div>
