@@ -7,7 +7,9 @@ import { Menu, LogOut, ChevronDown } from 'lucide-react';
 import { cn } from '../../lib/cn';
 import { Button } from '../ui/button';
 import { ThemeToggle } from '../ui/theme-toggle';
+import { LanguageToggle } from '../ui/language-toggle';
 import { CommandPalette } from '../ui/command-palette';
+import { makeT, type Locale } from '../../lib/i18n';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,15 +23,15 @@ import { logoutAction } from '../../lib/actions';
 // Lean top nav: the operational surfaces (VA / Attack Surface / CTI) up front; Projects and
 // Schedules live under Settings (workspace config, not day-to-day ops).
 const nav = [
-  { label: 'Dashboard', href: '/dashboard' },
-  { label: 'Targets', href: '/targets' },
-  { label: 'Vulnerability Assessment', href: '/scans' },
-  { label: 'Attack Surface', href: '/surface' },
-  { label: 'Cyber Threat Intel', href: '/threat' },
-  { label: 'AI Pentest', href: '/pentest' },
-  { label: 'Reports', href: '/reports' },
-  { label: 'Settings', href: '/settings/account' },
-  { label: 'Docs', href: '/docs' },
+  { key: 'nav.dashboard', label: 'Dashboard', href: '/dashboard' },
+  { key: 'nav.targets', label: 'Targets', href: '/targets' },
+  { key: 'nav.va', label: 'Vulnerability Assessment', href: '/scans' },
+  { key: 'nav.surface', label: 'Attack Surface', href: '/surface' },
+  { key: 'nav.threat', label: 'Cyber Threat Intel', href: '/threat' },
+  { key: 'nav.pentest', label: 'AI Pentest', href: '/pentest' },
+  { key: 'nav.reports', label: 'Reports', href: '/reports' },
+  { key: 'nav.settings', label: 'Settings', href: '/settings/account' },
+  { key: 'nav.docs', label: 'Docs', href: '/docs' },
 ];
 
 function isActive(pathname: string, href: string): boolean {
@@ -82,13 +84,16 @@ function UserMenu({ email, isSysAdmin }: { email: string; isSysAdmin: boolean })
 
 export function AppShell({
   user,
+  locale = 'en',
   children,
 }: {
   user: { email: string; isSysAdmin: boolean };
+  locale?: Locale;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = React.useState(false);
+  const tr = makeT(locale);
 
   return (
     <div className="min-h-screen">
@@ -110,7 +115,7 @@ export function AppShell({
                     active ? 'text-fg' : 'text-fg-muted hover:text-fg',
                   )}
                 >
-                  {item.label}
+                  {tr(item.key, item.label)}
                   {active ? <span className="absolute inset-x-2 bottom-0 h-0.5 rounded-full bg-accent" /> : null}
                 </Link>
               );
@@ -125,6 +130,7 @@ export function AppShell({
             <div className="hidden xl:block 2xl:hidden">
               <CommandPalette iconOnly />
             </div>
+            <LanguageToggle locale={locale} />
             <ThemeToggle />
             <UserMenu email={user.email} isSysAdmin={user.isSysAdmin} />
             <Button
@@ -153,7 +159,7 @@ export function AppShell({
                     active ? 'bg-accent/10 text-accent' : 'text-fg-muted hover:bg-surface-2 hover:text-fg',
                   )}
                 >
-                  {item.label}
+                  {tr(item.key, item.label)}
                 </Link>
               );
             })}
