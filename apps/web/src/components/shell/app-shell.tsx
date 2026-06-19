@@ -41,7 +41,7 @@ function isActive(pathname: string, href: string): boolean {
 
 function Brand() {
   return (
-    <Link href="/dashboard" className="flex items-center gap-2">
+    <Link href="/dashboard" className="flex shrink-0 items-center gap-2">
       <img src="/logo.svg" alt="" aria-hidden="true" width={28} height={31} className="h-7 w-auto" />
       <span className="font-display text-[17px] font-semibold tracking-tight">
         vac<span className="text-accent">ti</span>

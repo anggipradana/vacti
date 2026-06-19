@@ -1,24 +1,23 @@
 'use client';
 
 import * as React from 'react';
-import { useRouter } from 'next/navigation';
 import { Languages } from 'lucide-react';
 import { cn } from '../../lib/cn';
 import { LOCALE_COOKIE, type Locale } from '../../lib/i18n';
 
 /**
- * Top-right language toggle (EN / ID). Sets the `locale` cookie client-side and refreshes so the server
- * components re-render in the chosen language. No server round-trip beyond the refresh.
+ * Top-right language toggle (EN / ID). Sets the `locale` cookie, then does a FULL reload so every server
+ * component (layout nav AND the page body) re-renders in the chosen language - router.refresh() did not
+ * reliably re-render cached page bodies, so the menu changed but the content did not.
  */
 export function LanguageToggle({ locale }: { locale: Locale }) {
-  const router = useRouter();
   const [pending, setPending] = React.useState<Locale | null>(null);
 
   const switchTo = (l: Locale) => {
     if (l === locale) return;
     setPending(l);
     document.cookie = `${LOCALE_COOKIE}=${l}; path=/; max-age=${60 * 60 * 24 * 365}; samesite=lax`;
-    router.refresh();
+    window.location.reload();
   };
 
   return (

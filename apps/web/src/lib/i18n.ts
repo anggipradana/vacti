@@ -29,7 +29,7 @@ const DICT: Dict = {
   'nav.pentest': { en: 'AI Pentest', id: 'AI Pentest' },
   'nav.reports': { en: 'Reports', id: 'Laporan' },
   'nav.settings': { en: 'Settings', id: 'Pengaturan' },
-  'nav.docs': { en: 'Docs', id: 'Dokumentasi' },
+  'nav.docs': { en: 'Docs', id: 'Docs' },
 
   // Shell / common
   'common.signOut': { en: 'Sign out', id: 'Keluar' },
