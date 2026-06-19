@@ -58,6 +58,10 @@ const DICT: Dict = {
   'pentest.testAccounts': { en: 'Test accounts', id: 'Akun uji' },
   'pentest.inScope': { en: 'In-scope targets', id: 'Target in-scope' },
   'pentest.outScope': { en: 'Out of scope (optional)', id: 'Luar scope (opsional)' },
+  'finding.dir': { en: 'description / impact / remediation', id: 'deskripsi / dampak / remediasi' },
+  'finding.description': { en: 'Description', id: 'Deskripsi' },
+  'finding.impact': { en: 'Business impact', id: 'Dampak bisnis' },
+  'finding.remediation': { en: 'Remediation', id: 'Remediasi' },
 };
 
 /** Translate a key for a locale, with an optional explicit fallback (else the EN string, else the key). */
