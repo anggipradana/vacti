@@ -1,10 +1,10 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { Permission } from '@vacti/core';
 import type { DistributionRow, VersionHistoryRow } from '@vacti/reports';
-import { reportSettings, reportSignatories } from '@vacti/db';
+import { projects, reportSettings, reportSignatories } from '@vacti/db';
 import { getDb } from './db';
 import { requirePermission } from './authz';
 import { recordAudit } from './audit';
@@ -124,6 +124,103 @@ export async function savePentestReportSettingsAction(formData: FormData) {
     projectId,
   });
   revalidatePath('/settings/pentest-report');
+  revalidatePath('/pentest/report-settings');
+}
+
+/** Resolve the AI Pentest project id (slug 'ai-pentest'), creating it if missing - same as the settings page. */
+async function resolvePentestProjectId(): Promise<string> {
+  const db = getDb();
+  let [p] = await db.select().from(projects).where(eq(projects.slug, 'ai-pentest')).limit(1);
+  if (!p) {
+    [p] = await db.insert(projects).values({ slug: 'ai-pentest', name: 'AI Pentest', sector: 'banking' }).returning();
+  }
+  return p!.id;
+}
+
+/** Read the pentest (kind='pentest') report-settings row for the AI Pentest project, or null. */
+async function getPentestSettings() {
+  const projectId = await resolvePentestProjectId();
+  const [row] = await getDb()
+    .select()
+    .from(reportSettings)
+    .where(and(eq(reportSettings.projectId, projectId), eq(reportSettings.kind, 'pentest')));
+  return { projectId, row: row ?? null };
+}
+
+/** Upsert just the versionHistory or distributionList jsonb list on the pentest settings row, then audit + revalidate. */
+async function writePentestList(
+  actorId: string,
+  projectId: string,
+  column: 'versionHistory' | 'distributionList',
+  list: VersionHistoryRow[] | DistributionRow[],
+) {
+  const values: Record<string, unknown> = { projectId, kind: 'pentest', [column]: list };
+  await getDb()
+    .insert(reportSettings)
+    .values(values as typeof reportSettings.$inferInsert)
+    .onConflictDoUpdate({ target: [reportSettings.projectId, reportSettings.kind], set: { [column]: list } });
+  await recordAudit({
+    actorId,
+    action: 'report.settings_update',
+    resource: `report_settings:${projectId}:pentest`,
+    projectId,
+  });
+  revalidatePath('/pentest/report-settings');
+  revalidatePath('/settings/pentest-report');
+}
+
+/** Append one row to the pentest report Document-Control version history (GUI repeater, no JSON). */
+export async function addPentestVersionRow(formData: FormData) {
+  const user = await requirePermission(Permission.ModifyReport);
+  const { projectId, row } = await getPentestSettings();
+  const next: VersionHistoryRow = {
+    version: String(formData.get('version') ?? '').trim(),
+    date: String(formData.get('date') ?? '').trim(),
+    author: String(formData.get('author') ?? '').trim(),
+    changesEn: String(formData.get('changesEn') ?? '').trim() || null,
+    changesId: String(formData.get('changesId') ?? '').trim() || null,
+  };
+  if (!next.version && !next.date && !next.author) return;
+  const list = [...((row?.versionHistory as VersionHistoryRow[] | null) ?? []), next];
+  await writePentestList(user.id, projectId, 'versionHistory', list);
+}
+
+/** Remove the version-history row at the given index. */
+export async function removePentestVersionRow(formData: FormData) {
+  const user = await requirePermission(Permission.ModifyReport);
+  const index = Number(formData.get('index'));
+  const { projectId, row } = await getPentestSettings();
+  const current = (row?.versionHistory as VersionHistoryRow[] | null) ?? [];
+  if (!Number.isInteger(index) || index < 0 || index >= current.length) return;
+  const list = current.filter((_, i) => i !== index);
+  await writePentestList(user.id, projectId, 'versionHistory', list);
+}
+
+/** Append one row to the pentest report distribution list (GUI repeater, no JSON). */
+export async function addPentestDistributionRow(formData: FormData) {
+  const user = await requirePermission(Permission.ModifyReport);
+  const { projectId, row } = await getPentestSettings();
+  const next: DistributionRow = {
+    positionEn: String(formData.get('positionEn') ?? '').trim(),
+    positionId: String(formData.get('positionId') ?? '').trim() || null,
+    company: String(formData.get('company') ?? '').trim() || null,
+    email: String(formData.get('email') ?? '').trim() || null,
+    name: String(formData.get('name') ?? '').trim() || null,
+  };
+  if (!next.positionEn && !next.name && !next.email) return;
+  const list = [...((row?.distributionList as DistributionRow[] | null) ?? []), next];
+  await writePentestList(user.id, projectId, 'distributionList', list);
+}
+
+/** Remove the distribution-list row at the given index. */
+export async function removePentestDistributionRow(formData: FormData) {
+  const user = await requirePermission(Permission.ModifyReport);
+  const index = Number(formData.get('index'));
+  const { projectId, row } = await getPentestSettings();
+  const current = (row?.distributionList as DistributionRow[] | null) ?? [];
+  if (!Number.isInteger(index) || index < 0 || index >= current.length) return;
+  const list = current.filter((_, i) => i !== index);
+  await writePentestList(user.id, projectId, 'distributionList', list);
 }
 
 export async function addSignatoryAction(formData: FormData) {
@@ -138,6 +235,7 @@ export async function addSignatoryAction(formData: FormData) {
   await getDb().insert(reportSignatories).values({ projectId, role, name, position, sortOrder: order, signatureImage });
   revalidatePath('/settings/reports');
   revalidatePath('/settings/pentest-report');
+  revalidatePath('/pentest/report-settings');
 }
 
 export async function editSignatoryAction(formData: FormData) {
@@ -162,4 +260,5 @@ export async function deleteSignatoryAction(formData: FormData) {
   if (id) await getDb().delete(reportSignatories).where(eq(reportSignatories.id, id));
   revalidatePath('/settings/reports');
   revalidatePath('/settings/pentest-report');
+  revalidatePath('/pentest/report-settings');
 }
