@@ -27,7 +27,7 @@ export interface ReportSettings {
   headerStyle?: string | null;
   /** Traffic Light Protocol level shown in the header/cover/footer: RED | AMBER | GREEN | CLEAR. */
   tlpLevel?: string | null;
-  /** Finding-ID prefix, e.g. "MLPT" -> findings render as MLPT-01. Falls back to a derived code. */
+  /** Finding-ID prefix, e.g. "ACME" -> findings render as ACME-01. Falls back to a derived code. */
   findingIdPrefix?: string | null;
   /** Assessment type label on the cover + methodology: Blackbox | Greybox | Whitebox. */
   assessmentType?: string | null;
@@ -39,6 +39,8 @@ export interface ReportSettings {
   termsTextId?: string | null;
   /** Document Control version history rows. */
   versionHistory?: VersionHistoryRow[] | null;
+  /** Separate version history for the retest report's Document Control (falls back to versionHistory). */
+  retestVersionHistory?: VersionHistoryRow[] | null;
   /** Document distribution list rows. */
   distributionList?: DistributionRow[] | null;
   /** Retest-report "Overview" narrative (bilingual); auto-generated when empty. Only used by the retest variant. */

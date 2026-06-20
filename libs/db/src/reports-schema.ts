@@ -41,6 +41,8 @@ export const reportSettings = pgTable(
     termsTextId: text('terms_text_id'),
     versionHistory: jsonb('version_history').$type<VersionHistoryRow[]>(),
     distributionList: jsonb('distribution_list').$type<DistributionRow[]>(),
+    // Separate version history for the RETEST report's Document Control (falls back to versionHistory).
+    retestVersionHistory: jsonb('retest_version_history').$type<VersionHistoryRow[]>(),
     // Optional bilingual retest-report overview (the Retest Summary "Overview" block); auto when empty.
     retestOverview: text('retest_overview'),
     retestOverviewId: text('retest_overview_id'),
