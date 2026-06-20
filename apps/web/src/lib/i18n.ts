@@ -73,6 +73,7 @@ const DICT: Dict = {
   'col.evidence': { en: 'Evidence', id: 'Evidence' },
   'col.skill': { en: 'Skill', id: 'Skill' },
   'col.review': { en: 'Review', id: 'Tinjau' },
+  'col.manage': { en: 'Manage', id: 'Kelola' },
   'finding.noneYet': { en: 'None yet.', id: 'Belum ada.' },
   'finding.cardTitle': { en: 'Findings', id: 'Findings' },
   'finding.noneTitle': { en: 'No findings yet', id: 'Belum ada temuan' },
