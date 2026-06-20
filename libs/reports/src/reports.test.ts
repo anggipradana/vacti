@@ -129,6 +129,11 @@ describe('Pentest report html', () => {
     expect(html).not.toContain('Ringkasan Eksekutif'); // labels are EN-only now
     expect(html).toContain('Evidence Manifest'); // chain-of-custody section
     expect(html).toContain('a'.repeat(64)); // hash in the manifest
+    expect(html).toContain('Table of Contents'); // TOC
+    expect(html).toContain('Summary of Findings'); // at-a-glance overview section
+    expect(html).toContain('class="sevleg"'); // severity rating-scale legend
+    expect(html).toContain('class="sumtable"'); // findings overview table
+    expect(html).toContain('Reconnaissance &amp; Mapping'); // expanded methodology phases
     expect(html).not.toMatch(/[—–]/); // no em/en dashes (house style)
   });
 
