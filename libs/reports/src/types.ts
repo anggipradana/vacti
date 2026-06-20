@@ -19,6 +19,44 @@ export interface ReportSettings {
   /** Optional AI-generated general recommendations (overrides the deterministic fallback). */
   aiRecommendations?: string | null;
   aiRecommendationsId?: string | null;
+
+  // --- Pentest report (professional doc-style) settings ---
+  /** Issuing-organization phone (the other org fields reuse company*). */
+  companyPhone?: string | null;
+  /** Running-header style: dark | accent | light. Defaults to dark. */
+  headerStyle?: string | null;
+  /** Traffic Light Protocol level shown in the header/cover/footer: RED | AMBER | GREEN | CLEAR. */
+  tlpLevel?: string | null;
+  /** Finding-ID prefix, e.g. "MLPT" -> findings render as MLPT-01. Falls back to a derived code. */
+  findingIdPrefix?: string | null;
+  /** Assessment type label on the cover + methodology: Blackbox | Greybox | Whitebox. */
+  assessmentType?: string | null;
+  /** Confidentiality Notice body (bilingual); a sensible default is used when empty. */
+  confidentialityText?: string | null;
+  confidentialityTextId?: string | null;
+  /** Terms and Conditions body (bilingual); a sensible default is used when empty. */
+  termsText?: string | null;
+  termsTextId?: string | null;
+  /** Document Control version history rows. */
+  versionHistory?: VersionHistoryRow[] | null;
+  /** Document distribution list rows. */
+  distributionList?: DistributionRow[] | null;
+}
+
+export interface VersionHistoryRow {
+  version: string;
+  date: string;
+  author: string;
+  changesEn?: string | null;
+  changesId?: string | null;
+}
+
+export interface DistributionRow {
+  positionEn: string;
+  positionId?: string | null;
+  company?: string | null;
+  email?: string | null;
+  name?: string | null;
 }
 
 export interface Signatory {

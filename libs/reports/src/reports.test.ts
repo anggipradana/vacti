@@ -119,21 +119,22 @@ describe('Pentest report html', () => {
     generatedAt: '2026-06-16T00:00:00.000Z',
   };
 
-  it('renders a single-language (EN) report: cover, CVSS 4.0 vector, manifest, methodology', () => {
+  it('renders a single-language (EN) report: cover, sections, CVSS 4.0 vector, finding layout', () => {
     const html = renderPentestReport(data);
     expect(html).toContain('Penetration Test Report');
-    expect(html).toContain('CVSS:4.0/AV:N');
-    expect(html).toContain('Horizontal IDOR on /api/orders');
+    expect(html).toContain('CVSS:4.0/AV:N'); // CVSS vector string rendered
+    expect(html).toContain('Horizontal IDOR on /api/orders'); // finding title
     expect(html).toContain('Cross-user order access.'); // EN description
     expect(html).not.toContain('Akses order lintas pengguna.'); // ID text must NOT leak into the EN report
     expect(html).not.toContain('Ringkasan Eksekutif'); // labels are EN-only now
-    expect(html).toContain('Evidence Manifest'); // chain-of-custody section
-    expect(html).toContain('a'.repeat(64)); // hash in the manifest
-    expect(html).toContain('Table of Contents'); // TOC
-    expect(html).toContain('Summary of Findings'); // at-a-glance overview section
-    expect(html).toContain('class="sevleg"'); // severity rating-scale legend
-    expect(html).toContain('class="sumtable"'); // findings overview table
-    expect(html).toContain('Reconnaissance &amp; Mapping'); // expanded methodology phases
+    expect(html).toContain('Confidentiality Notice');
+    expect(html).toContain('Document Control');
+    expect(html).toContain('Table of Contents');
+    expect(html).toContain('Severity Rating');
+    expect(html).toContain('Technical Glossary');
+    expect(html).toContain('Assessment Results');
+    expect(html).toContain('Consolidated Recommendations');
+    expect(html).toMatch(/[A-Z]+-01/); // a finding ID like VAC-01
     expect(html).not.toMatch(/[—–]/); // no em/en dashes (house style)
   });
 
@@ -144,9 +145,9 @@ describe('Pentest report html', () => {
     expect(html).toContain('Ringkasan Eksekutif'); // ID labels
   });
 
-  it('summary type omits the evidence manifest', () => {
+  it('summary type omits the evidence section but keeps the finding', () => {
     const html = renderPentestReport({ ...data, type: 'summary' });
-    expect(html).not.toContain('Evidence Manifest');
+    expect(html).not.toContain('Evidence (Screenshots)');
     expect(html).toContain('Horizontal IDOR on /api/orders');
   });
 });

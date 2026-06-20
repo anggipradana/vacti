@@ -13,6 +13,7 @@ function buildTabs(locale: Locale) {
     { label: tx(locale, 'API Tokens', 'API Token'), href: '/settings/tokens' },
     { label: tx(locale, 'Scan Profiles', 'Scan Profile'), href: '/settings/profiles' },
     { label: tx(locale, 'Reports', 'Laporan'), href: '/settings/reports' },
+    { label: tx(locale, 'Pentest Report', 'Laporan Pentest'), href: '/settings/pentest-report' },
     { label: tx(locale, 'Integrations', 'Integrasi'), href: '/settings/integrations' },
     { label: tx(locale, 'Users', 'Pengguna'), href: '/settings/users', sysAdminOnly: true },
     { label: tx(locale, 'Audit log', 'Log audit'), href: '/settings/audit', sysAdminOnly: true },
