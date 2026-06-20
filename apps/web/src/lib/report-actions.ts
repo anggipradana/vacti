@@ -151,7 +151,7 @@ async function getPentestSettings() {
 async function writePentestList(
   actorId: string,
   projectId: string,
-  column: 'versionHistory' | 'distributionList',
+  column: 'versionHistory' | 'retestVersionHistory' | 'distributionList',
   list: VersionHistoryRow[] | DistributionRow[],
 ) {
   const values: Record<string, unknown> = { projectId, kind: 'pentest', [column]: list };
@@ -194,6 +194,33 @@ export async function removePentestVersionRow(formData: FormData) {
   if (!Number.isInteger(index) || index < 0 || index >= current.length) return;
   const list = current.filter((_, i) => i !== index);
   await writePentestList(user.id, projectId, 'versionHistory', list);
+}
+
+/** Append one row to the RETEST report Document-Control version history (GUI repeater, no JSON). */
+export async function addPentestRetestVersionRow(formData: FormData) {
+  const user = await requirePermission(Permission.ModifyReport);
+  const { projectId, row } = await getPentestSettings();
+  const next: VersionHistoryRow = {
+    version: String(formData.get('version') ?? '').trim(),
+    date: String(formData.get('date') ?? '').trim(),
+    author: String(formData.get('author') ?? '').trim(),
+    changesEn: String(formData.get('changesEn') ?? '').trim() || null,
+    changesId: String(formData.get('changesId') ?? '').trim() || null,
+  };
+  if (!next.version && !next.date && !next.author) return;
+  const list = [...((row?.retestVersionHistory as VersionHistoryRow[] | null) ?? []), next];
+  await writePentestList(user.id, projectId, 'retestVersionHistory', list);
+}
+
+/** Remove the retest version-history row at the given index. */
+export async function removePentestRetestVersionRow(formData: FormData) {
+  const user = await requirePermission(Permission.ModifyReport);
+  const index = Number(formData.get('index'));
+  const { projectId, row } = await getPentestSettings();
+  const current = (row?.retestVersionHistory as VersionHistoryRow[] | null) ?? [];
+  if (!Number.isInteger(index) || index < 0 || index >= current.length) return;
+  const list = current.filter((_, i) => i !== index);
+  await writePentestList(user.id, projectId, 'retestVersionHistory', list);
 }
 
 /** Append one row to the pentest report distribution list (GUI repeater, no JSON). */

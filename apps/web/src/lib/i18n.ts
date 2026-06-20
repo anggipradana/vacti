@@ -65,6 +65,7 @@ const DICT: Dict = {
   'finding.impact': { en: 'Business impact', id: 'Dampak bisnis' },
   'finding.remediation': { en: 'Remediation', id: 'Remediasi' },
   // Findings table. Technical/status terms (Severity, Skill, Evidence, Accepted) kept in English.
+  'col.id': { en: 'ID', id: 'ID' },
   'col.finding': { en: 'Finding', id: 'Temuan' },
   'col.location': { en: 'Location', id: 'Lokasi' },
   'col.severity': { en: 'Severity', id: 'Severity' },
