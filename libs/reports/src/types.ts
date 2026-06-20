@@ -41,6 +41,9 @@ export interface ReportSettings {
   versionHistory?: VersionHistoryRow[] | null;
   /** Document distribution list rows. */
   distributionList?: DistributionRow[] | null;
+  /** Retest-report "Overview" narrative (bilingual); auto-generated when empty. Only used by the retest variant. */
+  retestOverview?: string | null;
+  retestOverviewId?: string | null;
 }
 
 export interface VersionHistoryRow {

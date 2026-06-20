@@ -150,4 +150,29 @@ describe('Pentest report html', () => {
     expect(html).not.toContain('Evidence (Screenshots)');
     expect(html).toContain('Horizontal IDOR on /api/orders');
   });
+
+  it('retest variant swaps cover/summary/recommendations and renders the remediation-validation block', () => {
+    const html = renderPentestReport({
+      ...data,
+      retest: true,
+      findings: [
+        { ...finding, status: 'Closed', retestStatusRaw: 'fixed', retestNotes: 'Object-level authz enforced.' },
+      ],
+    });
+    expect(html).toContain('RETEST VERIFICATION REPORT'); // retest cover eyebrow
+    expect(html).toContain('Retest Summary'); // exec summary replaced
+    expect(html).toContain('Remediation Status'); // retest summary table
+    expect(html).toContain('Remediation Validation'); // per-finding band
+    expect(html).toContain('Object-level authz enforced.'); // retest notes
+    expect(html).not.toContain('Executive Summary'); // initial exec summary not present
+    expect(html).not.toMatch(/[—–]/); // no em/en dashes
+  });
+
+  it('keeps the full report byte-identical when retest is absent', () => {
+    const a = renderPentestReport(data);
+    const b = renderPentestReport({ ...data, retest: false });
+    expect(a).toBe(b);
+    expect(a).not.toContain('RETEST VERIFICATION REPORT');
+    expect(a).not.toContain('Retest Summary');
+  });
 });

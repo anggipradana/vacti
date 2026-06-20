@@ -41,6 +41,9 @@ export const reportSettings = pgTable(
     termsTextId: text('terms_text_id'),
     versionHistory: jsonb('version_history').$type<VersionHistoryRow[]>(),
     distributionList: jsonb('distribution_list').$type<DistributionRow[]>(),
+    // Optional bilingual retest-report overview (the Retest Summary "Overview" block); auto when empty.
+    retestOverview: text('retest_overview'),
+    retestOverviewId: text('retest_overview_id'),
     createdAt: createdAt(),
   },
   (t) => ({ uniqKind: uniqueIndex('report_settings_project_kind_uniq').on(t.projectId, t.kind) }),
