@@ -2,6 +2,19 @@ import { createHash } from 'node:crypto';
 
 export interface AiProvider {
   generate(system: string, prompt: string): Promise<string>;
+  /**
+   * Multimodal generation: prompt + one or more images (base64 + mime). Present only for vision-capable
+   * providers (Anthropic, OpenAI); undefined otherwise, so callers must feature-detect and skip gracefully.
+   * Used by the evidence-caption QA and the rendered-report visual QA.
+   */
+  generateVision?(system: string, prompt: string, images: VisionImage[]): Promise<string>;
+}
+
+export interface VisionImage {
+  /** Raw base64 (no data: prefix). */
+  base64: string;
+  /** e.g. image/png, image/jpeg. */
+  mediaType: string;
 }
 
 export interface AiConfig {
@@ -475,6 +488,26 @@ export async function makeProvider(cfg: AiConfig): Promise<AiProvider | null> {
       const anthropic = createAnthropic({ apiKey: cfg.anthropicKey, ...(baseURL ? { baseURL } : {}) });
       return {
         generate: async (system, prompt) => (await generateText({ model: anthropic(cfg.model), system, prompt })).text,
+        generateVision: async (system, prompt, images) =>
+          (
+            await generateText({
+              model: anthropic(cfg.model),
+              system,
+              messages: [
+                {
+                  role: 'user',
+                  content: [
+                    { type: 'text', text: prompt },
+                    ...images.map((im) => ({
+                      type: 'image' as const,
+                      image: Buffer.from(im.base64, 'base64'),
+                      mimeType: im.mediaType,
+                    })),
+                  ],
+                },
+              ],
+            })
+          ).text,
       };
     }
     if (cfg.provider === 'openai') {
@@ -483,6 +516,26 @@ export async function makeProvider(cfg: AiConfig): Promise<AiProvider | null> {
       const openai = createOpenAI({ apiKey: cfg.openaiKey, ...(baseURL ? { baseURL } : {}) });
       return {
         generate: async (system, prompt) => (await generateText({ model: openai(cfg.model), system, prompt })).text,
+        generateVision: async (system, prompt, images) =>
+          (
+            await generateText({
+              model: openai(cfg.model),
+              system,
+              messages: [
+                {
+                  role: 'user',
+                  content: [
+                    { type: 'text', text: prompt },
+                    ...images.map((im) => ({
+                      type: 'image' as const,
+                      image: Buffer.from(im.base64, 'base64'),
+                      mimeType: im.mediaType,
+                    })),
+                  ],
+                },
+              ],
+            })
+          ).text,
       };
     }
     if (cfg.provider === 'deepseek') {

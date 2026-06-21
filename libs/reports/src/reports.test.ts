@@ -175,4 +175,48 @@ describe('Pentest report html', () => {
     expect(a).not.toContain('RETEST VERIFICATION REPORT');
     expect(a).not.toContain('Retest Summary');
   });
+
+  it('prefers AI prose + consolidated recommendations when provided', () => {
+    const html = renderPentestReport({
+      ...data,
+      aiProse: {
+        overviewEn: 'AI executive overview narrative.',
+        riskPostureEn: 'AI overall risk posture narrative.',
+        mgmtRecEn: 'AI management recommendation narrative.',
+        methodologyIntroEn: 'AI methodology intro narrative.',
+        standardsUsed: [{ name: 'NIST SP 800-115', descEn: 'AI standard relevance.' }],
+        phases: [{ titleEn: 'AI Phase Recon', titleId: 'AI Fase Recon', descEn: 'AI phase description.' }],
+        toolsUsed: [{ en: 'AICustomScanner', id: 'AICustomScanner' }],
+      },
+      aiRecs: {
+        phases: [
+          {
+            labelEn: 'AI Immediate',
+            labelId: 'AI Segera',
+            color: '#123456',
+            itemsEn: ['AI rec item one'],
+            itemsId: [],
+          },
+        ],
+      },
+    });
+    expect(html).toContain('AI executive overview narrative.');
+    expect(html).toContain('AI overall risk posture narrative.');
+    expect(html).toContain('AI management recommendation narrative.');
+    expect(html).toContain('AI methodology intro narrative.');
+    expect(html).toContain('NIST SP 800-115');
+    expect(html).toContain('AI standard relevance.');
+    expect(html).toContain('AI Phase Recon');
+    expect(html).toContain('AICustomScanner');
+    expect(html).toContain('AI Immediate'); // AI consolidated-rec band label
+    expect(html).toContain('AI rec item one');
+    expect(html).toContain('background:#123456'); // validated hex band color
+    expect(html).not.toMatch(/[—–]/);
+  });
+
+  it('keeps the full report byte-identical when aiProse/aiRecs are absent', () => {
+    const a = renderPentestReport(data);
+    const b = renderPentestReport({ ...data, aiProse: null, aiRecs: null });
+    expect(a).toBe(b);
+  });
 });
