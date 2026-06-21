@@ -84,6 +84,57 @@ export async function fetchLeaks(
   return { records, found, truncated };
 }
 
+const PUBLIC_BASE = 'https://leakcheck.io/api/public';
+
+/** Free-form LeakCheck query types (the public API auto-detects when `type` is omitted/`auto`). */
+export type LeakSearchType = 'auto' | 'email' | 'domain' | 'username' | 'phone' | 'hash' | 'keyword';
+
+/**
+ * Free-form leak search against the LeakCheck public API
+ * (`https://leakcheck.io/api/public?key=<key>&check=<query>&type=<type>`). Unlike `fetchLeaks` (which
+ * is domain-scoped and walks the v2 domain/origin indexes), this runs a single arbitrary query and
+ * `type` defaults to `auto` so LeakCheck detects whether the input is an email/username/phone/etc.
+ * Returns the same normalized `LeakRecord` rows as `fetchLeaks`. Returns an empty result without a key.
+ */
+export async function searchLeaks(
+  query: string,
+  opts: { key?: string; type?: LeakSearchType; fetchImpl?: FetchLike } = {},
+): Promise<LeakResult> {
+  const { key, type = 'auto', fetchImpl = fetch } = opts;
+  const q = query.trim();
+  if (!key || !q) return { records: [], found: 0, truncated: false };
+  try {
+    const url = `${PUBLIC_BASE}?key=${encodeURIComponent(key)}&check=${encodeURIComponent(q)}&type=${encodeURIComponent(type)}`;
+    const res = await fetchImpl(url, { headers: { Accept: 'application/json' } });
+    if (!res.ok) return { records: [], found: 0, truncated: false };
+    const body = (await res.json()) as { success?: boolean; found?: number; result?: LeakRaw[] };
+    if (body.success === false) return { records: [], found: 0, truncated: false };
+    const seen = new Set<string>();
+    const records = (body.result ?? [])
+      .map((r) => {
+        const source = r.source?.name ?? 'unknown';
+        const identifier = r.email ?? r.username ?? r.line ?? '';
+        const password = r.password || undefined;
+        const origin = (r.origin ?? []).join(', ') || undefined;
+        return {
+          source,
+          identifier,
+          // Free-form results are not tied to the domain/origin index split; tag them as `domain`
+          // (the LeakRecord union only allows domain|origin) so the shape stays compatible.
+          type: 'domain',
+          password,
+          origin,
+          hashMd5: md5(`${source}:${identifier}:${password ?? ''}:${origin ?? ''}`),
+        } as LeakRecord;
+      })
+      .filter((r) => (seen.has(r.hashMd5) ? false : (seen.add(r.hashMd5), true)));
+    const found = Math.max(Number(body.found ?? 0), records.length);
+    return { records, found, truncated: records.length >= QUERY_LIMIT };
+  } catch {
+    return { records: [], found: 0, truncated: false };
+  }
+}
+
 export function md5(input: string): string {
   return createHash('md5').update(input).digest('hex');
 }

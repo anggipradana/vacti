@@ -69,6 +69,9 @@ export default async function ScansPage({
         actions={
           <div className="flex items-center gap-2">
             <ProjectSwitcher projects={projectRows} current={projectId} basePath="/scans" />
+            <Button asChild variant="secondary">
+              <Link href="/targets">{tx(locale, 'Manage targets', 'Kelola target')}</Link>
+            </Button>
             <NewScanDialog
               targets={targetRows.map((t) => ({ id: t.id, domain: t.domain }))}
               profiles={profileRows.map((p) => ({ id: p.id, name: p.name }))}

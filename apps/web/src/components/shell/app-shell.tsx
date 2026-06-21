@@ -24,7 +24,8 @@ import { logoutAction } from '../../lib/actions';
 // Schedules live under Settings (workspace config, not day-to-day ops).
 const nav = [
   { key: 'nav.dashboard', label: 'Dashboard', href: '/dashboard' },
-  { key: 'nav.targets', label: 'Targets', href: '/targets' },
+  // Targets are demoted from the top nav: they only matter as scan inputs, so target management is
+  // reachable from /scans (VA). The /targets routes stay intact and deep-linkable.
   { key: 'nav.va', label: 'Vulnerability Assessment', href: '/scans' },
   { key: 'nav.surface', label: 'Attack Surface', href: '/surface' },
   { key: 'nav.threat', label: 'Cyber Threat Intel', href: '/threat' },
