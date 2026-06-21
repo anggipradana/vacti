@@ -8,8 +8,6 @@ import {
   Globe,
   ShieldAlert,
   ShieldCheck,
-  FileText,
-  Plug,
   Radar as RadarIcon,
   Gauge,
   KeyRound,
@@ -353,6 +351,20 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
         }
       />
 
+      {/* Project-scope framing - sits at the very top so the active-project context (set via the
+          ProjectSwitcher above) frames everything below it. The project-scoped sections (VA · Attack
+          Surface · CTI) honor this selection; the AI Pentest band further down is independent. */}
+      <div className="mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-border bg-surface-2/40 px-3 py-2">
+        <Badge variant="neutral">{tx(locale, 'Project scoped', 'Lingkup proyek')}</Badge>
+        <p className="text-xs text-fg-muted">
+          {tx(
+            locale,
+            `Vulnerability Assessment, Attack Surface and Cyber Threat Intel are scoped to the selected project${dashProject ? ` (${dashProject.name})` : ''}. Switch projects with the selector above.`,
+            `Vulnerability Assessment, Attack Surface dan Cyber Threat Intel dibatasi pada proyek yang dipilih${dashProject ? ` (${dashProject.name})` : ''}. Ganti proyek lewat pemilih di atas.`,
+          )}
+        </p>
+      </div>
+
       {/* First-run onboarding: guide the next step until the user has data. */}
       {targetRows.length === 0 || scanRows.length === 0 ? (
         <Card className="mb-6 border-accent/40 bg-accent/5">
@@ -515,7 +527,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
         <ModuleCard
           hue="262 70% 62%"
           icon={<ShieldCheck />}
-          title="Cyber Threat Intelligence"
+          title="Cyber Threat Intel"
           description={tx(
             locale,
             'OTX, LeakCheck, indicators & unified risk score.',
@@ -526,41 +538,28 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
         />
         <ModuleCard
           hue="160 70% 42%"
-          icon={<FileText />}
-          title={tx(locale, 'Reports', 'Laporan')}
+          icon={<RadarIcon />}
+          title="Attack Surface"
           description={tx(
             locale,
-            'Bilingual VA & TI PDF reports - generate from any scan.',
-            'Laporan PDF VA & TI dwibahasa - buat dari scan mana pun.',
+            'Passive subdomains, exposure findings & URL discovery.',
+            'Subdomain pasif, temuan exposure & penemuan URL.',
           )}
-          href="/scans"
+          href="/surface"
           status="live"
         />
         <ModuleCard
           hue="35 92% 52%"
-          icon={<Plug />}
-          title={tx(locale, 'API & Integrations', 'API & Integrasi')}
+          icon={<Bug />}
+          title="AI Pentest"
           description={tx(
             locale,
-            'REST API tokens, webhooks & AI enrichment.',
-            'Token REST API, webhook & pengayaan AI.',
+            `Independent module · ${pentestActive} active engagement(s) across all targets.`,
+            `Modul independen · ${pentestActive} engagement aktif lintas semua target.`,
           )}
-          href="/settings/tokens"
+          href="/pentest"
           status="live"
         />
-      </div>
-
-      {/* ===================== Project-scoped modules (VA · Attack Surface · CTI) ===================== */}
-      {/* One shared domain: these three sections all honor the active project from the ProjectSwitcher. */}
-      <div className="mb-1 mt-10 flex flex-wrap items-center gap-2 rounded-lg border border-border bg-surface-2/40 px-3 py-2">
-        <Badge variant="neutral">{tx(locale, 'Project scoped', 'Lingkup proyek')}</Badge>
-        <p className="text-xs text-fg-muted">
-          {tx(
-            locale,
-            `Vulnerability Assessment, Attack Surface and Cyber Threat Intel below are scoped to the selected project${dashProject ? ` (${dashProject.name})` : ''}. Switch projects with the selector above.`,
-            `Vulnerability Assessment, Attack Surface dan Cyber Threat Intel di bawah ini dibatasi pada proyek yang dipilih${dashProject ? ` (${dashProject.name})` : ''}. Ganti proyek lewat pemilih di atas.`,
-          )}
-        </p>
       </div>
 
       {/* ===================== Vulnerability Assessment ===================== */}
@@ -597,6 +596,55 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
           </CardContent>
         </Card>
       </div>
+
+      {/* Recent scans - VA data, so it lives inside the VA section right after the charts. */}
+      <Card className="mt-4">
+        <CardHeader>
+          <CardTitle>{tx(locale, 'Recent scans', 'Scan terbaru')}</CardTitle>
+        </CardHeader>
+        <CardContent className="pt-0">
+          {scanRows.length === 0 ? (
+            <p className="py-2 text-sm text-fg-muted">
+              {tx(locale, 'No scans yet.', 'Belum ada scan.')}{' '}
+              <Link href="/targets" className="text-accent hover:underline">
+                {tx(locale, 'Add a target', 'Tambah target')}
+              </Link>{' '}
+              {tx(locale, 'to begin.', 'untuk memulai.')}
+            </p>
+          ) : (
+            <Table>
+              <THead>
+                <TR>
+                  <TH>{tx(locale, 'Target', 'Target')}</TH>
+                  <TH>{tx(locale, 'Status', 'Status')}</TH>
+                  <TH>{tx(locale, 'Findings', 'Temuan')}</TH>
+                </TR>
+              </THead>
+              <TBody>
+                {scanRows.slice(0, 6).map((s) => {
+                  const c = (s.counts ?? {}) as Record<string, number>;
+                  return (
+                    <TR key={s.id}>
+                      <TD>
+                        <Link href={`/scans/${s.id}`} className="font-mono text-sm text-accent hover:underline">
+                          {targetById.get(s.targetId)?.domain ?? s.targetId.slice(0, 8)}
+                        </Link>
+                      </TD>
+                      <TD>
+                        <StatusPill status={s.status} />
+                      </TD>
+                      <TD className="tabular text-sm text-fg-muted">
+                        {c.endpoints ?? 0} {tx(locale, 'endpoints', 'endpoint')} · {c.ports ?? 0}{' '}
+                        {tx(locale, 'ports', 'port')} · {c.vulnerabilities ?? 0} {tx(locale, 'vulns', 'vuln')}
+                      </TD>
+                    </TR>
+                  );
+                })}
+              </TBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
 
       {/* VA review status - triage breakdown of this project's findings. */}
       {vulnRows.length > 0 ? (
@@ -940,53 +988,6 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
           </CardContent>
         </Card>
       </div>
-
-      {/* Recent scans */}
-      <h2 className="mb-3 mt-8 font-display text-sm font-semibold uppercase tracking-wider text-fg-subtle">
-        {tx(locale, 'Recent scans', 'Scan terbaru')}
-      </h2>
-      {scanRows.length === 0 ? (
-        <Card>
-          <CardContent className="py-6 text-sm text-fg-muted">
-            {tx(locale, 'No scans yet.', 'Belum ada scan.')}{' '}
-            <Link href="/targets" className="text-accent hover:underline">
-              {tx(locale, 'Add a target', 'Tambah target')}
-            </Link>{' '}
-            {tx(locale, 'to begin.', 'untuk memulai.')}
-          </CardContent>
-        </Card>
-      ) : (
-        <Table>
-          <THead>
-            <TR>
-              <TH>{tx(locale, 'Target', 'Target')}</TH>
-              <TH>{tx(locale, 'Status', 'Status')}</TH>
-              <TH>{tx(locale, 'Findings', 'Temuan')}</TH>
-            </TR>
-          </THead>
-          <TBody>
-            {scanRows.slice(0, 6).map((s) => {
-              const c = (s.counts ?? {}) as Record<string, number>;
-              return (
-                <TR key={s.id}>
-                  <TD>
-                    <Link href={`/scans/${s.id}`} className="font-mono text-sm text-accent hover:underline">
-                      {targetById.get(s.targetId)?.domain ?? s.targetId.slice(0, 8)}
-                    </Link>
-                  </TD>
-                  <TD>
-                    <StatusPill status={s.status} />
-                  </TD>
-                  <TD className="tabular text-sm text-fg-muted">
-                    {c.endpoints ?? 0} {tx(locale, 'endpoints', 'endpoint')} · {c.ports ?? 0}{' '}
-                    {tx(locale, 'ports', 'port')} · {c.vulnerabilities ?? 0} {tx(locale, 'vulns', 'vuln')}
-                  </TD>
-                </TR>
-              );
-            })}
-          </TBody>
-        </Table>
-      )}
     </>
   );
 }

@@ -1,5 +1,5 @@
 /**
- * In-memory relay for interactive remote shell / Claude Code sessions to an OUTBOUND-ONLY engine.
+ * In-memory relay for interactive remote shell / Agentic Harness sessions to an OUTBOUND-ONLY engine.
  *
  * The live PTY runs ON the engine. The engine cannot be connected TO (no inbound port), so it INITIATES
  * the relay: it long-polls `pull` for control + the operator's keystrokes and POSTs PTY `output` back.
@@ -72,7 +72,7 @@ export function openSession(opts: {
   openedBy: string;
   cols?: number;
   rows?: number;
-  /** claude only: spawn `claude --continue` to resume the engine's last Claude Code conversation. */
+  /** claude only: spawn `claude --continue` to resume the engine's last Agentic Harness conversation. */
   resume?: boolean;
 }): void {
   const s: Session = {

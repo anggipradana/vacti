@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
+import { ZoomIn, ZoomOut, RotateCcw, Maximize2, X } from 'lucide-react';
 import { Button } from './button';
 import { cn } from '../../lib/cn';
 import { tx, type Locale } from '../../lib/i18n';
@@ -30,6 +30,7 @@ export function ZoomPan({ children, locale, className, height = 460, minScale = 
   const [tx0, setTx0] = React.useState(0);
   const [ty0, setTy0] = React.useState(0);
   const [dragging, setDragging] = React.useState(false);
+  const [fullscreen, setFullscreen] = React.useState(false);
   const dragOrigin = React.useRef<{ px: number; py: number; x: number; y: number } | null>(null);
 
   const clamp = React.useCallback((s: number) => Math.min(maxScale, Math.max(minScale, s)), [minScale, maxScale]);
@@ -39,6 +40,25 @@ export function ZoomPan({ children, locale, className, height = 460, minScale = 
     setTx0(0);
     setTy0(0);
   }, []);
+
+  // Reset the view when entering/leaving fullscreen so the graph fits the new viewport size.
+  const toggleFullscreen = React.useCallback(() => {
+    reset();
+    setFullscreen((v) => !v);
+  }, [reset]);
+
+  // Exit fullscreen on Escape.
+  React.useEffect(() => {
+    if (!fullscreen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        reset();
+        setFullscreen(false);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [fullscreen, reset]);
 
   // Zoom toward an anchor point (in viewport-local coordinates) so that point stays put on screen.
   const zoomFromButton = React.useCallback(
@@ -104,65 +124,96 @@ export function ZoomPan({ children, locale, className, height = 460, minScale = 
 
   const pct = Math.round(scale * 100);
 
+  const controls = (
+    <div className="absolute right-2 top-2 z-10 flex items-center gap-1 rounded-md border border-border bg-surface/90 p-1 shadow-sm backdrop-blur">
+      <span className="px-1.5 text-xs font-medium tabular-nums text-fg-muted" aria-live="polite">
+        {pct}%
+      </span>
+      <Button
+        type="button"
+        size="sm"
+        variant="ghost"
+        className="h-7 w-7 p-0"
+        onClick={() => zoomFromButton(-ZOOM_STEP)}
+        aria-label={tx(locale, 'Zoom out', 'Perkecil')}
+        title={tx(locale, 'Zoom out', 'Perkecil')}
+      >
+        <ZoomOut className="size-4" />
+      </Button>
+      <Button
+        type="button"
+        size="sm"
+        variant="ghost"
+        className="h-7 w-7 p-0"
+        onClick={() => zoomFromButton(ZOOM_STEP)}
+        aria-label={tx(locale, 'Zoom in', 'Perbesar')}
+        title={tx(locale, 'Zoom in', 'Perbesar')}
+      >
+        <ZoomIn className="size-4" />
+      </Button>
+      <Button
+        type="button"
+        size="sm"
+        variant="outline"
+        className="h-7 w-7 p-0"
+        onClick={reset}
+        aria-label={tx(locale, 'Reset view', 'Atur ulang tampilan')}
+        title={tx(locale, 'Reset view', 'Atur ulang tampilan')}
+      >
+        <RotateCcw className="size-4" />
+      </Button>
+      <Button
+        type="button"
+        size="sm"
+        variant="outline"
+        className="h-7 w-7 p-0"
+        onClick={toggleFullscreen}
+        aria-label={
+          fullscreen ? tx(locale, 'Exit full screen', 'Keluar layar penuh') : tx(locale, 'Full screen', 'Layar penuh')
+        }
+        title={
+          fullscreen ? tx(locale, 'Exit full screen', 'Keluar layar penuh') : tx(locale, 'Full screen', 'Layar penuh')
+        }
+      >
+        {fullscreen ? <X className="size-4" /> : <Maximize2 className="size-4" />}
+      </Button>
+    </div>
+  );
+
+  const viewport = (
+    <div
+      ref={viewportRef}
+      className={cn('h-full w-full touch-none', dragging ? 'cursor-grabbing' : 'cursor-grab')}
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={endDrag}
+      onPointerCancel={endDrag}
+    >
+      <div
+        className="w-full"
+        style={{ transform: `translate(${tx0}px, ${ty0}px) scale(${scale})`, transformOrigin: '0 0' }}
+      >
+        {children}
+      </div>
+    </div>
+  );
+
+  if (fullscreen) {
+    return (
+      <div className="fixed inset-4 z-[100] overflow-hidden rounded-md border border-border bg-surface shadow-lg">
+        {controls}
+        {viewport}
+      </div>
+    );
+  }
+
   return (
     <div
       className={cn('relative overflow-hidden rounded-md border border-border bg-surface', className)}
       style={{ height }}
     >
-      <div className="absolute right-2 top-2 z-10 flex items-center gap-1 rounded-md border border-border bg-surface/90 p-1 shadow-sm backdrop-blur">
-        <span className="px-1.5 text-xs font-medium tabular-nums text-fg-muted" aria-live="polite">
-          {pct}%
-        </span>
-        <Button
-          type="button"
-          size="sm"
-          variant="ghost"
-          className="h-7 w-7 p-0"
-          onClick={() => zoomFromButton(-ZOOM_STEP)}
-          aria-label={tx(locale, 'Zoom out', 'Perkecil')}
-          title={tx(locale, 'Zoom out', 'Perkecil')}
-        >
-          <ZoomOut className="size-4" />
-        </Button>
-        <Button
-          type="button"
-          size="sm"
-          variant="ghost"
-          className="h-7 w-7 p-0"
-          onClick={() => zoomFromButton(ZOOM_STEP)}
-          aria-label={tx(locale, 'Zoom in', 'Perbesar')}
-          title={tx(locale, 'Zoom in', 'Perbesar')}
-        >
-          <ZoomIn className="size-4" />
-        </Button>
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          className="h-7 w-7 p-0"
-          onClick={reset}
-          aria-label={tx(locale, 'Reset view', 'Atur ulang tampilan')}
-          title={tx(locale, 'Reset view', 'Atur ulang tampilan')}
-        >
-          <RotateCcw className="size-4" />
-        </Button>
-      </div>
-
-      <div
-        ref={viewportRef}
-        className={cn('h-full w-full touch-none', dragging ? 'cursor-grabbing' : 'cursor-grab')}
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={endDrag}
-        onPointerCancel={endDrag}
-      >
-        <div
-          className="w-full"
-          style={{ transform: `translate(${tx0}px, ${ty0}px) scale(${scale})`, transformOrigin: '0 0' }}
-        >
-          {children}
-        </div>
-      </div>
+      {controls}
+      {viewport}
     </div>
   );
 }

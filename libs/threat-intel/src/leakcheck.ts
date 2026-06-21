@@ -21,6 +21,11 @@ export interface LeakResult {
   found: number;
   /** A query hit the per-request limit, so more credentials exist than were returned (silent-cap signal). */
   truncated: boolean;
+  /**
+   * Set when the lookup failed (HTTP error, timeout, or LeakCheck returned `success:false`) so callers
+   * can show a real error instead of an empty "no leaks found". Absent on success (incl. genuine 0 rows).
+   */
+  error?: string;
 }
 
 interface LeakRaw {
@@ -103,12 +108,21 @@ export async function searchLeaks(
   const { key, type = 'auto', fetchImpl = fetch } = opts;
   const q = query.trim();
   if (!key || !q) return { records: [], found: 0, truncated: false };
+  // Never block on the network without a bound: abort after 20s so a hung LeakCheck request surfaces a
+  // timeout error instead of leaving the page (and its pending overlay) spinning forever.
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 20_000);
   try {
     const url = `${PUBLIC_BASE}?key=${encodeURIComponent(key)}&check=${encodeURIComponent(q)}&type=${encodeURIComponent(type)}`;
-    const res = await fetchImpl(url, { headers: { Accept: 'application/json' } });
-    if (!res.ok) return { records: [], found: 0, truncated: false };
-    const body = (await res.json()) as { success?: boolean; found?: number; result?: LeakRaw[] };
-    if (body.success === false) return { records: [], found: 0, truncated: false };
+    const res = await fetchImpl(url, { headers: { Accept: 'application/json' }, signal: controller.signal });
+    if (!res.ok) {
+      // 401/403 = bad/missing key, 429 = rate limited; bubble a real message up to the UI.
+      return { records: [], found: 0, truncated: false, error: `LeakCheck request failed (HTTP ${res.status})` };
+    }
+    const body = (await res.json()) as { success?: boolean; error?: string; found?: number; result?: LeakRaw[] };
+    if (body.success === false) {
+      return { records: [], found: 0, truncated: false, error: body.error || 'LeakCheck rejected the query' };
+    }
     const seen = new Set<string>();
     const records = (body.result ?? [])
       .map((r) => {
@@ -130,8 +144,16 @@ export async function searchLeaks(
       .filter((r) => (seen.has(r.hashMd5) ? false : (seen.add(r.hashMd5), true)));
     const found = Math.max(Number(body.found ?? 0), records.length);
     return { records, found, truncated: records.length >= QUERY_LIMIT };
-  } catch {
-    return { records: [], found: 0, truncated: false };
+  } catch (err) {
+    const aborted = err instanceof Error && err.name === 'AbortError';
+    return {
+      records: [],
+      found: 0,
+      truncated: false,
+      error: aborted ? 'LeakCheck request timed out' : 'Could not reach LeakCheck',
+    };
+  } finally {
+    clearTimeout(timer);
   }
 }
 

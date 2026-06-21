@@ -21,13 +21,19 @@ function crc32(buf: Uint8Array): number {
 /** Build a ZIP (stored) from named text entries. Returns a Buffer ready to stream. */
 export function makeZip(files: { name: string; content: string }[]): Buffer {
   const enc = new TextEncoder();
+  return makeZipBytes(files.map((f) => ({ name: f.name, content: enc.encode(f.content) })));
+}
+
+/** Build a ZIP (stored) from named binary entries. Returns a Buffer ready to stream. */
+export function makeZipBytes(files: { name: string; content: Uint8Array }[]): Buffer {
+  const enc = new TextEncoder();
   const locals: Buffer[] = [];
   const central: Buffer[] = [];
   let offset = 0;
 
   for (const f of files) {
     const nameBuf = enc.encode(f.name);
-    const data = enc.encode(f.content);
+    const data = f.content;
     const crc = crc32(data);
 
     const lh = Buffer.alloc(30);

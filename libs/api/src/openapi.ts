@@ -1523,7 +1523,7 @@ function pentestPaths(): Record<string, unknown> {
       get: {
         summary: 'Pull the operator-managed Claude credential (engine startup)',
         description:
-          'Scope: `pentest:dispatch`. Returns the decrypted Anthropic credential the engine injects into Claude Code.',
+          'Scope: `pentest:dispatch`. Returns the decrypted Anthropic credential the engine injects into Agentic Harness.',
         tags,
         security: bearer,
         responses: {

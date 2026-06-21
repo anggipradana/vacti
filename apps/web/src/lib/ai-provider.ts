@@ -45,6 +45,7 @@ export async function resolveAiConfig(projectId: string): Promise<AiConfig> {
 }
 
 /** Resolve an AI provider for a project (vault key -> env fallback), or null if unconfigured. */
-export async function providerFor(projectId: string): Promise<AiProvider | null> {
+export async function providerFor(projectId: string | null): Promise<AiProvider | null> {
+  if (!projectId) return null; // project-less engagement (AI Pentest is project-independent)
   return makeProvider(await resolveAiConfig(projectId));
 }
