@@ -13,6 +13,8 @@ import {
   Radar as RadarIcon,
   Gauge,
   KeyRound,
+  Bug,
+  Radio,
 } from 'lucide-react';
 import { PageHeader } from '../../../components/ui/page-header';
 import { StatCard } from '../../../components/ui/stat-card';
@@ -41,6 +43,9 @@ import {
   subdomains,
   exposureFindings,
   discoveredUrls,
+  pentestEngagements,
+  pentestEngines,
+  pentestFindings,
 } from '@vacti/db';
 import { computeProjectRisk } from '@vacti/threat-intel';
 import { getDb } from '../../../lib/db';
@@ -50,6 +55,8 @@ import { getActiveProjectId } from '../../../lib/active-project';
 import { getLocale } from '../../../lib/locale';
 import { tx } from '../../../lib/i18n';
 import { RansomwareHighlight, RansomwareHighlightFallback } from './cti-overview';
+import { ENG_STATUS_LABEL } from '../pentest/ui';
+import { SectionHeader, ProgressBar } from './section';
 
 export const dynamic = 'force-dynamic';
 
@@ -239,6 +246,85 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
     .sort((a, b) => b.count - a.count || b.severity - a.severity)
     .slice(0, 8);
 
+  // AI Pentest aggregates - PROJECT-AGNOSTIC: an engagement targets a host, not a business project, so
+  // this section ignores the dashboard's active project and tallies across every engagement/engine.
+  // (Mirrors apps/web/src/app/(app)/pentest/page.tsx.)
+  const PENTEST_ENGINE_STALE_MS = 90_000;
+  const [pentestEngRows, pentestSevRows, pentestRetestRows, pentestEngineRows] = await Promise.all([
+    db.select({ status: pentestEngagements.status }).from(pentestEngagements),
+    // Accepted (shippable) findings grouped by severity, across all engagements.
+    db
+      .select({ severity: pentestFindings.severity, n: count() })
+      .from(pentestFindings)
+      .where(inArray(pentestFindings.status, ['accepted', 'reported']))
+      .groupBy(pentestFindings.severity),
+    // Of accepted findings, how many are marked fixed on retest.
+    db
+      .select({ retestStatus: pentestFindings.retestStatus, n: count() })
+      .from(pentestFindings)
+      .where(inArray(pentestFindings.status, ['accepted', 'reported']))
+      .groupBy(pentestFindings.retestStatus),
+    db.select({ lastHeartbeatAt: pentestEngines.lastHeartbeatAt }).from(pentestEngines),
+  ]);
+
+  // Engagements by status -> total + per-status bars.
+  const pentestEngagementTotal = pentestEngRows.length;
+  const pentestStatusCounts = pentestEngRows.reduce<Map<string, number>>((m, r) => {
+    m.set(r.status, (m.get(r.status) ?? 0) + 1);
+    return m;
+  }, new Map());
+  const pentestStatusBreakdown = [...pentestStatusCounts.entries()]
+    .map(([status, n]) => ({ status, label: ENG_STATUS_LABEL[status] ?? status, count: n }))
+    .sort((a, b) => b.count - a.count);
+  // "Active" = claimed or running engagements (drives the narrative).
+  const pentestActive = (pentestStatusCounts.get('claimed') ?? 0) + (pentestStatusCounts.get('running') ?? 0);
+
+  // Accepted findings by severity -> reuse SeverityDonut [crit, high, med, low, info].
+  const pentestSevByName = pentestSevRows.reduce<Map<string, number>>((m, r) => {
+    m.set(r.severity, (m.get(r.severity) ?? 0) + Number(r.n));
+    return m;
+  }, new Map());
+  const pentestSeverityCounts: [number, number, number, number, number] = [
+    pentestSevByName.get('critical') ?? 0,
+    pentestSevByName.get('high') ?? 0,
+    pentestSevByName.get('medium') ?? 0,
+    pentestSevByName.get('low') ?? 0,
+    pentestSevByName.get('info') ?? 0,
+  ];
+  const pentestAcceptedTotal = pentestSeverityCounts.reduce((a, b) => a + b, 0);
+
+  // Remediation progress: fixed / total accepted.
+  const pentestFixed = pentestRetestRows.filter((r) => r.retestStatus === 'fixed').reduce((a, r) => a + Number(r.n), 0);
+  const pentestRetestTotal = pentestRetestRows.reduce((a, r) => a + Number(r.n), 0);
+  const pentestRemediatedPct = pentestRetestTotal > 0 ? Math.round((pentestFixed / pentestRetestTotal) * 100) : 0;
+
+  // Engines online (heartbeat within ~90s).
+  const pentestNow = Date.now();
+  const pentestEnginesOnline = pentestEngineRows.filter(
+    (e) => e.lastHeartbeatAt && pentestNow - e.lastHeartbeatAt.getTime() < PENTEST_ENGINE_STALE_MS,
+  ).length;
+  const pentestEnginesTotal = pentestEngineRows.length;
+
+  // Deterministic narrative (no AI call) summarising the aggregates above. Bilingual via tx.
+  const pentestSevParts: string[] = [];
+  if (pentestSeverityCounts[0] > 0) pentestSevParts.push(`${pentestSeverityCounts[0]} Critical`);
+  if (pentestSeverityCounts[1] > 0) pentestSevParts.push(`${pentestSeverityCounts[1]} High`);
+  if (pentestSeverityCounts[2] > 0) pentestSevParts.push(`${pentestSeverityCounts[2]} Medium`);
+  if (pentestSeverityCounts[3] > 0) pentestSevParts.push(`${pentestSeverityCounts[3]} Low`);
+  const pentestSevSuffix = pentestSevParts.length ? ` (${pentestSevParts.join(', ')})` : '';
+  const pentestNarrative =
+    pentestEngagementTotal === 0
+      ? tx(
+          locale,
+          'No engagements yet. Stand up an engine and run an authorized pentest to see findings here.',
+          'Belum ada engagement. Siapkan engine dan jalankan pentest terotorisasi untuk melihat temuan di sini.',
+        )
+      : tx(
+          locale,
+          `${pentestActive} active engagement(s); ${pentestAcceptedTotal} accepted finding(s)${pentestSevSuffix}; ${pentestRemediatedPct}% remediated; ${pentestEnginesOnline} of ${pentestEnginesTotal} engine(s) online.`,
+          `${pentestActive} engagement aktif; ${pentestAcceptedTotal} temuan accepted${pentestSevSuffix}; ${pentestRemediatedPct}% diremediasi; ${pentestEnginesOnline} dari ${pentestEnginesTotal} engine online.`,
+        );
+
   const days: { label: string; value: number }[] = [];
   for (let i = 6; i >= 0; i--) {
     const d = new Date();
@@ -327,7 +413,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
         </Card>
       ) : null}
 
-      {/* Metric tiles */}
+      {/* Global stat ribbon - at-a-glance totals across the active project + AI Pentest. */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
         <StatCard
           label={tx(locale, 'Targets', 'Target')}
@@ -341,11 +427,11 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
         <Link href="/surface">
           <StatCard label="Passive subdomains" value={passiveSubdomains} icon={<RadarIcon />} />
         </Link>
-        <Link href="/surface">
+        <Link href="/pentest">
           <StatCard
-            label={tx(locale, 'Exposure findings', 'Temuan exposure')}
-            value={exposureFindingsCount}
-            icon={<KeyRound />}
+            label={tx(locale, 'Pentest findings', 'Temuan pentest')}
+            value={pentestAcceptedTotal}
+            icon={<Bug />}
           />
         </Link>
       </div>
@@ -464,8 +550,23 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
         />
       </div>
 
-      {/* Visualizations */}
-      <div className="mt-8 grid gap-4 lg:grid-cols-3">
+      {/* ===================== Vulnerability Assessment ===================== */}
+      <SectionHeader
+        title="Vulnerability Assessment"
+        subtitle={tx(
+          locale,
+          'Findings, scan trend & triage for this project.',
+          'Temuan, tren scan & triase untuk proyek ini.',
+        )}
+        action={
+          <Button asChild variant="ghost" size="sm">
+            <Link href={projectId ? `/scans?project=${projectId}` : '/scans'}>
+              {tx(locale, 'Open VA →', 'Buka VA →')}
+            </Link>
+          </Button>
+        }
+      />
+      <div className="grid gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-1">
           <CardHeader>
             <CardTitle>{tx(locale, 'Severity breakdown', 'Rincian severity')}</CardTitle>
@@ -484,22 +585,9 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
         </Card>
       </div>
 
-      {discoveryEver > 0 ? (
-        <Card className="mt-4">
-          <CardHeader>
-            <CardTitle>
-              {tx(locale, 'URL discovery · last 14 days (passive)', 'Penemuan URL · 14 hari terakhir (pasif)')}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <TrendArea data={discoveryDays} />
-          </CardContent>
-        </Card>
-      ) : null}
-
       {/* VA review status - triage breakdown of this project's findings. */}
       {vulnRows.length > 0 ? (
-        <Card className="mt-6">
+        <Card className="mt-4">
           <CardHeader>
             <CardTitle>{tx(locale, 'VA review status', 'Status review VA')}</CardTitle>
           </CardHeader>
@@ -526,76 +614,9 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
         </Card>
       ) : null}
 
-      {/* CTI overview - unified risk, leaked credentials & ransomware highlight for this project. */}
-      <div className="mb-3 mt-8 flex items-center justify-between">
-        <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-fg-subtle">
-          {tx(locale, 'Threat intelligence', 'Threat Intelligence')}
-        </h2>
-        <Button asChild variant="ghost" size="sm">
-          <Link href={projectId ? `/threat?project=${projectId}` : '/threat'}>
-            {tx(locale, 'Open CTI →', 'Buka CTI →')}
-          </Link>
-        </Button>
-      </div>
-      <div className="grid gap-4 lg:grid-cols-[280px_1fr]">
-        <Card>
-          <CardHeader>
-            <CardTitle>{tx(locale, 'Unified risk score', 'Skor risiko terpadu')}</CardTitle>
-          </CardHeader>
-          <CardContent className="flex justify-center py-4">
-            <RiskGauge score={risk.score} />
-          </CardContent>
-        </Card>
-        <div className="grid content-start gap-4">
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-            <StatCard label={tx(locale, 'Risk score', 'Skor risiko')} value={risk.score} icon={<Gauge />} />
-            <StatCard
-              label={tx(locale, 'Leaked creds', 'Kredensial bocor')}
-              value={leakRows.length}
-              icon={<KeyRound />}
-              hint={`${leakUnchecked} ${tx(locale, 'unchecked', 'belum diperiksa')}`}
-            />
-            <StatCard label={tx(locale, 'Targets', 'Target')} value={targetRows.length} icon={<Crosshair />} />
-          </div>
-          {leakStatusBreakdown.length > 0 ? (
-            <Card>
-              <CardHeader>
-                <CardTitle>{tx(locale, 'Leak triage status', 'Status triase kebocoran')}</CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <div className="flex flex-wrap gap-2">
-                  {leakStatusBreakdown.map((s) => (
-                    <Badge
-                      key={s.status}
-                      variant={
-                        s.status === 'new'
-                          ? 'danger'
-                          : s.status === 'investigating' || s.status === 'confirmed'
-                            ? 'accent'
-                            : s.status === 'remediated'
-                              ? 'success'
-                              : 'neutral'
-                      }
-                    >
-                      {s.label} · {s.count}
-                    </Badge>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          ) : null}
-        </div>
-      </div>
-      {/* Ransomware highlight does a (cached) network fetch - stream it so it never blocks the dashboard. */}
-      <div className="mt-4">
-        <Suspense fallback={<RansomwareHighlightFallback locale={locale} />}>
-          <RansomwareHighlight locale={locale} />
-        </Suspense>
-      </div>
-
-      {/* Data-relevant analytics */}
+      {/* Top vulnerable hosts + most common findings (VA drill-downs). */}
       {vulnRows.length > 0 ? (
-        <div className="mt-6 grid gap-4 lg:grid-cols-2">
+        <div className="mt-4 grid gap-4 lg:grid-cols-2">
           <Card className="lg:col-span-2">
             <CardHeader>
               <CardTitle>{tx(locale, 'Top vulnerable subdomains', 'Subdomain paling rentan')}</CardTitle>
@@ -695,6 +716,207 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
           </Card>
         </div>
       ) : null}
+
+      {/* ===================== Attack Surface ===================== */}
+      <SectionHeader
+        title="Attack Surface"
+        subtitle={tx(
+          locale,
+          'Passive subdomains, exposure findings & URL discovery.',
+          'Subdomain pasif, temuan exposure & penemuan URL.',
+        )}
+        action={
+          <Button asChild variant="ghost" size="sm">
+            <Link href="/surface">{tx(locale, 'Open Surface →', 'Buka Surface →')}</Link>
+          </Button>
+        }
+      />
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-2">
+        <Link href="/surface">
+          <StatCard label="Passive subdomains" value={passiveSubdomains} icon={<RadarIcon />} />
+        </Link>
+        <Link href="/surface">
+          <StatCard
+            label={tx(locale, 'Exposure findings', 'Temuan exposure')}
+            value={exposureFindingsCount}
+            icon={<KeyRound />}
+          />
+        </Link>
+      </div>
+      {discoveryEver > 0 ? (
+        <Card className="mt-4">
+          <CardHeader>
+            <CardTitle>
+              {tx(locale, 'URL discovery · last 14 days (passive)', 'Penemuan URL · 14 hari terakhir (pasif)')}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <TrendArea data={discoveryDays} />
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {/* ===================== Cyber Threat Intel ===================== */}
+      <SectionHeader
+        title="Cyber Threat Intel"
+        subtitle={tx(
+          locale,
+          'Unified risk, leaked credentials & ransomware highlight.',
+          'Risiko terpadu, kredensial bocor & sorotan ransomware.',
+        )}
+        action={
+          <Button asChild variant="ghost" size="sm">
+            <Link href={projectId ? `/threat?project=${projectId}` : '/threat'}>
+              {tx(locale, 'Open CTI →', 'Buka CTI →')}
+            </Link>
+          </Button>
+        }
+      />
+      <div className="grid gap-4 lg:grid-cols-[280px_1fr]">
+        <Card>
+          <CardHeader>
+            <CardTitle>{tx(locale, 'Unified risk score', 'Skor risiko terpadu')}</CardTitle>
+          </CardHeader>
+          <CardContent className="flex justify-center py-4">
+            <RiskGauge score={risk.score} />
+          </CardContent>
+        </Card>
+        <div className="grid content-start gap-4">
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+            <StatCard label={tx(locale, 'Risk score', 'Skor risiko')} value={risk.score} icon={<Gauge />} />
+            <StatCard
+              label={tx(locale, 'Leaked creds', 'Kredensial bocor')}
+              value={leakRows.length}
+              icon={<KeyRound />}
+              hint={`${leakUnchecked} ${tx(locale, 'unchecked', 'belum diperiksa')}`}
+            />
+            <StatCard label={tx(locale, 'Targets', 'Target')} value={targetRows.length} icon={<Crosshair />} />
+          </div>
+          {leakStatusBreakdown.length > 0 ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>{tx(locale, 'Leak triage status', 'Status triase kebocoran')}</CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="flex flex-wrap gap-2">
+                  {leakStatusBreakdown.map((s) => (
+                    <Badge
+                      key={s.status}
+                      variant={
+                        s.status === 'new'
+                          ? 'danger'
+                          : s.status === 'investigating' || s.status === 'confirmed'
+                            ? 'accent'
+                            : s.status === 'remediated'
+                              ? 'success'
+                              : 'neutral'
+                      }
+                    >
+                      {s.label} · {s.count}
+                    </Badge>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          ) : null}
+        </div>
+      </div>
+      {/* Ransomware highlight does a (cached) network fetch - stream it so it never blocks the dashboard. */}
+      <div className="mt-4">
+        <Suspense fallback={<RansomwareHighlightFallback locale={locale} />}>
+          <RansomwareHighlight locale={locale} />
+        </Suspense>
+      </div>
+
+      {/* ===================== AI Pentest (NEW) - PROJECT-AGNOSTIC ===================== */}
+      <SectionHeader
+        title="AI Pentest"
+        subtitle={tx(
+          locale,
+          'Autonomous, verified penetration testing - across all engagements (not scoped to a project).',
+          'Penetration testing otonom & terverifikasi - lintas semua engagement (tidak dibatasi proyek).',
+        )}
+        action={
+          <Button asChild variant="ghost" size="sm">
+            <Link href="/pentest">{tx(locale, 'Open AI Pentest →', 'Buka AI Pentest →')}</Link>
+          </Button>
+        }
+      />
+      <Card className="border-accent/40 bg-accent/5">
+        <CardContent className="pt-6">
+          <p className="mb-5 text-sm text-fg-muted">
+            <Bug className="mr-1.5 inline size-4 text-accent" />
+            {pentestNarrative}
+          </p>
+          <div className="grid gap-5 lg:grid-cols-3">
+            {/* Engagements by status */}
+            <div>
+              <div className="mb-2 flex items-center justify-between">
+                <span className="text-xs font-semibold uppercase tracking-wide text-fg-subtle">
+                  {tx(locale, 'Engagements by status', 'Engagement per status')}
+                </span>
+                <span className="text-xs text-fg-muted">
+                  {pentestEngagementTotal} {tx(locale, 'total', 'total')}
+                </span>
+              </div>
+              {pentestStatusBreakdown.length ? (
+                <div className="space-y-2">
+                  {pentestStatusBreakdown.map((s) => (
+                    <div key={s.status} className="flex items-center gap-2 text-sm">
+                      <span className="w-20 shrink-0 text-fg-muted">{s.label}</span>
+                      <div className="flex-1">
+                        <CountBar value={s.count} max={pentestStatusBreakdown[0]?.count ?? 1} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="py-2 text-sm text-fg-muted">
+                  {tx(locale, 'No engagements yet.', 'Belum ada engagement.')}
+                </p>
+              )}
+            </div>
+
+            {/* Accepted findings by severity */}
+            <div>
+              <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-fg-subtle">
+                {tx(locale, 'Accepted findings by severity', 'Temuan accepted per severity')}
+              </div>
+              <SeverityDonut counts={pentestSeverityCounts} />
+            </div>
+
+            {/* Remediation progress + engines online */}
+            <div className="space-y-5">
+              <div>
+                <div className="mb-2 flex items-center justify-between">
+                  <span className="text-xs font-semibold uppercase tracking-wide text-fg-subtle">
+                    {tx(locale, 'Remediation progress', 'Progres remediasi')}
+                  </span>
+                  <span className="text-xs text-fg-muted">{pentestRemediatedPct}%</span>
+                </div>
+                <ProgressBar
+                  pct={pentestRemediatedPct}
+                  label={`${pentestFixed} / ${pentestRetestTotal} ${tx(locale, 'fixed', 'diperbaiki')}`}
+                />
+              </div>
+              <div>
+                <div className="mb-2 flex items-center justify-between">
+                  <span className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-fg-subtle">
+                    <Radio className="size-3.5 text-accent" /> {tx(locale, 'Engines', 'Engine')}
+                  </span>
+                  <Badge variant={pentestEnginesOnline > 0 ? 'success' : 'neutral'}>
+                    {pentestEnginesOnline} {tx(locale, 'online', 'online')}
+                  </Badge>
+                </div>
+                <p className="text-sm text-fg-muted">
+                  {pentestEnginesOnline} {tx(locale, 'of', 'dari')} {pentestEnginesTotal}{' '}
+                  {tx(locale, 'engine(s) online', 'engine online')}
+                </p>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Recent scans */}
       <h2 className="mb-3 mt-8 font-display text-sm font-semibold uppercase tracking-wider text-fg-subtle">
