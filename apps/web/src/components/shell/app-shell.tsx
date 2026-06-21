@@ -30,7 +30,6 @@ const nav = [
   { key: 'nav.surface', label: 'Attack Surface', href: '/surface' },
   { key: 'nav.threat', label: 'Cyber Threat Intel', href: '/threat' },
   { key: 'nav.pentest', label: 'AI Pentest', href: '/pentest' },
-  { key: 'nav.reports', label: 'Reports', href: '/reports' },
   { key: 'nav.settings', label: 'Settings', href: '/settings/account' },
   { key: 'nav.docs', label: 'Docs', href: '/docs' },
 ];

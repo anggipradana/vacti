@@ -7,6 +7,7 @@ import { Table, THead, TBody, TR, TH, TD } from '../../../components/ui/table';
 import { StatusPill } from '../../../components/ui/status-pill';
 import { EmptyState } from '../../../components/ui/empty-state';
 import { Pagination } from '../../../components/ui/pagination';
+import { Button } from '../../../components/ui/button';
 import { NewScanDialog } from '../../../components/new-scan-dialog';
 import { CollapsibleCard } from '../../../components/ui/collapsible-card';
 import { TargetsManager } from '../../../components/targets-manager';
@@ -30,6 +31,9 @@ function rel(d: Date, locale: Locale): string {
 }
 
 const PAGE_SIZE = 25;
+
+// Reports are generated from finished scans only; running scans would produce partial documents.
+const TERMINAL = new Set(['completed', 'failed', 'cancelled']);
 
 export default async function ScansPage({
   searchParams,
@@ -114,6 +118,7 @@ export default async function ScansPage({
                 <TH>{tx(locale, 'Status', 'Status')}</TH>
                 <TH>{tx(locale, 'Findings', 'Temuan')}</TH>
                 <TH>{tx(locale, 'Started', 'Dimulai')}</TH>
+                <TH>{tx(locale, 'Report', 'Laporan')}</TH>
               </TR>
             </THead>
             <TBody>
@@ -135,6 +140,31 @@ export default async function ScansPage({
                       {c.endpoints ?? 0} endpoints · {c.ports ?? 0} ports · {c.vulnerabilities ?? 0} vulns
                     </TD>
                     <TD className="text-sm text-fg-subtle">{rel(s.createdAt, locale)}</TD>
+                    <TD>
+                      {/* VA reports, surfaced here now that the standalone Reports hub is retired. Full
+                          includes recon and findings; Recon and Findings are scoped variants. */}
+                      {TERMINAL.has(s.status) ? (
+                        <div className="flex items-center gap-1">
+                          <Button asChild variant="outline" size="sm">
+                            <a href={`/reports/va/${s.id}?type=full`} target="_blank" rel="noopener noreferrer">
+                              Full
+                            </a>
+                          </Button>
+                          <Button asChild variant="ghost" size="sm">
+                            <a href={`/reports/va/${s.id}?type=recon`} target="_blank" rel="noopener noreferrer">
+                              {tx(locale, 'Recon', 'Recon')}
+                            </a>
+                          </Button>
+                          <Button asChild variant="ghost" size="sm">
+                            <a href={`/reports/va/${s.id}?type=vuln`} target="_blank" rel="noopener noreferrer">
+                              {tx(locale, 'Findings', 'Temuan')}
+                            </a>
+                          </Button>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-fg-subtle">-</span>
+                      )}
+                    </TD>
                   </TR>
                 );
               })}
