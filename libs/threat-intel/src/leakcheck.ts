@@ -89,8 +89,22 @@ export async function fetchLeaks(
   return { records, found, truncated };
 }
 
-/** Free-form LeakCheck query types (v2 auto-detects when `type` is omitted/`auto`). */
-export type LeakSearchType = 'auto' | 'email' | 'domain' | 'username' | 'phone' | 'hash' | 'keyword';
+/**
+ * Free-form LeakCheck query types (v2 auto-detects when `type` is omitted/`auto`).
+ * `phash`/`origin`/`password` are LeakCheck Enterprise-only - the API returns an error for
+ * non-Enterprise keys, which the UI surfaces verbatim.
+ */
+export type LeakSearchType =
+  | 'auto'
+  | 'email'
+  | 'domain'
+  | 'username'
+  | 'phone'
+  | 'hash'
+  | 'keyword'
+  | 'origin'
+  | 'password'
+  | 'phash';
 
 /**
  * Free-form leak search against the LeakCheck API v2 (`GET /api/v2/query/<query>?type=`, `X-API-Key`).
