@@ -550,6 +550,19 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
         />
       </div>
 
+      {/* ===================== Project-scoped modules (VA · Attack Surface · CTI) ===================== */}
+      {/* One shared domain: these three sections all honor the active project from the ProjectSwitcher. */}
+      <div className="mb-1 mt-10 flex flex-wrap items-center gap-2 rounded-lg border border-border bg-surface-2/40 px-3 py-2">
+        <Badge variant="neutral">{tx(locale, 'Project scoped', 'Lingkup proyek')}</Badge>
+        <p className="text-xs text-fg-muted">
+          {tx(
+            locale,
+            `Vulnerability Assessment, Attack Surface and Cyber Threat Intel below are scoped to the selected project${dashProject ? ` (${dashProject.name})` : ''}. Switch projects with the selector above.`,
+            `Vulnerability Assessment, Attack Surface dan Cyber Threat Intel di bawah ini dibatasi pada proyek yang dipilih${dashProject ? ` (${dashProject.name})` : ''}. Ganti proyek lewat pemilih di atas.`,
+          )}
+        </p>
+      </div>
+
       {/* ===================== Vulnerability Assessment ===================== */}
       <SectionHeader
         title="Vulnerability Assessment"
@@ -828,95 +841,105 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
         </Suspense>
       </div>
 
-      {/* ===================== AI Pentest (NEW) - PROJECT-AGNOSTIC ===================== */}
-      <SectionHeader
-        title="AI Pentest"
-        subtitle={tx(
-          locale,
-          'Autonomous, verified penetration testing - across all engagements (not scoped to a project).',
-          'Penetration testing otonom & terverifikasi - lintas semua engagement (tidak dibatasi proyek).',
-        )}
-        action={
+      {/* ===================== AI Pentest - PROJECT-AGNOSTIC / INDEPENDENT MODULE ===================== */}
+      {/* Strong divider + spacing to set this block apart: it is NOT project-scoped (dynamic engagement
+          targets), so it sits in its own accent band rather than under the project-scoped header above. */}
+      <div className="mt-12 border-t-2 border-dashed border-accent/40 pt-10">
+        <div className="mb-3 flex flex-wrap items-end justify-between gap-3 rounded-lg border border-accent/40 bg-accent/5 px-4 py-3">
+          <div>
+            <div className="flex items-center gap-2">
+              <Bug className="size-4 text-accent" />
+              <h2 className="font-display text-base font-semibold tracking-wide text-fg">AI Pentest</h2>
+              <Badge variant="accent">{tx(locale, 'Independent module', 'Modul independen')}</Badge>
+            </div>
+            <p className="mt-1 text-xs text-fg-muted">
+              {tx(
+                locale,
+                'Not scoped to the selected project. Targets are dynamic engagement hosts, so this is shown separately and aggregates across all engagements.',
+                'Tidak dibatasi pada proyek yang dipilih. Targetnya adalah host engagement yang dinamis, sehingga ditampilkan terpisah dan diagregasi lintas semua engagement.',
+              )}
+            </p>
+          </div>
           <Button asChild variant="ghost" size="sm">
             <Link href="/pentest">{tx(locale, 'Open AI Pentest →', 'Buka AI Pentest →')}</Link>
           </Button>
-        }
-      />
-      <Card className="border-accent/40 bg-accent/5">
-        <CardContent className="pt-6">
-          <p className="mb-5 text-sm text-fg-muted">
-            <Bug className="mr-1.5 inline size-4 text-accent" />
-            {pentestNarrative}
-          </p>
-          <div className="grid gap-5 lg:grid-cols-3">
-            {/* Engagements by status */}
-            <div>
-              <div className="mb-2 flex items-center justify-between">
-                <span className="text-xs font-semibold uppercase tracking-wide text-fg-subtle">
-                  {tx(locale, 'Engagements by status', 'Engagement per status')}
-                </span>
-                <span className="text-xs text-fg-muted">
-                  {pentestEngagementTotal} {tx(locale, 'total', 'total')}
-                </span>
-              </div>
-              {pentestStatusBreakdown.length ? (
-                <div className="space-y-2">
-                  {pentestStatusBreakdown.map((s) => (
-                    <div key={s.status} className="flex items-center gap-2 text-sm">
-                      <span className="w-20 shrink-0 text-fg-muted">{s.label}</span>
-                      <div className="flex-1">
-                        <CountBar value={s.count} max={pentestStatusBreakdown[0]?.count ?? 1} />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="py-2 text-sm text-fg-muted">
-                  {tx(locale, 'No engagements yet.', 'Belum ada engagement.')}
-                </p>
-              )}
-            </div>
-
-            {/* Accepted findings by severity */}
-            <div>
-              <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-fg-subtle">
-                {tx(locale, 'Accepted findings by severity', 'Temuan accepted per severity')}
-              </div>
-              <SeverityDonut counts={pentestSeverityCounts} />
-            </div>
-
-            {/* Remediation progress + engines online */}
-            <div className="space-y-5">
+        </div>
+        <Card className="border-accent/40 bg-accent/5">
+          <CardContent className="pt-6">
+            <p className="mb-5 text-sm text-fg-muted">
+              <Bug className="mr-1.5 inline size-4 text-accent" />
+              {pentestNarrative}
+            </p>
+            <div className="grid gap-5 lg:grid-cols-3">
+              {/* Engagements by status */}
               <div>
                 <div className="mb-2 flex items-center justify-between">
                   <span className="text-xs font-semibold uppercase tracking-wide text-fg-subtle">
-                    {tx(locale, 'Remediation progress', 'Progres remediasi')}
+                    {tx(locale, 'Engagements by status', 'Engagement per status')}
                   </span>
-                  <span className="text-xs text-fg-muted">{pentestRemediatedPct}%</span>
+                  <span className="text-xs text-fg-muted">
+                    {pentestEngagementTotal} {tx(locale, 'total', 'total')}
+                  </span>
                 </div>
-                <ProgressBar
-                  pct={pentestRemediatedPct}
-                  label={`${pentestFixed} / ${pentestRetestTotal} ${tx(locale, 'fixed', 'diperbaiki')}`}
-                />
+                {pentestStatusBreakdown.length ? (
+                  <div className="space-y-2">
+                    {pentestStatusBreakdown.map((s) => (
+                      <div key={s.status} className="flex items-center gap-2 text-sm">
+                        <span className="w-20 shrink-0 text-fg-muted">{s.label}</span>
+                        <div className="flex-1">
+                          <CountBar value={s.count} max={pentestStatusBreakdown[0]?.count ?? 1} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="py-2 text-sm text-fg-muted">
+                    {tx(locale, 'No engagements yet.', 'Belum ada engagement.')}
+                  </p>
+                )}
               </div>
+
+              {/* Accepted findings by severity */}
               <div>
-                <div className="mb-2 flex items-center justify-between">
-                  <span className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-fg-subtle">
-                    <Radio className="size-3.5 text-accent" /> {tx(locale, 'Engines', 'Engine')}
-                  </span>
-                  <Badge variant={pentestEnginesOnline > 0 ? 'success' : 'neutral'}>
-                    {pentestEnginesOnline} {tx(locale, 'online', 'online')}
-                  </Badge>
+                <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-fg-subtle">
+                  {tx(locale, 'Accepted findings by severity', 'Temuan accepted per severity')}
                 </div>
-                <p className="text-sm text-fg-muted">
-                  {pentestEnginesOnline} {tx(locale, 'of', 'dari')} {pentestEnginesTotal}{' '}
-                  {tx(locale, 'engine(s) online', 'engine online')}
-                </p>
+                <SeverityDonut counts={pentestSeverityCounts} />
+              </div>
+
+              {/* Remediation progress + engines online */}
+              <div className="space-y-5">
+                <div>
+                  <div className="mb-2 flex items-center justify-between">
+                    <span className="text-xs font-semibold uppercase tracking-wide text-fg-subtle">
+                      {tx(locale, 'Remediation progress', 'Progres remediasi')}
+                    </span>
+                    <span className="text-xs text-fg-muted">{pentestRemediatedPct}%</span>
+                  </div>
+                  <ProgressBar
+                    pct={pentestRemediatedPct}
+                    label={`${pentestFixed} / ${pentestRetestTotal} ${tx(locale, 'fixed', 'diperbaiki')}`}
+                  />
+                </div>
+                <div>
+                  <div className="mb-2 flex items-center justify-between">
+                    <span className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-fg-subtle">
+                      <Radio className="size-3.5 text-accent" /> {tx(locale, 'Engines', 'Engine')}
+                    </span>
+                    <Badge variant={pentestEnginesOnline > 0 ? 'success' : 'neutral'}>
+                      {pentestEnginesOnline} {tx(locale, 'online', 'online')}
+                    </Badge>
+                  </div>
+                  <p className="text-sm text-fg-muted">
+                    {pentestEnginesOnline} {tx(locale, 'of', 'dari')} {pentestEnginesTotal}{' '}
+                    {tx(locale, 'engine(s) online', 'engine online')}
+                  </p>
+                </div>
               </div>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Recent scans */}
       <h2 className="mb-3 mt-8 font-display text-sm font-semibold uppercase tracking-wider text-fg-subtle">

@@ -12,6 +12,16 @@ export interface ReportSettings {
   footerText?: string | null;
   /** Company logo as a data: URL, embedded on the cover (falls back to a monogram). */
   companyLogo?: string | null;
+  /**
+   * Logo backdrop on colored surfaces (cover). 'white' wraps the logo in a white rounded box so a
+   * dark/transparent logo stays visible on the navy cover; 'transparent' (default) is the current look.
+   */
+  logoBackground?: 'transparent' | 'white' | null;
+  /**
+   * Pentest cover header treatment: 'classic' (default, current navy gradient + centered meta grid),
+   * 'minimal' (flat dark cover, no glow/meta-grid chrome), or 'band' (an accent band behind the title).
+   */
+  coverStyle?: 'classic' | 'minimal' | 'band' | null;
   /** When set, use the analyst-authored executive summary instead of the auto-generated one. */
   showExecutiveSummary?: boolean | null;
   executiveSummary?: string | null;
