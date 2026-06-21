@@ -89,17 +89,15 @@ export async function fetchLeaks(
   return { records, found, truncated };
 }
 
-const PUBLIC_BASE = 'https://leakcheck.io/api/public';
-
-/** Free-form LeakCheck query types (the public API auto-detects when `type` is omitted/`auto`). */
+/** Free-form LeakCheck query types (v2 auto-detects when `type` is omitted/`auto`). */
 export type LeakSearchType = 'auto' | 'email' | 'domain' | 'username' | 'phone' | 'hash' | 'keyword';
 
 /**
- * Free-form leak search against the LeakCheck public API
- * (`https://leakcheck.io/api/public?key=<key>&check=<query>&type=<type>`). Unlike `fetchLeaks` (which
- * is domain-scoped and walks the v2 domain/origin indexes), this runs a single arbitrary query and
- * `type` defaults to `auto` so LeakCheck detects whether the input is an email/username/phone/etc.
- * Returns the same normalized `LeakRecord` rows as `fetchLeaks`. Returns an empty result without a key.
+ * Free-form leak search against the LeakCheck API v2 (`GET /api/v2/query/<query>?type=`, `X-API-Key`).
+ * Unlike `fetchLeaks` (which is domain-scoped and walks the v2 domain/origin indexes), this runs a
+ * single arbitrary query and `type` defaults to `auto` so LeakCheck detects whether the input is an
+ * email/username/phone/keyword/etc. Uses the SAME v2 key as `fetchLeaks` (the older public `?key=` API
+ * needed a different key). Returns the same normalized `LeakRecord` rows. Empty result without a key.
  */
 export async function searchLeaks(
   query: string,
@@ -113,14 +111,29 @@ export async function searchLeaks(
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 20_000);
   try {
-    const url = `${PUBLIC_BASE}?key=${encodeURIComponent(key)}&check=${encodeURIComponent(q)}&type=${encodeURIComponent(type)}`;
-    const res = await fetchImpl(url, { headers: { Accept: 'application/json' }, signal: controller.signal });
+    // LeakCheck API v2 (the SAME endpoint + key as fetchLeaks): GET /api/v2/query/<query>?type=&limit=
+    // with the `X-API-Key` header. (The old public API `?key=&check=` needs a separate public-API key,
+    // which the operator's v2 key is NOT - that mismatch is why the search silently failed.) `auto` is
+    // the v2 default, so the param is omitted unless an explicit type is requested.
+    const typeParam = type && type !== 'auto' ? `&type=${encodeURIComponent(type)}` : '';
+    const url = `${BASE}/${encodeURIComponent(q)}?limit=${QUERY_LIMIT}${typeParam}`;
+    const res = await fetchImpl(url, {
+      headers: { 'X-API-Key': key, Accept: 'application/json' },
+      signal: controller.signal,
+    });
     if (!res.ok) {
-      // 401/403 = bad/missing key, 429 = rate limited; bubble a real message up to the UI.
-      return { records: [], found: 0, truncated: false, error: `LeakCheck request failed (HTTP ${res.status})` };
+      // 400 = bad query/type, 401/403 = bad/missing key, 429 = rate limited; bubble a real message up.
+      let msg = `LeakCheck request failed (HTTP ${res.status})`;
+      try {
+        const e = (await res.json()) as { error?: string };
+        if (e?.error) msg = `LeakCheck: ${e.error}`;
+      } catch {
+        /* non-JSON error body */
+      }
+      return { records: [], found: 0, truncated: false, error: msg };
     }
     const body = (await res.json()) as { success?: boolean; error?: string; found?: number; result?: LeakRaw[] };
-    if (body.success === false) {
+    if (body.success === false || body.error) {
       return { records: [], found: 0, truncated: false, error: body.error || 'LeakCheck rejected the query' };
     }
     const seen = new Set<string>();
