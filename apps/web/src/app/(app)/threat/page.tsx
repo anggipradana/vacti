@@ -16,6 +16,8 @@ import { Select } from '../../../components/ui/select';
 import { Badge } from '../../../components/ui/badge';
 import { EmptyState } from '../../../components/ui/empty-state';
 import { ProjectSwitcher } from '../../../components/project-switcher';
+import { CollapsibleCard } from '../../../components/ui/collapsible-card';
+import { TargetsManager } from '../../../components/targets-manager';
 import { computeProjectRisk } from '@vacti/threat-intel';
 import { LEAK_STATUS_LABEL, NEWS_STATUS_LABEL, userCan, Permission } from '@vacti/core';
 import { SECTORS } from '@vacti/threat-intel';
@@ -54,7 +56,15 @@ export const dynamic = 'force-dynamic';
 export default async function ThreatPage({
   searchParams,
 }: {
-  searchParams: Promise<{ project?: string; bnews?: string; leak?: string; news?: string }>;
+  searchParams: Promise<{
+    project?: string;
+    bnews?: string;
+    leak?: string;
+    news?: string;
+    tpage?: string;
+    ok?: string;
+    error?: string;
+  }>;
 }) {
   const user = await getCurrentUser();
   if (!user) redirect('/login');
@@ -168,6 +178,21 @@ export default async function ThreatPage({
             )}
           </span>
         ) : null}
+      </div>
+
+      <div className="mb-4">
+        <CollapsibleCard title={tx(locale, 'Monitored targets', 'Target yang dimonitor')}>
+          <TargetsManager
+            user={user}
+            locale={locale}
+            projectId={projectId}
+            projectRows={projectRows}
+            basePath="/threat"
+            page={Math.max(1, Number(sp.tpage ?? 1) || 1)}
+            ok={sp.ok}
+            error={sp.error}
+          />
+        </CollapsibleCard>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[280px_1fr]">

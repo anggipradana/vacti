@@ -359,8 +359,8 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
         <p className="text-xs text-fg-muted">
           {tx(
             locale,
-            `Vulnerability Assessment, Attack Surface and Cyber Threat Intel are scoped to the selected project${dashProject ? ` (${dashProject.name})` : ''}. Switch projects with the selector above.`,
-            `Vulnerability Assessment, Attack Surface dan Cyber Threat Intel dibatasi pada proyek yang dipilih${dashProject ? ` (${dashProject.name})` : ''}. Ganti proyek lewat pemilih di atas.`,
+            `Vulnerability Assessment, Attack Surface and Cyber Threat Intel are scoped to the selected project${dashProject ? ` (${dashProject.name})` : ''}. Switch projects with the selector above. AI Pentest is a separate, project-independent module (shown further down) - it belongs to no project and is reachable from any.`,
+            `Vulnerability Assessment, Attack Surface dan Cyber Threat Intel dibatasi pada proyek yang dipilih${dashProject ? ` (${dashProject.name})` : ''}. Ganti proyek lewat pemilih di atas. AI Pentest adalah modul terpisah yang independen dari proyek (di bagian bawah) - tidak terikat proyek manapun dan bisa diakses dari proyek apapun.`,
           )}
         </p>
       </div>

@@ -35,7 +35,7 @@ export default async function TargetDetail({ params }: { params: Promise<{ id: s
   return (
     <>
       <div className="mb-6">
-        <Link href="/targets" className="mb-3 inline-flex items-center gap-1 text-sm text-fg-muted hover:text-fg">
+        <Link href="/scans" className="mb-3 inline-flex items-center gap-1 text-sm text-fg-muted hover:text-fg">
           <ArrowLeft className="size-4" /> {tx(locale, 'Targets', 'Target')}
         </Link>
         <h1 className="font-mono text-2xl font-semibold tracking-tight">{target.domain}</h1>

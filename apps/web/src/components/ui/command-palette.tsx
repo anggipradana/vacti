@@ -4,7 +4,6 @@ import { Command } from 'cmdk';
 import { useRouter } from 'next/navigation';
 import {
   LayoutDashboard,
-  Crosshair,
   Radar,
   KeyRound,
   FolderKanban,
@@ -20,7 +19,6 @@ import { cn } from '../../lib/cn';
 
 const items = [
   { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { label: 'Targets', href: '/targets', icon: Crosshair },
   { label: 'Vulnerability Assessment', href: '/scans', icon: Radar },
   { label: 'Attack Surface', href: '/surface', icon: Network },
   { label: 'Cyber Threat Intel', href: '/threat', icon: ShieldAlert },

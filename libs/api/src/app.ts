@@ -56,7 +56,7 @@ export interface ApiDeps {
   enqueueTiRefresh: (projectId: string) => Promise<void>;
 }
 
-type Vars = { userId: string; role: RoleName; scopes: string[] };
+type Vars = { userId: string; role: RoleName; scopes: string[]; tokenId: string };
 
 /** Permission gate for mutating routes. Returns a 403 Response when denied, else null. */
 function guard(c: Context<{ Variables: Vars }>, permission: (typeof Permission)[keyof typeof Permission]) {
@@ -139,6 +139,9 @@ export function buildApi(deps: ApiDeps): Hono<{ Variables: Vars }> {
     c.set('role', roleFromUser(user));
     // Token scopes back the AI Pentest engine writeback verb-authz (producer/verifier/gatekeeper).
     c.set('scopes', row.scopes ?? []);
+    // The presented token's id, so a single-use route (e.g. /pentest/enroll) can delete exactly the
+    // token that authenticated this call, never another row.
+    c.set('tokenId', row.id);
     await next();
   });
 

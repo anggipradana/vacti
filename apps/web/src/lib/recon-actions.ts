@@ -166,15 +166,26 @@ function parseHeaders(raw: string): Record<string, string> | null {
   return Object.keys(out).length ? out : null;
 }
 
+/**
+ * Where to send the operator after a target mutation. The shared <TargetsManager> lives inside both
+ * /scans and /threat (target management is no longer a standalone page), so each form posts a
+ * `returnTo` of the host page; default to /scans for legacy callers. Only allow same-origin paths.
+ */
+function targetReturnTo(formData: FormData): string {
+  const raw = String(formData.get('returnTo') ?? '').trim();
+  return raw.startsWith('/') ? raw : '/scans';
+}
+
 export async function createTargetAction(formData: FormData) {
   await requirePermission(Permission.ModifyTargets);
+  const back = targetReturnTo(formData);
   const projectId = String(formData.get('projectId') ?? '');
   // Normalize + validate: a pasted URL/garbage ("http://x.com:8080/p", "not a domain") would
   // otherwise be fed verbatim to subfinder/httpx and silently yield zero results.
   const domain = normalizeDomain(String(formData.get('domain') ?? ''));
   const subsRaw = String(formData.get('predefinedSubdomains') ?? '').trim();
   const headersRaw = String(formData.get('customHeaders') ?? '').trim();
-  if (!projectId || !domain) redirect('/targets?error=invalid');
+  if (!projectId || !domain) redirect(`${back}?error=invalid`);
   const predefinedSubdomains = subsRaw
     ? subsRaw
         .split(/[\s,]+/)
@@ -183,17 +194,18 @@ export async function createTargetAction(formData: FormData) {
     : [];
   const customHeaders = headersRaw ? parseHeaders(headersRaw) : null;
   await getDb().insert(targets).values({ projectId, domain, predefinedSubdomains, customHeaders });
-  revalidatePath('/targets');
+  revalidatePath(back);
 }
 
 /** Update a target's domain, predefined subdomains and custom headers. ModifyTargets + audit. */
 export async function editTargetAction(formData: FormData) {
   const actor = await requirePermission(Permission.ModifyTargets);
+  const back = targetReturnTo(formData);
   const id = String(formData.get('id') ?? '');
   const domain = normalizeDomain(String(formData.get('domain') ?? ''));
   const subsRaw = String(formData.get('predefinedSubdomains') ?? '').trim();
   const headersRaw = String(formData.get('customHeaders') ?? '').trim();
-  if (!id || !domain) redirect('/targets?error=invalid');
+  if (!id || !domain) redirect(`${back}?error=invalid`);
   const predefinedSubdomains = subsRaw
     ? subsRaw
         .split(/[\s,]+/)
@@ -203,7 +215,7 @@ export async function editTargetAction(formData: FormData) {
   const customHeaders = headersRaw ? parseHeaders(headersRaw) : null;
   await getDb().update(targets).set({ domain, predefinedSubdomains, customHeaders }).where(eq(targets.id, id));
   await recordAudit({ actorId: actor.id, action: 'target.update', resource: `target:${id}` });
-  revalidatePath('/targets');
+  revalidatePath(back);
 }
 
 /** Delete a target and its scans/results (cascade via FK). ModifyTargets + audit. */
@@ -213,7 +225,7 @@ export async function deleteTargetAction(formData: FormData) {
   if (!id) return;
   await getDb().delete(targets).where(eq(targets.id, id));
   await recordAudit({ actorId: actor.id, action: 'target.delete', resource: `target:${id}` });
-  revalidatePath('/targets');
+  revalidatePath(targetReturnTo(formData));
 }
 
 /** Delete a scan and all its results (cascade via FK). InitiateScans + audit. */

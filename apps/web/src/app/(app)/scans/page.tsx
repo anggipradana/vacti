@@ -6,9 +6,10 @@ import { PageHeader } from '../../../components/ui/page-header';
 import { Table, THead, TBody, TR, TH, TD } from '../../../components/ui/table';
 import { StatusPill } from '../../../components/ui/status-pill';
 import { EmptyState } from '../../../components/ui/empty-state';
-import { Button } from '../../../components/ui/button';
 import { Pagination } from '../../../components/ui/pagination';
 import { NewScanDialog } from '../../../components/new-scan-dialog';
+import { CollapsibleCard } from '../../../components/ui/collapsible-card';
+import { TargetsManager } from '../../../components/targets-manager';
 import { ProjectSwitcher } from '../../../components/project-switcher';
 import { getActiveProjectId } from '../../../lib/active-project';
 import { scans, targets, scanProfiles, projects } from '@vacti/db';
@@ -33,7 +34,7 @@ const PAGE_SIZE = 25;
 export default async function ScansPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string; project?: string }>;
+  searchParams: Promise<{ page?: string; project?: string; tpage?: string; ok?: string; error?: string }>;
 }) {
   const user = await getCurrentUser();
   if (!user) redirect('/login');
@@ -41,6 +42,7 @@ export default async function ScansPage({
   const db = getDb();
   const sp = await searchParams;
   const page = Math.max(1, Number(sp.page ?? 1) || 1);
+  const tpage = Math.max(1, Number(sp.tpage ?? 1) || 1);
   const offset = (page - 1) * PAGE_SIZE;
   const projectRows = await db.select().from(projects).orderBy(desc(projects.createdAt));
   const projectId = await getActiveProjectId(sp.project, projectRows);
@@ -69,9 +71,6 @@ export default async function ScansPage({
         actions={
           <div className="flex items-center gap-2">
             <ProjectSwitcher projects={projectRows} current={projectId} basePath="/scans" />
-            <Button asChild variant="secondary">
-              <Link href="/targets">{tx(locale, 'Manage targets', 'Kelola target')}</Link>
-            </Button>
             <NewScanDialog
               targets={targetRows.map((t) => ({ id: t.id, domain: t.domain }))}
               profiles={profileRows.map((p) => ({ id: p.id, name: p.name }))}
@@ -79,20 +78,32 @@ export default async function ScansPage({
           </div>
         }
       />
+      <div className="mb-6">
+        <CollapsibleCard
+          title={`${tx(locale, 'Targets', 'Target')} · ${targetRows.length}`}
+          defaultOpen={targetRows.length === 0}
+        >
+          <TargetsManager
+            user={user}
+            locale={locale}
+            projectId={projectId}
+            projectRows={projectRows}
+            basePath="/scans"
+            page={tpage}
+            ok={sp.ok}
+            error={sp.error}
+          />
+        </CollapsibleCard>
+      </div>
       {scanRows.length === 0 ? (
         <EmptyState
           icon={<Radar />}
           title={tx(locale, 'No scans yet', 'Belum ada scan')}
           description={tx(
             locale,
-            'Add a target, then start your first recon scan.',
-            'Tambahkan target, lalu mulai scan recon pertama Anda.',
+            'Add a target in the Targets panel above, then start your first recon scan.',
+            'Tambahkan target di panel Target di atas, lalu mulai scan recon pertama Anda.',
           )}
-          action={
-            <Button asChild variant="secondary">
-              <Link href="/targets">{tx(locale, 'Add a target', 'Tambah target')}</Link>
-            </Button>
-          }
         />
       ) : (
         <div data-testid="scan-list">
