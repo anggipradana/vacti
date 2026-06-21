@@ -17,6 +17,23 @@ export interface VisionImage {
   mediaType: string;
 }
 
+/** Build the `ai` SDK user message (prompt + images) for a vision call - shared by all providers. */
+function visionMessages(prompt: string, images: VisionImage[]) {
+  return [
+    {
+      role: 'user' as const,
+      content: [
+        { type: 'text' as const, text: prompt },
+        ...images.map((im) => ({
+          type: 'image' as const,
+          image: Buffer.from(im.base64, 'base64'),
+          mimeType: im.mediaType,
+        })),
+      ],
+    },
+  ];
+}
+
 export interface AiConfig {
   provider: 'anthropic' | 'openai' | 'deepseek' | 'kimi' | 'ollama';
   model: string;
@@ -489,25 +506,7 @@ export async function makeProvider(cfg: AiConfig): Promise<AiProvider | null> {
       return {
         generate: async (system, prompt) => (await generateText({ model: anthropic(cfg.model), system, prompt })).text,
         generateVision: async (system, prompt, images) =>
-          (
-            await generateText({
-              model: anthropic(cfg.model),
-              system,
-              messages: [
-                {
-                  role: 'user',
-                  content: [
-                    { type: 'text', text: prompt },
-                    ...images.map((im) => ({
-                      type: 'image' as const,
-                      image: Buffer.from(im.base64, 'base64'),
-                      mimeType: im.mediaType,
-                    })),
-                  ],
-                },
-              ],
-            })
-          ).text,
+          (await generateText({ model: anthropic(cfg.model), system, messages: visionMessages(prompt, images) })).text,
       };
     }
     if (cfg.provider === 'openai') {
@@ -517,25 +516,7 @@ export async function makeProvider(cfg: AiConfig): Promise<AiProvider | null> {
       return {
         generate: async (system, prompt) => (await generateText({ model: openai(cfg.model), system, prompt })).text,
         generateVision: async (system, prompt, images) =>
-          (
-            await generateText({
-              model: openai(cfg.model),
-              system,
-              messages: [
-                {
-                  role: 'user',
-                  content: [
-                    { type: 'text', text: prompt },
-                    ...images.map((im) => ({
-                      type: 'image' as const,
-                      image: Buffer.from(im.base64, 'base64'),
-                      mimeType: im.mediaType,
-                    })),
-                  ],
-                },
-              ],
-            })
-          ).text,
+          (await generateText({ model: openai(cfg.model), system, messages: visionMessages(prompt, images) })).text,
       };
     }
     if (cfg.provider === 'deepseek') {
@@ -549,6 +530,10 @@ export async function makeProvider(cfg: AiConfig): Promise<AiProvider | null> {
       });
       return {
         generate: async (system, prompt) => (await generateText({ model: deepseek(cfg.model), system, prompt })).text,
+        // OpenAI-compatible vision: works when the configured DeepSeek-compatible model/endpoint accepts
+        // images (a vision model or gateway); deepseek-chat itself ignores them, so the caller fail-opens.
+        generateVision: async (system, prompt, images) =>
+          (await generateText({ model: deepseek(cfg.model), system, messages: visionMessages(prompt, images) })).text,
       };
     }
     if (cfg.provider === 'kimi') {
@@ -564,6 +549,9 @@ export async function makeProvider(cfg: AiConfig): Promise<AiProvider | null> {
       });
       return {
         generate: async (system, prompt) => (await generateText({ model: kimi(cfg.model), system, prompt })).text,
+        // Moonshot/Kimi has vision models (e.g. moonshot-v1-8k-vision-preview); pass images through.
+        generateVision: async (system, prompt, images) =>
+          (await generateText({ model: kimi(cfg.model), system, messages: visionMessages(prompt, images) })).text,
       };
     }
     if (cfg.provider === 'ollama' && cfg.ollamaBaseUrl) {
@@ -574,6 +562,22 @@ export async function makeProvider(cfg: AiConfig): Promise<AiProvider | null> {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ model: cfg.model, system, prompt, stream: false }),
+          });
+          if (!res.ok) throw new Error(`ollama ${res.status}`);
+          return ((await res.json()) as { response?: string }).response ?? '';
+        },
+        // Ollama vision models (llava, llama3.2-vision, ...) accept a base64 `images` array on /api/generate.
+        generateVision: async (system, prompt, images) => {
+          const res = await fetch(`${base}/api/generate`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              model: cfg.model,
+              system,
+              prompt,
+              images: images.map((im) => im.base64),
+              stream: false,
+            }),
           });
           if (!res.ok) throw new Error(`ollama ${res.status}`);
           return ((await res.json()) as { response?: string }).response ?? '';
