@@ -22,13 +22,15 @@ export function CollapsibleCard({
 }) {
   return (
     <details open={defaultOpen} className={cn('group rounded-lg border border-border bg-surface shadow-sm', className)}>
-      <div className="flex flex-row items-center justify-between gap-3 p-5">
-        <summary className="flex flex-1 cursor-pointer list-none items-center gap-2 [&::-webkit-details-marker]:hidden">
+      {/* The <summary> MUST be the direct first child of <details>, otherwise the browser ignores it and
+          renders the generic default "Details" label instead of the title. Keep the header row INSIDE it. */}
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-5 [&::-webkit-details-marker]:hidden">
+        <span className="flex flex-1 items-center gap-2">
           <ChevronDown className="size-4 text-fg-subtle transition-transform group-open:rotate-180" />
           <span className="font-display text-base font-semibold leading-6">{title}</span>
-        </summary>
-        {actions ? <div className="flex items-center gap-2">{actions}</div> : null}
-      </div>
+        </span>
+        {actions ? <span className="flex items-center gap-2">{actions}</span> : null}
+      </summary>
       <div className="p-5 pt-0">{children}</div>
     </details>
   );
