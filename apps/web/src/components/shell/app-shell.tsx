@@ -7,6 +7,7 @@ import { Menu, LogOut, ChevronDown } from 'lucide-react';
 import { cn } from '../../lib/cn';
 import { Button } from '../ui/button';
 import { ThemeToggle } from '../ui/theme-toggle';
+import { NavProgress } from '../ui/nav-progress';
 import { LanguageToggle } from '../ui/language-toggle';
 import { CommandPalette } from '../ui/command-palette';
 import { makeT, type Locale } from '../../lib/i18n';
@@ -97,6 +98,7 @@ export function AppShell({
 
   return (
     <div className="min-h-screen">
+      <NavProgress />
       <header className="sticky top-0 z-40 border-b border-border bg-bg/85 backdrop-blur">
         <div className="mx-auto flex h-14 w-full max-w-screen-2xl items-center gap-3 px-5 sm:px-6 lg:px-8">
           <Brand />
