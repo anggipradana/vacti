@@ -8,6 +8,11 @@ export default tseslint.config(
   {
     rules: {
       '@typescript-eslint/no-non-null-assertion': 'off',
+      // Allow intentionally-unused identifiers when prefixed with `_` (e.g. required-by-signature params).
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' },
+      ],
     },
   },
 );
