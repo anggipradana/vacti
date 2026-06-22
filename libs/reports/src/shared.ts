@@ -5,15 +5,13 @@ import type { ReportSettings, Signatory } from './types';
 const SEV_VAR = ['--sev-info', '--sev-low', '--sev-medium', '--sev-high', '--sev-critical'];
 
 /**
- * Whether an evidence item should be SHOWN for a finding. For XSS findings the only trustworthy alert
- * screenshot is the deterministic engine capture (evidence_key 'auto-*', a real rendered popup proven by
- * the payload actually executing). Swarm-attached XSS screenshots have repeatedly been fabricated (pasted
- * "alert" text on a real page), so hide non-auto SCREENSHOTS for XSS. Everything else passes: non-XSS
- * findings, and non-screenshot evidence (request/response, command output) for XSS.
+ * Whether an evidence item should be SHOWN for a finding. XSS screenshots used to be hidden unless their
+ * evidence_key was `auto-*` (an old guard against swarm-fabricated "alert" posters), but that ALSO hid the
+ * legitimate QA'd PoC captures (xss-*-poc-oracle-fired, baseline, persistence), so the operator saw NO XSS
+ * screenshot at all. They now pass: the Screenshot-QA caption in the evidence popup flags any suspect
+ * capture in red ("NEEDS REVIEW") instead of silently dropping the whole set.
  */
-export function showEvidence(findingClass: string | null | undefined, kind: string, evidenceKey: string): boolean {
-  const isXss = (findingClass ?? '').toLowerCase().includes('xss');
-  if (isXss && kind === 'screenshot' && !evidenceKey.startsWith('auto-')) return false;
+export function showEvidence(_findingClass: string | null | undefined, _kind: string, _evidenceKey: string): boolean {
   return true;
 }
 
