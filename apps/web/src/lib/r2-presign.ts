@@ -21,6 +21,15 @@ function enc(s: string): string {
 }
 
 export function presignR2Get(cfg: R2Config, key: string, expiresSec = 300, now: Date = new Date()): string {
+  return presignR2('GET', cfg, key, expiresSec, now);
+}
+
+/** Presign a PUT URL so vacti can cache a generated report (e.g. PDF) straight into the bucket. */
+export function presignR2Put(cfg: R2Config, key: string, expiresSec = 300, now: Date = new Date()): string {
+  return presignR2('PUT', cfg, key, expiresSec, now);
+}
+
+function presignR2(method: 'GET' | 'PUT', cfg: R2Config, key: string, expiresSec: number, now: Date): string {
   const host = `${cfg.accountId}.r2.cloudflarestorage.com`;
   const region = 'auto';
   const service = 's3';
@@ -46,7 +55,7 @@ export function presignR2Get(cfg: R2Config, key: string, expiresSec = 300, now: 
     .map(([k, v]) => `${k}=${v}`)
     .join('&');
 
-  const canonicalRequest = `GET\n${canonicalUri}\n${canonicalQuery}\nhost:${host}\n\nhost\nUNSIGNED-PAYLOAD`;
+  const canonicalRequest = `${method}\n${canonicalUri}\n${canonicalQuery}\nhost:${host}\n\nhost\nUNSIGNED-PAYLOAD`;
   const scope = `${datestamp}/${region}/${service}/aws4_request`;
   const stringToSign = `AWS4-HMAC-SHA256\n${amzdate}\n${scope}\n${sha256hex(canonicalRequest)}`;
   const signingKey = hmac(hmac(hmac(hmac(`AWS4${cfg.secretAccessKey}`, datestamp), region), service), 'aws4_request');
