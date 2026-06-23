@@ -179,7 +179,6 @@ export interface BssnTarget {
   findings: BssnFinding[];
 }
 
-const SEV_LIST = ['Critical', 'High', 'Medium', 'Low', 'Info/None'];
 const POC_DISPLAY_W = 340; // px each PoC image is scaled to in its cell
 
 /** A safe Excel sheet-name from an app/host (<=31 chars, no []:*?/\). */
@@ -195,41 +194,10 @@ function targetSheet(t: BssnTarget, idx: number): XlsxSheet {
   const rows: XlsxCell[][] = [];
   const images: XlsxImage[] = [];
   const merges: string[] = [];
-  const blank = (n: number): XlsxCell[] => Array.from({ length: n }, () => '');
-  const lbl = (s: string): XlsxCell => ({ v: s, style: 1 }); // bold label
 
-  // ── App metadata block (rows 0-7) ──
-  rows.push([{ v: 'Penjelasan Aplikasi', style: 2 }]);
-  rows.push([lbl('Nama Aplikasi'), t.appName]);
-  rows.push([lbl('URL'), t.url]);
-  rows.push([lbl('IP Address'), t.ip ?? '']);
-  rows.push([lbl('Versi Aplikasi'), t.version ?? '']);
-  rows.push([lbl('Deskripsi Aplikasi'), t.description ?? '']);
-  rows.push([lbl('Jenis Aset'), t.assetType ?? 'Web/API']);
-  rows.push([lbl('Catatan Pengujian'), t.testingNotes ?? '']);
-  rows.push([lbl('Tampilan Aplikasi (Gambar)')]); // row 8 (index 8) - screenshot anchored to B9
-  // screenshot spans rows 8..16
-  if (t.screenshot) {
-    const sw = Math.min(520, t.screenshot.widthPx);
-    const sh = Math.round(sw * (t.screenshot.heightPx / Math.max(1, t.screenshot.widthPx)));
-    images.push({ data: t.screenshot.image, ext: t.screenshot.ext, col: 1, row: 8, widthPx: sw, heightPx: sh });
-  }
-  for (let r = 0; r < 8; r++) rows.push(blank(1)); // rows 9-16 reserved for the screenshot
-
-  // ── DO NOT EDIT reference block (rows 17-30): severity / OWASP Top 10 (Perban BSSN dropped - not an
-  // international standard, per the operator) ──
-  rows[17] = ['', { v: 'DO NOT EDIT', style: 1 }];
-  const refTop = 18;
-  const maxRef = Math.max(SEV_LIST.length, OWASP_TOP10_2021.length);
-  for (let i = 0; i < maxRef; i++) {
-    const r = refTop + i;
-    if (!rows[r]) rows[r] = [];
-    rows[r][2] = SEV_LIST[i] ?? '';
-    rows[r][3] = OWASP_TOP10_2021[i] ?? '';
-  }
-
-  // ── Findings table ──
-  const headerRow = refTop + maxRef + 2; // blank gap then header
+  // Straight to the main findings table (the operator wants the metadata + reference blocks dropped for a
+  // clean sheet). The header sits on row 0; findings follow.
+  const headerRow = 0;
   const HEAD = [
     'No',
     'Nama Kerentanan',
@@ -310,7 +278,6 @@ function targetSheet(t: BssnTarget, idx: number): XlsxSheet {
     17: 22,
     18: POC_DISPLAY_W / 7,
   };
-  merges.push(`A1:B1`); // "Penjelasan Aplikasi" header
   return { name: sheetName(t.appName, idx), rows, images, colWidths, rowHeights, merges };
 }
 
