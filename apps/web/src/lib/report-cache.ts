@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { decryptSecret } from '@vacti/auth';
 import { pentestEngineConfig } from '@vacti/db';
 import { getDb, env } from './db';
-import { presignR2Get, presignR2Put, type R2Config } from './r2-presign';
+import { presignR2Get, presignR2Put, presignR2Head, type R2Config } from './r2-presign';
 
 /**
  * Shared report-artifact cache in R2: a generated PDF / XLSX is expensive (Chromium render / image
@@ -33,19 +33,16 @@ export function versionHash(parts: unknown): string {
 
 /** If the cached object exists, a 302 redirect Response straight to R2 (instant download); else null. */
 export async function cachedRedirect(r2: R2Config, key: string): Promise<Response | null> {
-  const exists = await fetch(presignR2Get(r2, key, 120), { method: 'HEAD' })
-    .then((r) => r.ok)
-    .catch(() => false);
-  if (!exists) return null;
+  if (!(await cacheExists(r2, key))) return null;
   return new Response(null, {
     status: 302,
     headers: { Location: presignR2Get(r2, key, 600), 'X-Report-Cache': 'HIT' },
   });
 }
 
-/** Whether the cached object exists (used by the report hub to show "Ready to download"). */
+/** Whether the cached object exists (HEAD must be signed for HEAD - a GET-signed URL 403s on HEAD). */
 export async function cacheExists(r2: R2Config, key: string): Promise<boolean> {
-  return fetch(presignR2Get(r2, key, 120), { method: 'HEAD' })
+  return fetch(presignR2Head(r2, key, 120), { method: 'HEAD' })
     .then((r) => r.ok)
     .catch(() => false);
 }

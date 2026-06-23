@@ -29,7 +29,12 @@ export function presignR2Put(cfg: R2Config, key: string, expiresSec = 300, now: 
   return presignR2('PUT', cfg, key, expiresSec, now);
 }
 
-function presignR2(method: 'GET' | 'PUT', cfg: R2Config, key: string, expiresSec: number, now: Date): string {
+/** Presign a HEAD URL to cheaply check whether a cached object exists (signature must match the method). */
+export function presignR2Head(cfg: R2Config, key: string, expiresSec = 300, now: Date = new Date()): string {
+  return presignR2('HEAD', cfg, key, expiresSec, now);
+}
+
+function presignR2(method: 'GET' | 'PUT' | 'HEAD', cfg: R2Config, key: string, expiresSec: number, now: Date): string {
   const host = `${cfg.accountId}.r2.cloudflarestorage.com`;
   const region = 'auto';
   const service = 's3';
