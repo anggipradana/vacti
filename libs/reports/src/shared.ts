@@ -11,8 +11,44 @@ const SEV_VAR = ['--sev-info', '--sev-low', '--sev-medium', '--sev-high', '--sev
  * screenshot at all. They now pass: the Screenshot-QA caption in the evidence popup flags any suspect
  * capture in red ("NEEDS REVIEW") instead of silently dropping the whole set.
  */
-export function showEvidence(_findingClass: string | null | undefined, _kind: string, _evidenceKey: string): boolean {
+export function showEvidence(_findingClass: string | null | undefined, kind: string, evidenceKey: string): boolean {
+  const k = (evidenceKey ?? '').toLowerCase();
+  // The engine's own QA critique (auto-qa / scan_output) is internal - never an operator/report exhibit.
+  if (k.startsWith('auto-qa-') || (kind === 'scan_output' && k.includes('qa'))) return false;
+  // The deterministic-capture placeholder context note ("this class has no deterministic PoC...") proves
+  // nothing; the proof is the req/resp exploit images + the swarm's own exhibits.
+  if (k.startsWith('auto-context-')) return false;
   return true;
+}
+
+/**
+ * Display priority so the EXPLOIT proof leads and generic page-loads trail (lower = earlier). Fixes the
+ * "belum urut" problem where evidence sorted by capture time buried the re-rendered req/resp images last.
+ * Order: combined req/resp image -> request image -> response image -> swarm exploit exhibit -> other
+ * swarm screenshots -> generic affected-page screenshot -> raw req/resp text + command output.
+ */
+export function evidenceRank(kind: string, evidenceKey: string): number {
+  const k = (evidenceKey ?? '').toLowerCase();
+  if (kind === 'screenshot') {
+    if (/proxy-reqres|auto-reqres/.test(k)) return 1;
+    if (/auto-req-|req-only|-request/.test(k)) return 2;
+    if (/auto-res-|res-only|-response/.test(k)) return 3;
+    if (/exploit|exhibit|comparison/.test(k)) return 4;
+    if (/auto-loc|^loc-|page-load|landing/.test(k)) return 6; // generic affected-page screenshot trails the proof
+    return 5;
+  }
+  return 7; // request_response / command_output / har text after the images
+}
+
+/** Sort evidence by exploit-proof priority (stable within a tier - keeps capture order). */
+export function orderEvidence<T extends { kind: string; evidenceKey?: string | null }>(items: readonly T[]): T[] {
+  return items
+    .map((e, i) => ({ e, i }))
+    .sort(
+      (a, b) =>
+        evidenceRank(a.e.kind, a.e.evidenceKey ?? '') - evidenceRank(b.e.kind, b.e.evidenceKey ?? '') || a.i - b.i,
+    )
+    .map((x) => x.e);
 }
 
 export function sevClass(sev: number): string {
