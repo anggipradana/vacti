@@ -18,6 +18,10 @@ export function showEvidence(_findingClass: string | null | undefined, kind: str
   // The deterministic-capture placeholder context note ("this class has no deterministic PoC...") proves
   // nothing; the proof is the req/resp exploit images + the swarm's own exhibits.
   if (k.startsWith('auto-context-')) return false;
+  // The deterministic `auto-loc` page-load screenshot navigates UNauthenticated, so authenticated-endpoint
+  // findings (IDOR, account pages) capture the LOGIN WALL instead of the exploit - it never matches the
+  // finding. The req/resp exploit images + the swarm's own authenticated screenshots are the real proof.
+  if (k.startsWith('auto-loc')) return false;
   return true;
 }
 
