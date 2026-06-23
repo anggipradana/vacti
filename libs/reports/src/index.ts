@@ -5,3 +5,4 @@ export * from './ti-report';
 export * from './pentest-report';
 export * from './render';
 export { showEvidence, evidenceRank, orderEvidence } from './shared';
+export * from './bssn';
