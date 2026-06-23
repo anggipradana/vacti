@@ -34,6 +34,8 @@ export function showEvidence(_findingClass: string | null | undefined, kind: str
 export function evidenceRank(kind: string, evidenceKey: string): number {
   const k = (evidenceKey ?? '').toLowerCase();
   if (kind === 'screenshot') {
+    // The IDOR/BAC 2-account comparison exhibits ARE the proof - lead with them.
+    if (/idor-compare|compare-shots|compare-reqres/.test(k)) return 0;
     if (/proxy-reqres|auto-reqres/.test(k)) return 1;
     if (/auto-req-|req-only|-request/.test(k)) return 2;
     if (/auto-res-|res-only|-response/.test(k)) return 3;
