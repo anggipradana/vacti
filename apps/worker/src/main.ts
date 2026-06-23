@@ -28,6 +28,7 @@ import {
   type ScanProfile,
 } from '@vacti/recon';
 import { refreshThreatIntel } from '@vacti/threat-intel';
+import { enrichCompletedEngagements } from './pentest-enrich';
 import {
   sendProjectNotifications,
   getProjectSecret,
@@ -484,7 +485,15 @@ async function main(): Promise<void> {
   });
   await queue.schedule('news-refresh-daily', '0 9 * * *');
 
-  console.log('[worker] started; consuming scan + ti-refresh + schedule-tick + news-refresh-daily queues');
+  // AUTO report enrichment: every 90s, enrich one COMPLETED pentest engagement whose accepted findings
+  // still lack AI prose - so a finished engagement's report is "berisi" (descriptions + business-impact +
+  // remediation + CVSS + executive prose) with NO manual click. Self-draining + non-overlapping.
+  const enrichTick = setInterval(() => void enrichCompletedEngagements(db, env.ENCRYPTION_KEY), 90_000);
+  enrichTick.unref?.();
+
+  console.log(
+    '[worker] started; consuming scan + ti-refresh + schedule-tick + news-refresh-daily + pentest-enrich queues',
+  );
 
   const shutdown = async (signal: string): Promise<void> => {
     console.log(`[worker] ${signal} received, shutting down…`);
