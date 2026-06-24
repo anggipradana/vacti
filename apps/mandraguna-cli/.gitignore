@@ -1,0 +1,17 @@
+# Binary output
+dist/
+target/
+
+# Binary artifacts
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary
+*.test
+
+# Coverage output
+*.out
+lcov.info
