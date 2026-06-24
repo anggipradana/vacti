@@ -16,11 +16,16 @@ TypeScript, Nx monorepo, Next.js + worker + Postgres. See [README.md](README.md)
 - **Security:** secrets only in `.env.example`; keys encrypted at rest; RBAC enforced server-side;
   never log or commit secrets.
 
-## Planning (ccpm)
+## Planning
 
-- PRDs in `.claude/prds/`, epics + numbered tasks in `.claude/epics/<name>/`.
-- Feature scope is bounded by [docs/planning/02-FEATURE-PARITY-CHECKLIST.md](docs/planning/02-FEATURE-PARITY-CHECKLIST.md).
+- Plans in `plans/` (backlog/, in-progress/, done/) following the
+  [Plans Organization Convention](repo-governance/conventions/structure/plans.md).
+  Quick ideas in `plans/ideas.md`.
+- Feature scope bounded by [docs/planning/02-FEATURE-PARITY-CHECKLIST.md](docs/planning/02-FEATURE-PARITY-CHECKLIST.md).
   Items marked ❌ must NOT be implemented in v1.
+- Plan agents: `plan-maker`, `plan-checker`, `plan-fixer`, `plan-execution-checker`.
+- Pre-write and post-write grilling required (structured 2-4 option questions via `grill-me` skill).
+- Anti-hallucination: verify all file paths, Nx targets, and commands before writing them into plans.
 
 ## Conventions
 
