@@ -4,7 +4,7 @@ Archived plans and completed project planning documents.
 
 ## Completed Projects
 
-_(no completed plans yet)_
+No completed plans yet.
 
 ## Instructions
 

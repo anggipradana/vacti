@@ -4,7 +4,7 @@ Active project plans currently being worked on.
 
 ## Active Plans
 
-_(no in-progress plans)_
+No in-progress plans.
 
 ## Instructions
 

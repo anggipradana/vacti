@@ -4,7 +4,7 @@ Planned projects for future implementation.
 
 ## Planned Projects
 
-_(no backlog plans)_
+No backlog plans.
 
 ## Instructions
 
