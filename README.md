@@ -47,7 +47,7 @@ Three services (app, worker, Postgres). No Redis, no Celery, no Ruby. End-to-end
 - **Threat Intelligence**: OTX AlienVault + LeakCheck + manual indicators + sector security news
   (RSS, including Indonesian sources) + a unified **risk score** (with a passive **Exposure**
   component) that is identical across the dashboard, the TI page, and the reports.
-- **AI Penetration Test** (planned): authorized, AI-driven pentesting via a separate offensive engine
+- **AI Penetration Test**: authorized, AI-driven pentesting via a separate offensive engine
   ([vacti-pentest-engine](https://github.com/anggipradana/vacti-pentest-engine)) on Kali. vacti is the
   control plane (engagement console, findings, evidence, bilingual pentest report); the engine pulls
   authorized engagements, runs an in-scope agent swarm, and writes findings + human-grade evidence
@@ -84,13 +84,13 @@ flowchart TD
     Worker -->|"passive recon"| OSINT["VirusTotal / Wayback Machine (HTTP APIs)"]
     Worker -->|"threat intel"| TI["OTX / LeakCheck / RSS feeds"]
     Worker -->|"persist results"| PG
-    Engine["vacti-pentest-engine (separate repo, on Kali) - planned"] -.->|"pull engagement / writeback findings + evidence (outbound only)"| Web
+    Engine["vacti-pentest-engine (separate repo, on Kali) - optional"] -.->|"pull engagement / writeback findings + evidence (outbound only)"| Web
 ```
 
 The web app serves the UI and the REST API; the worker consumes jobs from the queue and shells out to
 the Go scanners. See [`docs/explanation/architecture.md`](docs/explanation/architecture.md).
 
-The planned **AI Penetration Test** capability adds a second, optional runtime: the
+The **AI Penetration Test** capability adds a second, optional runtime: the
 [vacti-pentest-engine](https://github.com/anggipradana/vacti-pentest-engine) on Kali. It is a separate
 deploy unit (not one of the three services) that reaches vacti **outbound only** to pull authorized
 engagements and write back findings + evidence; vacti stays the lightweight control plane.
@@ -189,7 +189,7 @@ A five-minute walkthrough once the app is running at <http://localhost:3100>.
 | **Targets**                  | Add domains, predefined subdomains, and per-target custom request headers; recon notes.                                                                             |
 | **Attack Surface**           | Passive OSINT results: discovered URLs (file-category filter), exposure findings (masked snippet + triage), IP directory.                                           |
 | **Cyber Threat Intel**       | OTX + LeakCheck + monitored-asset reputation (VT/OTX verdicts) + sector/brand news + passive exposure, all feeding one risk score.                                  |
-| **AI Pentest** (planned)     | Authorized AI-driven pentesting: engagement console, in-scope agent swarm, human-grade evidence, bilingual report. Runs on the separate engine; preview in-product. |
+| **AI Pentest**               | Authorized AI-driven pentesting: engagement console, in-scope agent swarm, human-grade evidence, bilingual report. Runs on the separate engine; preview in-product. |
 | **Reports**                  | Branded EN/ID PDF for VA and TI, with signatories, classification, and executive summary.                                                                           |
 | **Settings**                 | Projects, scheduled scans (cron), scan profiles, API tokens, webhooks, AI provider + key vault, users/RBAC, audit log.                                              |
 
@@ -377,7 +377,7 @@ docs/        Diataxis docs (tutorials/how-to/reference/explanation) + planning d
 drizzle/     SQL migrations (0000+)
 ```
 
-The planned **AI Penetration Test** engine lives in its own repository,
+The **AI Penetration Test** engine lives in its own repository,
 [vacti-pentest-engine](https://github.com/anggipradana/vacti-pentest-engine) (offensive runtime on
 Kali, with its own governance). Its feature plan stays here under `.claude/prds/ai-pentest.md` and
 `.claude/epics/ai-pentest/`.
