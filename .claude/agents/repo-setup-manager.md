@@ -2,7 +2,7 @@
 name: repo-setup-manager
 description: 'Executes Phase 0 of any plan delivery checklist: checks and installs the full vacti polyglot toolchain (Node 22+, Rust 1.95, Go + ProjectDiscovery scanners, PostgreSQL 16, Playwright Chromium), installs npm deps, configures .env, runs DB migrations and seed, records a test baseline, and resolves all preexisting failures before plan work begins. Use at the start of every plan execution to establish a clean, known-good baseline.'
 tools: [Read, Bash, Glob, Grep]
-model: haiku
+model: sonnet
 color: green
 ---
 
