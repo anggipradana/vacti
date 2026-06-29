@@ -136,11 +136,16 @@ export default async function ScanDetail({
                 <Link href="/surface">{tx(locale, 'View on Attack Surface', 'Lihat di Attack Surface')}</Link>
               </Button>
             ) : (
-              <Button asChild size="sm">
-                <a href={`/reports/va/${scan.id}?type=full`} target="_blank" rel="noopener noreferrer">
-                  {tx(locale, 'Generate report', 'Buat laporan')}
-                </a>
-              </Button>
+              <>
+                <Button asChild variant="outline" size="sm">
+                  <Link href={`/scans/${scan.id}/attack-path`}>{tx(locale, 'Attack Path', 'Jalur Serangan')}</Link>
+                </Button>
+                <Button asChild size="sm">
+                  <a href={`/reports/va/${scan.id}?type=full`} target="_blank" rel="noopener noreferrer">
+                    {tx(locale, 'Generate report', 'Buat laporan')}
+                  </a>
+                </Button>
+              </>
             )}
             {terminal && userCan(user, Permission.InitiateScans) ? (
               // ActionForm (not a bare server-action form): on this heavy page the action's redirect
