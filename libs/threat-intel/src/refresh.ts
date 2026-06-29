@@ -231,10 +231,20 @@ export async function refreshThreatIntel(deps: RefreshDeps): Promise<void> {
       leakFoundTotal += leakResult.found;
       leakTruncated = leakTruncated || leakResult.truncated;
       for (const l of leakResult.records) {
+        // Dedup per (project, DOMAIN, hash): the same leaked credential can legitimately surface for
+        // several of a project's domains (corporate emails / origin-index hits overlap), so scoping
+        // the existence check to the project alone made only the FIRST domain processed keep the row
+        // and silently dropped that credential for every other target domain.
         const ex = await db
           .select({ id: leakcheckData.id, password: leakcheckData.password })
           .from(leakcheckData)
-          .where(and(eq(leakcheckData.projectId, projectId), eq(leakcheckData.hashMd5, l.hashMd5)));
+          .where(
+            and(
+              eq(leakcheckData.projectId, projectId),
+              eq(leakcheckData.domain, domain),
+              eq(leakcheckData.hashMd5, l.hashMd5),
+            ),
+          );
         if (!ex.length) {
           await db.insert(leakcheckData).values({
             projectId,

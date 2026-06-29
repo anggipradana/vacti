@@ -66,7 +66,7 @@ export interface PipelineDeps {
  */
 export async function runScanPipeline(input: ScanInput, deps: PipelineDeps): Promise<void> {
   const { db } = deps;
-  const timeoutMs = (input.profile.timeoutSec ?? 600) * 1000;
+  const timeoutMs = (input.profile.timeoutSec ?? 3600) * 1000;
   const cfg = input.profile.config ?? {};
   // Profile headers merge under the target's custom headers (target wins on conflict).
   const reqHeaders = { ...(cfg.headers ?? {}), ...(input.customHeaders ?? {}) };
@@ -275,7 +275,9 @@ export async function runScanPipeline(input: ScanInput, deps: PipelineDeps): Pro
       });
       await record('nuclei', args, r);
       await insertVulns(r.lines.map(parseNucleiLine).flatMap((v) => (v ? [v] : [])));
-      await activity('nuclei', stageStatus(r), stageNote(r, `${counts.vulnerabilities} findings`));
+      // A nuclei timeout with partial findings is still a valid result, so don't mark the stage failed.
+      const nucleiStatus = r.timedOut && counts.vulnerabilities > 0 ? 'completed' : stageStatus(r);
+      await activity('nuclei', nucleiStatus, stageNote(r, `${counts.vulnerabilities} findings`));
     }
 
     // Stage 4b - wordfence: WordPress-focused nuclei templates on detected WP hosts. Runs

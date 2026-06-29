@@ -44,7 +44,7 @@ const DEFAULT_PROFILES = [
     // Include 'info' so a Standard scan matches a manual `nuclei -u` (all severities) instead of
     // silently dropping the info-level templates that make up most real findings.
     severities: ['critical', 'high', 'medium', 'low', 'info'],
-    timeoutSec: 900,
+    timeoutSec: 3600,
     config: { interestingKeywords: INTERESTING_KEYWORDS },
   },
   {

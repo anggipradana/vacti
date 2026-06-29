@@ -47,7 +47,7 @@ const DEFAULT_PROFILE: ScanProfile = {
   // (exposed files/panels, tech + TLS + header checks) are the bulk of real findings. Excluding
   // them made scans look near-empty versus a manual run.
   severities: ['critical', 'high', 'medium', 'low', 'info'],
-  timeoutSec: 900,
+  timeoutSec: 3600,
 };
 
 async function main(): Promise<void> {
@@ -192,220 +192,236 @@ async function main(): Promise<void> {
   const queue = createQueue(env.DATABASE_URL);
   await queue.start();
 
-  await queue.work('scan', scanJobSchema, async ({ scanId }) => {
-    const [scan] = await db.select().from(scans).where(eq(scans.id, scanId));
-    if (!scan) return;
-    // Cancelled while still queued - never start it.
-    if (scan.status === 'cancelled' || scan.cancelRequested) {
-      await db.update(scans).set({ status: 'cancelled', finishedAt: new Date() }).where(eq(scans.id, scanId));
-      return;
-    }
-    const [target] = await db.select().from(targets).where(eq(targets.id, scan.targetId));
-    if (!target) {
-      // Target deleted while the scan sat queued: terminate the row, never leave it stuck 'queued'.
-      await db
-        .update(scans)
-        .set({ status: 'failed', stage: 'interrupted', error: 'Target no longer exists', finishedAt: new Date() })
-        .where(eq(scans.id, scanId));
-      return;
-    }
-    let profile = DEFAULT_PROFILE;
-    if (scan.profileId) {
-      const [p] = await db.select().from(scanProfiles).where(eq(scanProfiles.id, scan.profileId));
-      if (p)
-        profile = {
-          tools: p.tools as ScanProfile['tools'],
-          ports: p.ports,
-          severities: p.severities,
-          config: (p.config as ScanProfile['config']) ?? undefined,
-          timeoutSec: p.timeoutSec ?? undefined,
-        };
-    }
-    // Sub-scan: a per-scan tool subset overrides the profile's tools.
-    if (scan.toolsOverride) {
-      profile = { ...profile, tools: scan.toolsOverride as ScanProfile['tools'] };
-    }
-    console.log(`[worker] scan ${scanId} starting (${target.domain})`);
-    // scan.started is a subscribable webhook event, so actually emit it (best-effort) - otherwise a
-    // webhook subscribed only to scan.started would silently never fire.
-    await sendProjectNotifications(db, scan.projectId, {
-      type: 'scan.started',
-      title: `Scan started: ${target.domain}`,
-      message: `${scan.mode ?? 'active'} scan queued and now running.`,
-      severity: 'info',
-      fields: { Target: target.domain, Mode: scan.mode ?? 'active' },
-    }).catch((e) => console.error(`[worker] scan.started notify failed (${scanId}):`, e));
-    // Poll the cancel flag and abort the in-flight run (kills child processes).
-    const controller = new AbortController();
-    liveRuns.set(scanId, controller);
-    // Hard wall-clock deadline owned by the handler itself: aborting the controller SIGKILLs the
-    // child process group, so a hung tool cannot hold the run (and its job slot) forever.
-    let stalled = false;
-    const deadline = setTimeout(() => {
-      // If a user cancel already aborted, this is a cancel, not a stall - don't relabel it.
-      if (controller.signal.aborted) return;
-      stalled = true;
-      console.log(`[worker] scan ${scanId} exceeded max runtime, aborting`);
-      controller.abort();
-    }, MAX_SCAN_MS);
-    const poll = setInterval(() => {
-      void db
-        .select()
-        .from(scans)
-        .where(eq(scans.id, scanId))
-        .then(([s]) => {
-          if (s?.cancelRequested && !controller.signal.aborted) {
-            console.log(`[worker] scan ${scanId} cancellation requested`);
-            controller.abort();
-          }
-        })
-        // A transient DB error here must not become an unhandled rejection (it would kill the worker).
-        .catch((err) => console.error(`[worker] cancel-poll error (${scanId}):`, err));
-    }, 2000);
-    const mode = scan.mode ?? 'active';
-    // Catch (not propagate) the run error: the pipeline already persisted status='failed' before
-    // re-throwing, and swallowing it here lets the notification block below run for FAILED scans
-    // too (it previously only fired for completed/stalled). retryLimit is 0, so not re-throwing
-    // just means pg-boss marks the job done instead of failed - we don't rely on its retry.
-    try {
-      // Passive phase (mode passive|full): OSINT discovery + exposure, no binaries.
-      let passiveHosts: string[] = [];
-      if (mode === 'passive' || mode === 'full') {
+  // Process scans concurrently: a multi-target project would otherwise run them one-at-a-time and
+  // look stuck. SCAN_CONCURRENCY (default 2) sets how many run in parallel - each handler operates on
+  // its own scan row + AbortController + timers (liveRuns is keyed by scanId), so parallelism is safe.
+  const scanConcurrency = Math.max(1, Number(process.env.SCAN_CONCURRENCY ?? 2));
+  await queue.work(
+    'scan',
+    scanJobSchema,
+    async ({ scanId }) => {
+      const [scan] = await db.select().from(scans).where(eq(scans.id, scanId));
+      if (!scan) return;
+      // Cancelled while still queued - never start it.
+      if (scan.status === 'cancelled' || scan.cancelRequested) {
+        await db.update(scans).set({ status: 'cancelled', finishedAt: new Date() }).where(eq(scans.id, scanId));
+        return;
+      }
+      const [target] = await db.select().from(targets).where(eq(targets.id, scan.targetId));
+      if (!target) {
+        // Target deleted while the scan sat queued: terminate the row, never leave it stuck 'queued'.
         await db
           .update(scans)
-          .set({ status: 'running', stage: 'passive', startedAt: new Date() })
+          .set({ status: 'failed', stage: 'interrupted', error: 'Target no longer exists', finishedAt: new Date() })
           .where(eq(scans.id, scanId));
-        try {
-          // VT keys: rotate over vault keys (virustotal, virustotal-2, …) with Postgres quota/backoff;
-          // fall back to the env key when none are in the vault.
-          const hasVaultVt = (await countProviderKeys(db, scan.projectId, 'virustotal')) > 0;
-          const vtKeyProvider = hasVaultVt
-            ? {
-                next: () => acquireRotatingKey(db, scan.projectId, 'virustotal', env.ENCRYPTION_KEY),
-                report: (id: string, status: number) => backoffKey(db, id, status === 429 ? 900 : 300),
-              }
-            : undefined;
-          const vtKey = hasVaultVt ? null : (env.VT_API_KEY ?? null);
-          const urlscanKey =
-            (await getProjectSecret(db, scan.projectId, 'urlscan', env.ENCRYPTION_KEY)) ?? env.URLSCAN_API_KEY ?? null;
-          const res = await runPassiveScan(
-            {
-              scanId,
-              projectId: scan.projectId,
-              targetId: scan.targetId,
-              domain: target.domain,
-              vtApiKey: vtKey,
-              vtKeyProvider,
-              urlscanApiKey: urlscanKey,
-              deepScan: scan.deepScan,
-              signal: controller.signal,
-            },
-            { db, onProgress: (stage, msg) => console.log(`[passive ${scanId}] ${stage}: ${msg}`) },
-          );
-          passiveHosts = res.hosts;
-        } catch (err) {
-          // A deadline abort is a stall, not a user cancel: label it failed with the real reason.
-          const aborted = controller.signal.aborted && !stalled;
-          const msg = stalled ? 'Stalled (max runtime exceeded)' : err instanceof Error ? err.message : String(err);
-          await db
-            .insert(scanActivity)
-            .values({ scanId, stage: 'done', status: aborted ? 'cancelled' : 'failed', message: msg });
+        return;
+      }
+      let profile = DEFAULT_PROFILE;
+      if (scan.profileId) {
+        const [p] = await db.select().from(scanProfiles).where(eq(scanProfiles.id, scan.profileId));
+        if (p)
+          profile = {
+            tools: p.tools as ScanProfile['tools'],
+            ports: p.ports,
+            severities: p.severities,
+            config: (p.config as ScanProfile['config']) ?? undefined,
+            timeoutSec: p.timeoutSec ?? undefined,
+          };
+      }
+      // Sub-scan: a per-scan tool subset overrides the profile's tools.
+      if (scan.toolsOverride) {
+        profile = { ...profile, tools: scan.toolsOverride as ScanProfile['tools'] };
+      }
+      console.log(`[worker] scan ${scanId} starting (${target.domain})`);
+      // scan.started is a subscribable webhook event, so actually emit it (best-effort) - otherwise a
+      // webhook subscribed only to scan.started would silently never fire.
+      await sendProjectNotifications(db, scan.projectId, {
+        type: 'scan.started',
+        title: `Scan started: ${target.domain}`,
+        message: `${scan.mode ?? 'active'} scan queued and now running.`,
+        severity: 'info',
+        fields: { Target: target.domain, Mode: scan.mode ?? 'active' },
+      }).catch((e) => console.error(`[worker] scan.started notify failed (${scanId}):`, e));
+      // Poll the cancel flag and abort the in-flight run (kills child processes).
+      const controller = new AbortController();
+      liveRuns.set(scanId, controller);
+      // Hard wall-clock deadline owned by the handler itself: aborting the controller SIGKILLs the
+      // child process group, so a hung tool cannot hold the run (and its job slot) forever.
+      let stalled = false;
+      const deadline = setTimeout(() => {
+        // If a user cancel already aborted, this is a cancel, not a stall - don't relabel it.
+        if (controller.signal.aborted) return;
+        stalled = true;
+        console.log(`[worker] scan ${scanId} exceeded max runtime, aborting`);
+        controller.abort();
+      }, MAX_SCAN_MS);
+      const poll = setInterval(() => {
+        void db
+          .select()
+          .from(scans)
+          .where(eq(scans.id, scanId))
+          .then(([s]) => {
+            if (s?.cancelRequested && !controller.signal.aborted) {
+              console.log(`[worker] scan ${scanId} cancellation requested`);
+              controller.abort();
+            }
+          })
+          // A transient DB error here must not become an unhandled rejection (it would kill the worker).
+          .catch((err) => console.error(`[worker] cancel-poll error (${scanId}):`, err));
+      }, 2000);
+      const mode = scan.mode ?? 'active';
+      // Catch (not propagate) the run error: the pipeline already persisted status='failed' before
+      // re-throwing, and swallowing it here lets the notification block below run for FAILED scans
+      // too (it previously only fired for completed/stalled). retryLimit is 0, so not re-throwing
+      // just means pg-boss marks the job done instead of failed - we don't rely on its retry.
+      try {
+        // Passive phase (mode passive|full): OSINT discovery + exposure, no binaries.
+        let passiveHosts: string[] = [];
+        if (mode === 'passive' || mode === 'full') {
           await db
             .update(scans)
-            .set({
-              status: aborted ? 'cancelled' : 'failed',
-              stage: aborted ? 'cancelled' : 'failed',
-              error: msg,
-              finishedAt: new Date(),
-            })
+            .set({ status: 'running', stage: 'passive', startedAt: new Date() })
             .where(eq(scans.id, scanId));
-          throw err;
+          try {
+            // VT keys: rotate over vault keys (virustotal, virustotal-2, …) with Postgres quota/backoff;
+            // fall back to the env key when none are in the vault.
+            const hasVaultVt = (await countProviderKeys(db, scan.projectId, 'virustotal')) > 0;
+            const vtKeyProvider = hasVaultVt
+              ? {
+                  next: () => acquireRotatingKey(db, scan.projectId, 'virustotal', env.ENCRYPTION_KEY),
+                  report: (id: string, status: number) => backoffKey(db, id, status === 429 ? 900 : 300),
+                }
+              : undefined;
+            const vtKey = hasVaultVt ? null : (env.VT_API_KEY ?? null);
+            const urlscanKey =
+              (await getProjectSecret(db, scan.projectId, 'urlscan', env.ENCRYPTION_KEY)) ??
+              env.URLSCAN_API_KEY ??
+              null;
+            const res = await runPassiveScan(
+              {
+                scanId,
+                projectId: scan.projectId,
+                targetId: scan.targetId,
+                domain: target.domain,
+                vtApiKey: vtKey,
+                vtKeyProvider,
+                urlscanApiKey: urlscanKey,
+                deepScan: scan.deepScan,
+                signal: controller.signal,
+              },
+              { db, onProgress: (stage, msg) => console.log(`[passive ${scanId}] ${stage}: ${msg}`) },
+            );
+            passiveHosts = res.hosts;
+          } catch (err) {
+            // A deadline abort is a stall, not a user cancel: label it failed with the real reason.
+            const aborted = controller.signal.aborted && !stalled;
+            const msg = stalled ? 'Stalled (max runtime exceeded)' : err instanceof Error ? err.message : String(err);
+            await db
+              .insert(scanActivity)
+              .values({ scanId, stage: 'done', status: aborted ? 'cancelled' : 'failed', message: msg });
+            await db
+              .update(scans)
+              .set({
+                status: aborted ? 'cancelled' : 'failed',
+                stage: aborted ? 'cancelled' : 'failed',
+                error: msg,
+                finishedAt: new Date(),
+              })
+              .where(eq(scans.id, scanId));
+            throw err;
+          }
         }
+        if (mode === 'passive') {
+          await db
+            .insert(scanActivity)
+            .values({ scanId, stage: 'done', status: 'completed', message: 'passive scan complete' });
+          await db
+            .update(scans)
+            .set({ status: 'completed', stage: 'done', finishedAt: new Date() })
+            .where(eq(scans.id, scanId));
+        } else {
+          // active|full → binary pipeline (full feeds the passively-discovered hosts in as predefined).
+          const predefined =
+            mode === 'full'
+              ? [
+                  ...new Set([
+                    ...(target.predefinedSubdomains ?? []),
+                    ...passiveHosts.filter((h) => h !== target.domain),
+                  ]),
+                ]
+              : target.predefinedSubdomains;
+          await runScanPipeline(
+            {
+              scanId,
+              domain: target.domain,
+              predefinedSubdomains: predefined,
+              profile,
+              customHeaders: (target.customHeaders as Record<string, string> | null) ?? undefined,
+              signal: controller.signal,
+            },
+            { db, onProgress: (stage, msg) => console.log(`[scan ${scanId}] ${stage}: ${msg}`) },
+          );
+        }
+      } catch (err) {
+        // Status already persisted by the pipeline; log and fall through to notify.
+        console.error(`[worker] scan ${scanId} failed:`, err instanceof Error ? err.message : err);
+      } finally {
+        clearInterval(poll);
+        clearTimeout(deadline);
+        liveRuns.delete(scanId);
       }
-      if (mode === 'passive') {
-        await db
-          .insert(scanActivity)
-          .values({ scanId, stage: 'done', status: 'completed', message: 'passive scan complete' });
+      // A deadline abort goes through the pipelines' abort path (which labels it 'cancelled');
+      // relabel it as a stall so the user sees what actually happened.
+      if (stalled) {
         await db
           .update(scans)
-          .set({ status: 'completed', stage: 'done', finishedAt: new Date() })
-          .where(eq(scans.id, scanId));
-      } else {
-        // active|full → binary pipeline (full feeds the passively-discovered hosts in as predefined).
-        const predefined =
-          mode === 'full'
-            ? [...new Set([...(target.predefinedSubdomains ?? []), ...passiveHosts.filter((h) => h !== target.domain)])]
-            : target.predefinedSubdomains;
-        await runScanPipeline(
-          {
-            scanId,
-            domain: target.domain,
-            predefinedSubdomains: predefined,
-            profile,
-            customHeaders: (target.customHeaders as Record<string, string> | null) ?? undefined,
-            signal: controller.signal,
-          },
-          { db, onProgress: (stage, msg) => console.log(`[scan ${scanId}] ${stage}: ${msg}`) },
-        );
+          .set({ status: 'failed', stage: 'interrupted', error: 'Stalled (max runtime exceeded)' })
+          .where(and(eq(scans.id, scanId), eq(scans.status, 'cancelled')));
       }
-    } catch (err) {
-      // Status already persisted by the pipeline; log and fall through to notify.
-      console.error(`[worker] scan ${scanId} failed:`, err instanceof Error ? err.message : err);
-    } finally {
-      clearInterval(poll);
-      clearTimeout(deadline);
-      liveRuns.delete(scanId);
-    }
-    // A deadline abort goes through the pipelines' abort path (which labels it 'cancelled');
-    // relabel it as a stall so the user sees what actually happened.
-    if (stalled) {
-      await db
-        .update(scans)
-        .set({ status: 'failed', stage: 'interrupted', error: 'Stalled (max runtime exceeded)' })
-        .where(and(eq(scans.id, scanId), eq(scans.status, 'cancelled')));
-    }
-    const [done] = await db.select().from(scans).where(eq(scans.id, scanId));
-    if (done && done.status !== 'cancelled') {
-      const counts = (done.counts ?? {}) as Record<string, number>;
-      const passiveMsg = counts.discoveredUrls
-        ? ` · ${counts.discoveredUrls} URLs · ${counts.exposureFindings ?? 0} exposures · ${counts.ipResolutions ?? 0} IPs`
-        : '';
-      await sendProjectNotifications(db, done.projectId, {
-        type: done.status === 'completed' ? 'scan.completed' : 'scan.failed',
-        title: `Scan ${done.status}: ${target.domain}`,
-        message: `${counts.endpoints ?? 0} endpoints · ${counts.ports ?? 0} ports · ${counts.vulnerabilities ?? 0} vulns${passiveMsg}`,
-        severity: done.status === 'completed' ? 'success' : 'error',
-        fields: { Status: done.status, Target: target.domain },
-      });
+      const [done] = await db.select().from(scans).where(eq(scans.id, scanId));
+      if (done && done.status !== 'cancelled') {
+        const counts = (done.counts ?? {}) as Record<string, number>;
+        const passiveMsg = counts.discoveredUrls
+          ? ` · ${counts.discoveredUrls} URLs · ${counts.exposureFindings ?? 0} exposures · ${counts.ipResolutions ?? 0} IPs`
+          : '';
+        await sendProjectNotifications(db, done.projectId, {
+          type: done.status === 'completed' ? 'scan.completed' : 'scan.failed',
+          title: `Scan ${done.status}: ${target.domain}`,
+          message: `${counts.endpoints ?? 0} endpoints · ${counts.ports ?? 0} ports · ${counts.vulnerabilities ?? 0} vulns${passiveMsg}`,
+          severity: done.status === 'completed' ? 'success' : 'error',
+          fields: { Status: done.status, Target: target.domain },
+        });
 
-      // Dedicated high-severity alert so subscribers can be paged on the findings that matter.
-      if (done.status === 'completed') {
-        const sev = await db
-          .select()
-          .from(vulnerabilities)
-          .where(
-            and(
-              eq(vulnerabilities.scanId, scanId),
-              inArray(vulnerabilities.severity, [Severity.Critical, Severity.High]),
-            ),
-          );
-        if (sev.length) {
-          const crit = sev.filter((v) => v.severity === Severity.Critical).length;
-          const preview = sev
-            .slice(0, 5)
-            .map((v) => `${SEVERITY_LABEL[v.severity as SeverityValue].toUpperCase()} · ${v.name}`)
-            .join('\n');
-          await sendProjectNotifications(db, done.projectId, {
-            type: 'vuln.found',
-            title: `${sev.length} high/critical finding(s): ${target.domain}`,
-            message: preview + (sev.length > 5 ? `\n…and ${sev.length - 5} more` : ''),
-            severity: crit > 0 ? 'error' : 'warning',
-            fields: { Target: target.domain, Critical: String(crit), High: String(sev.length - crit) },
-          });
+        // Dedicated high-severity alert so subscribers can be paged on the findings that matter.
+        if (done.status === 'completed') {
+          const sev = await db
+            .select()
+            .from(vulnerabilities)
+            .where(
+              and(
+                eq(vulnerabilities.scanId, scanId),
+                inArray(vulnerabilities.severity, [Severity.Critical, Severity.High]),
+              ),
+            );
+          if (sev.length) {
+            const crit = sev.filter((v) => v.severity === Severity.Critical).length;
+            const preview = sev
+              .slice(0, 5)
+              .map((v) => `${SEVERITY_LABEL[v.severity as SeverityValue].toUpperCase()} · ${v.name}`)
+              .join('\n');
+            await sendProjectNotifications(db, done.projectId, {
+              type: 'vuln.found',
+              title: `${sev.length} high/critical finding(s): ${target.domain}`,
+              message: preview + (sev.length > 5 ? `\n…and ${sev.length - 5} more` : ''),
+              severity: crit > 0 ? 'error' : 'warning',
+              fields: { Target: target.domain, Critical: String(crit), High: String(sev.length - crit) },
+            });
+          }
         }
       }
-    }
-  });
+    },
+    { batchSize: scanConcurrency, concurrent: true },
+  );
 
   await queue.work('ti-refresh', tiJobSchema, async ({ projectId }) => {
     console.log(`[worker] threat-intel refresh ${projectId}`);
