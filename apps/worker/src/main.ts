@@ -250,15 +250,18 @@ async function main(): Promise<void> {
       const controller = new AbortController();
       liveRuns.set(scanId, controller);
       // Hard wall-clock deadline owned by the handler itself: aborting the controller SIGKILLs the
-      // child process group, so a hung tool cannot hold the run (and its job slot) forever.
+      // child process group, so a hung tool cannot hold the run (and its job slot) forever. The
+      // per-scan "Timeout (menit)" (scan.timeoutSec) raises this above the 1h MAX_SCAN_MS floor, so a
+      // big multi-domain scan is not silently cut short at the default.
       let stalled = false;
+      const scanDeadlineMs = Math.max(MAX_SCAN_MS, (scan.timeoutSec ?? 0) * 1000);
       const deadline = setTimeout(() => {
         // If a user cancel already aborted, this is a cancel, not a stall - don't relabel it.
         if (controller.signal.aborted) return;
         stalled = true;
         console.log(`[worker] scan ${scanId} exceeded max runtime, aborting`);
         controller.abort();
-      }, MAX_SCAN_MS);
+      }, scanDeadlineMs);
       const poll = setInterval(() => {
         void db
           .select()
