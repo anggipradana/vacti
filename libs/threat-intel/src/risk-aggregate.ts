@@ -1,4 +1,4 @@
-import { and, eq, inArray, ne, count } from 'drizzle-orm';
+import { and, desc, eq, inArray, ne, count } from 'drizzle-orm';
 import { Severity, VULN_ACTIVE_STATUSES, LEAK_UNRESOLVED_STATUSES } from '@vacti/core';
 import {
   scans,
@@ -16,8 +16,23 @@ const unresolvedLeak = new Set<string>(LEAK_UNRESOLVED_STATUSES);
 
 /** Aggregate a project's VA + Threat-Intel data into the unified risk score (status-aware). */
 export async function computeProjectRisk(db: Database, projectId: string): Promise<RiskResult> {
-  const scanRows = await db.select({ id: scans.id }).from(scans).where(eq(scans.projectId, projectId));
-  const scanIds = scanRows.map((s) => s.id);
+  // Current posture, not historical sum: count vulns from the latest vuln-producing scan per target
+  // (mode active|full), preferring a completed one, else the latest such scan (a running re-run is a
+  // fine partial). Tallying across every scan double-counts re-runs and inflates the risk score.
+  // Ordered createdAt DESC so the first match per target is the latest. Passive scans produce no vulns.
+  const scanRows = await db
+    .select({ id: scans.id, targetId: scans.targetId, status: scans.status, mode: scans.mode })
+    .from(scans)
+    .where(eq(scans.projectId, projectId))
+    .orderBy(desc(scans.createdAt));
+  const activeByTarget = new Map<string, string>();
+  const activeFallbackByTarget = new Map<string, string>();
+  for (const s of scanRows) {
+    if (s.mode === 'passive') continue;
+    if (!activeFallbackByTarget.has(s.targetId)) activeFallbackByTarget.set(s.targetId, s.id);
+    if (s.status === 'completed' && !activeByTarget.has(s.targetId)) activeByTarget.set(s.targetId, s.id);
+  }
+  const scanIds = [...activeFallbackByTarget].map(([tid, fallback]) => activeByTarget.get(tid) ?? fallback);
   // hasVa flips the score onto the "with VA" weighting, so it must mean a real assessment exists:
   // a queued/failed/passive scan row must NOT zero out the VA component (a fresh passive recon was
   // silently dropping the unified risk score by up to ~40%).

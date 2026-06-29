@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { Suspense } from 'react';
-import { desc, eq, inArray, and, count, sql, gte } from 'drizzle-orm';
+import { and, count, desc, eq, gte, inArray, ne, sql } from 'drizzle-orm';
 import {
   Crosshair,
   Radar,
@@ -63,7 +63,11 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
   if (!user) redirect('/login');
   const locale = await getLocale();
   const db = getDb();
-  const projectRows = await db.select().from(projects).orderBy(desc(projects.createdAt));
+  const projectRows = await db
+    .select()
+    .from(projects)
+    .where(ne(projects.slug, 'ai-pentest'))
+    .orderBy(desc(projects.createdAt));
   const projectId = await getActiveProjectId((await searchParams).project, projectRows);
   // Scope the whole overview to the active project so client engagements never bleed into each other.
   const [targetRows, scanRows] = projectId
@@ -72,14 +76,34 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
         db.select().from(scans).where(eq(scans.projectId, projectId)).orderBy(desc(scans.createdAt)),
       ])
     : [[], []];
-  const scanIds = scanRows.map((s) => s.id);
+  // Current posture, not historical sum: a target can accumulate several scans (re-runs, plus a
+  // separate active + passive scan), and tallying vulns/endpoints across all of them double-counts.
+  // scanRows is ordered createdAt DESC, so the first match per target is the latest one.
+  //  - activeScanIds: latest vuln/endpoint-producing scan per target (mode active|full). Prefer a
+  //    completed one; fall back to the latest such scan (a running re-run is fine as a partial) so a
+  //    target mid-rescan still shows data instead of zeroing out.
+  //  - passiveScanIds: every passive scan, for the distinct-host subdomain count (a subdomain found in
+  //    an older passive scan is still part of the surface; distinct already dedups re-runs).
+  const activeByTarget = new Map<string, string>();
+  const activeFallbackByTarget = new Map<string, string>();
+  const passiveScanIds: string[] = [];
+  for (const s of scanRows) {
+    if (s.mode === 'passive') {
+      passiveScanIds.push(s.id);
+      continue;
+    }
+    // active | full produce vulns + endpoints
+    if (!activeFallbackByTarget.has(s.targetId)) activeFallbackByTarget.set(s.targetId, s.id);
+    if (s.status === 'completed' && !activeByTarget.has(s.targetId)) activeByTarget.set(s.targetId, s.id);
+  }
+  const activeScanIds = [...activeFallbackByTarget].map(([tid, fallback]) => activeByTarget.get(tid) ?? fallback);
   // Endpoints are only ever counted on this page; tally server-side instead of hauling every row.
   // Vulnerabilities feed several top-N reductions, so we still pull rows - but only the columns those
   // reductions touch (name/severity/status/scanId/host/url/matchedAt), never the request/response/
   // description blobs that bloat the payload.
-  const [endpointCountRows, vulnRows] = scanIds.length
+  const [endpointCountRows, vulnRows] = activeScanIds.length
     ? await Promise.all([
-        db.select({ n: count() }).from(endpoints).where(inArray(endpoints.scanId, scanIds)),
+        db.select({ n: count() }).from(endpoints).where(inArray(endpoints.scanId, activeScanIds)),
         db
           .select({
             name: vulnerabilities.name,
@@ -91,7 +115,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
             matchedAt: vulnerabilities.matchedAt,
           })
           .from(vulnerabilities)
-          .where(inArray(vulnerabilities.scanId, scanIds)),
+          .where(inArray(vulnerabilities.scanId, activeScanIds)),
       ])
     : [[{ n: 0 }], []];
   const endpointCount = Number(endpointCountRows[0]?.n ?? 0);
@@ -108,11 +132,11 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
   const [expCount, passiveSubCount, discoveryByDay, discoveryEverCount, risk, leakRows, newsRows, brandRows] = projectId
     ? await Promise.all([
         db.select({ n: count() }).from(exposureFindings).where(eq(exposureFindings.projectId, projectId)),
-        scanIds.length
+        passiveScanIds.length
           ? db
               .select({ n: sql<number>`count(distinct ${subdomains.host})` })
               .from(subdomains)
-              .where(and(inArray(subdomains.scanId, scanIds), eq(subdomains.source, 'passive')))
+              .where(and(inArray(subdomains.scanId, passiveScanIds), eq(subdomains.source, 'passive')))
           : Promise.resolve([{ n: 0 }]),
         db
           .select({ day: sql<string>`date_trunc('day', ${discoveredUrls.createdAt})`, n: count() })
