@@ -116,10 +116,22 @@ interface NucleiRaw {
 }
 
 /** Normalise a nuclei field that may be a string, array, or absent into a string[]. */
+// Strip the NUL byte (0x00): Postgres text columns reject it, and nuclei's raw request/response
+// capture can contain it - which crashed the whole scan insert with no retry. fromCharCode keeps
+// a literal NUL out of the source.
+const NUL = String.fromCharCode(0);
+function stripNul(x: string): string {
+  return x.split(NUL).join('');
+}
+
 function toList(v: string[] | string | undefined): string[] {
   if (!v) return [];
-  return (Array.isArray(v) ? v : [v]).map((x) => String(x).trim()).filter(Boolean);
+  return (Array.isArray(v) ? v : [v]).map((x) => stripNul(String(x)).trim()).filter(Boolean);
 }
+
+// Postgres text columns reject the NUL byte (0x00); nuclei's captured request/response (raw, sometimes
+// binary HTTP) can contain it and would otherwise crash the whole scan's insert with no retry. Strip it.
+const pgText = (s: string | undefined): string | undefined => (s == null ? s : stripNul(s));
 
 export function parseNucleiLine(line: string): VulnResult | null {
   try {
@@ -131,19 +143,19 @@ export function parseNucleiLine(line: string): VulnResult | null {
     const cvss = rawScore != null && rawScore !== '' ? Number(rawScore) : undefined;
     return {
       templateId: id,
-      name: j.info?.name ?? id,
+      name: pgText(j.info?.name) ?? id,
       severity: mapNucleiSeverity(j.info?.severity),
       type: j.type,
-      host: j.host,
+      host: pgText(j.host),
       port: j.port,
       scheme: j.scheme,
-      url: j.url,
-      matchedAt: j['matched-at'],
-      tags: j.info?.tags ?? [],
-      request: j.request,
-      response: j.response,
-      description: j.info?.description?.trim() || undefined,
-      remediation: j.info?.remediation?.trim() || undefined,
+      url: pgText(j.url),
+      matchedAt: pgText(j['matched-at']),
+      tags: (j.info?.tags ?? []).map(stripNul),
+      request: pgText(j.request),
+      response: pgText(j.response),
+      description: pgText(j.info?.description?.trim()) || undefined,
+      remediation: pgText(j.info?.remediation?.trim()) || undefined,
       cvss: cvss != null && Number.isFinite(cvss) ? cvss : undefined,
       cveIds: toList(cls?.['cve-id']),
       references: toList(j.info?.reference),
