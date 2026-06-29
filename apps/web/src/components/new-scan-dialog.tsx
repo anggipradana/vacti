@@ -3,6 +3,7 @@ import * as React from 'react';
 import { Plus } from 'lucide-react';
 import { Button } from './ui/button';
 import { Checkbox } from './ui/checkbox';
+import { Input } from './ui/input';
 import { Select } from './ui/select';
 import { Label } from './ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from './ui/dialog';
@@ -35,6 +36,7 @@ export function NewScanDialog({
           profileId: String(fd.get('profileId') ?? ''),
           mode: String(fd.get('mode') ?? 'active'),
           deepScan: fd.get('deepScan') === '1',
+          timeoutMin: String(fd.get('timeoutMin') ?? ''),
         }),
       });
       const data = (await res.json()) as { ok?: boolean; scanId?: string };
@@ -83,6 +85,21 @@ export function NewScanDialog({
               <option value="passive">Passive (OSINT only - no traffic to target)</option>
               <option value="full">Full (passive discovery → active)</option>
             </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="timeoutMin">Timeout (menit)</Label>
+            <Input
+              id="timeoutMin"
+              name="timeoutMin"
+              type="number"
+              min={1}
+              max={600}
+              defaultValue={60}
+              data-testid="scan-timeout"
+            />
+            <p className="text-xs text-fg-subtle">
+              Berapa lama tiap tool boleh jalan. Scan besar multi-domain bisa diset sampai 600 menit (10 jam).
+            </p>
           </div>
           <label className="flex items-center gap-2 text-sm">
             <Checkbox name="deepScan" value="1" data-testid="scan-deep" />

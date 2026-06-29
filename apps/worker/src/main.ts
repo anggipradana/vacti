@@ -232,6 +232,10 @@ async function main(): Promise<void> {
       if (scan.toolsOverride) {
         profile = { ...profile, tools: scan.toolsOverride as ScanProfile['tools'] };
       }
+      // Per-scan timeout (set on the new-scan form) wins over the profile, else the in-code default.
+      if (scan.timeoutSec != null) {
+        profile = { ...profile, timeoutSec: scan.timeoutSec };
+      }
       console.log(`[worker] scan ${scanId} starting (${target.domain})`);
       // scan.started is a subscribable webhook event, so actually emit it (best-effort) - otherwise a
       // webhook subscribed only to scan.started would silently never fire.

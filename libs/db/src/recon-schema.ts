@@ -57,6 +57,9 @@ export const scans = pgTable(
     cancelRequested: boolean('cancel_requested').notNull().default(false),
     // Partial-rescan tool subset (sub-scan): overrides the profile's tools when present.
     toolsOverride: jsonb('tools_override'),
+    // Per-scan per-tool timeout (seconds). Wins over the profile/default when set so big
+    // multi-domain scans can be given a longer budget (up to 10h = 36000s).
+    timeoutSec: integer('timeout_sec'),
     startedAt: timestamp('started_at', { withTimezone: true }),
     finishedAt: timestamp('finished_at', { withTimezone: true }),
     counts: jsonb('counts'),

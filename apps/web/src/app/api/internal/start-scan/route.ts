@@ -30,6 +30,7 @@ export async function POST(req: Request): Promise<Response> {
     profileId?: string;
     mode?: string;
     deepScan?: boolean;
+    timeoutMin?: unknown;
   };
   const targetId = body.targetId ?? '';
   // Validate the id is a UUID before querying: an empty/malformed value would otherwise make the
@@ -39,12 +40,19 @@ export async function POST(req: Request): Promise<Response> {
   const profileId = isUuid(rawProfile) ? rawProfile : null; // ignore '' / malformed
   const mode = body.mode === 'passive' || body.mode === 'full' ? body.mode : 'active';
   const deepScan = body.deepScan === true;
+  // Per-scan per-tool timeout in minutes (1..600 = up to 10h), stored as seconds. Optional: an
+  // absent/invalid value leaves timeoutSec NULL so the profile/default applies.
+  const parsedTimeout = z.coerce.number().int().min(1).max(600).safeParse(body.timeoutMin);
+  if (body.timeoutMin != null && body.timeoutMin !== '' && !parsedTimeout.success) {
+    return Response.json({ ok: false, error: 'bad_timeout' }, { status: 400 });
+  }
+  const timeoutSec = parsedTimeout.success ? parsedTimeout.data * 60 : null;
   const db = getDb();
   const [target] = await db.select().from(targets).where(eq(targets.id, targetId));
   if (!target) return Response.json({ ok: false, error: 'no_target' }, { status: 400 });
   const [scan] = await db
     .insert(scans)
-    .values({ projectId: target.projectId, targetId: target.id, profileId, mode, deepScan })
+    .values({ projectId: target.projectId, targetId: target.id, profileId, mode, deepScan, timeoutSec })
     .returning();
   await recordAudit({
     actorId: user.id,
