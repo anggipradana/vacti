@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
-import { count, desc } from 'drizzle-orm';
+import { count, desc, ne } from 'drizzle-orm';
 import { FolderKanban } from 'lucide-react';
 import { Card, CardContent } from '../../../../components/ui/card';
 import { FormBanner } from '../../../../components/ui/form-banner';
@@ -45,10 +45,11 @@ export default async function ProjectsPage({
     db
       .select()
       .from(projects)
+      .where(ne(projects.slug, 'ai-pentest'))
       .orderBy(desc(projects.createdAt))
       .limit(PAGE)
       .offset((page - 1) * PAGE),
-    db.select({ n: count() }).from(projects),
+    db.select({ n: count() }).from(projects).where(ne(projects.slug, 'ai-pentest')),
   ]);
   const total = Number(countRows[0]?.n ?? 0);
   const totalPages = Math.max(1, Math.ceil(total / PAGE));

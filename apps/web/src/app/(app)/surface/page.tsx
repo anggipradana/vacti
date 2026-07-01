@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import Form from 'next/form';
 import { redirect } from 'next/navigation';
-import { and, eq, ilike, desc, count, sql, inArray } from 'drizzle-orm';
+import { and, count, desc, eq, ilike, inArray, ne, sql } from 'drizzle-orm';
 import { ShieldAlert, FileSearch, Network } from 'lucide-react';
 import { PageHeader } from '../../../components/ui/page-header';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card';
@@ -44,7 +44,11 @@ export default async function SurfacePage({
   if (!user) redirect('/login');
   const locale = await getLocale();
   const db = getDb();
-  const projectRows = await db.select().from(projects).orderBy(desc(projects.createdAt));
+  const projectRows = await db
+    .select()
+    .from(projects)
+    .where(ne(projects.slug, 'ai-pentest'))
+    .orderBy(desc(projects.createdAt));
   const sp = await searchParams;
   const projectId = await getActiveProjectId(sp.project, projectRows);
   if (!projectId) {

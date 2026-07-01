@@ -7,6 +7,7 @@ export * from './pentest-ai-types';
 export * from './pentest-ref-validate';
 export * from './pentest-caption-qa';
 export * from './pentest-report-prose';
+export * from './pentest-dedup';
 export * from './pentest-consolidated-recs';
 export * from './pentest-visual-qa';
 export * from './vault-keys';

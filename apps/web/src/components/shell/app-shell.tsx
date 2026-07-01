@@ -3,7 +3,7 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Menu, LogOut, ChevronDown } from 'lucide-react';
+import { Menu, LogOut, ChevronDown, Bell } from 'lucide-react';
 import { cn } from '../../lib/cn';
 import { Button } from '../ui/button';
 import { ThemeToggle } from '../ui/theme-toggle';
@@ -86,10 +86,12 @@ function UserMenu({ email, isSysAdmin }: { email: string; isSysAdmin: boolean })
 export function AppShell({
   user,
   locale = 'en',
+  helpAlert = null,
   children,
 }: {
   user: { email: string; isSysAdmin: boolean };
   locale?: Locale;
+  helpAlert?: { count: number; href: string } | null;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -124,6 +126,19 @@ export function AppShell({
             })}
           </nav>
           <div className="ml-auto flex items-center gap-1.5">
+            {helpAlert ? (
+              <Link
+                href={helpAlert.href}
+                className="relative inline-flex size-9 items-center justify-center rounded-md"
+                title={locale === 'id' ? 'Engine butuh bantuan' : 'Engine needs help'}
+                aria-label="engine needs help"
+              >
+                <Bell className="size-5 text-accent" />
+                <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold text-white">
+                  {helpAlert.count}
+                </span>
+              </Link>
+            ) : null}
             {/* The full search box needs room; show it at 2xl, keep the icon-trigger at xl so the
                 nav fits comfortably between 1280-1536. ⌘K works at any width. */}
             <div className="hidden 2xl:block">

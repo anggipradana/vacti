@@ -36,10 +36,13 @@ export function evidenceRank(kind: string, evidenceKey: string): number {
   if (kind === 'screenshot') {
     // The IDOR/BAC 2-account comparison exhibits ARE the proof - lead with them.
     if (/idor-compare|compare-shots|compare-reqres/.test(k)) return 0;
-    if (/proxy-reqres|auto-reqres/.test(k)) return 1;
-    if (/auto-req-|req-only|-request/.test(k)) return 2;
-    if (/auto-res-|res-only|-response/.test(k)) return 3;
-    if (/exploit|exhibit|comparison/.test(k)) return 4;
+    // The swarm's OWN authenticated exploit/PoC screenshots (named by the exploit/step, NOT a deterministic
+    // auto-* capture or a req/resp pane) are the real visual proof the operator wants to SEE - rank them ABOVE
+    // the styled req/resp panes (which read as "fabricated" boxes and are only supporting evidence).
+    if (!k.startsWith('auto-') && !/^loc-|page-load|landing|reqres|-request\b|-response\b/.test(k)) return 1;
+    if (/proxy-reqres|auto-reqres/.test(k)) return 2;
+    if (/auto-req-|req-only|-request/.test(k)) return 3;
+    if (/auto-res-|res-only|-response/.test(k)) return 4;
     if (/auto-loc|^loc-|page-load|landing/.test(k)) return 6; // generic affected-page screenshot trails the proof
     return 5;
   }
@@ -55,6 +58,55 @@ export function orderEvidence<T extends { kind: string; evidenceKey?: string | n
         evidenceRank(a.e.kind, a.e.evidenceKey ?? '') - evidenceRank(b.e.kind, b.e.evidenceKey ?? '') || a.i - b.i,
     )
     .map((x) => x.e);
+}
+
+/** A good PoC needs the REAL web exploit screenshots PLUS the request/response - every finding MUST carry its
+ *  req/resp, not just screenshots (and an API/POST finding may have NO web UI to screenshot, so the req/resp IS
+ *  the proof). The CURATED set: drop internal/padding shots (showEvidence), order exploit-proof first
+ *  (orderEvidence), then keep up to `cap` (10) REAL web screenshots SEPARATELY from - and always alongside -
+ *  the req/resp exhibits (<=2 rendered req/resp panes + <=3 raw request_response texts) and a bounded set of
+ *  tool command_output. The req/resp is NEVER crowded out by the screenshot cap. */
+export const EVIDENCE_CAP = 10; // REAL web exploit screenshots per finding, EXCLUDING the req/resp exhibits
+export function curateEvidence<T extends { kind: string; evidenceKey?: string | null }>(
+  items: readonly T[],
+  cap: number = EVIDENCE_CAP,
+): T[] {
+  const ordered = orderEvidence(items.filter((e) => showEvidence(null, e.kind, e.evidenceKey ?? '')));
+  const out: T[] = [];
+  let webShots = 0;
+  let reqResShots = 0;
+  let reqRespText = 0;
+  let cmdOut = 0;
+  for (const e of ordered) {
+    const k = (e.evidenceKey ?? '').toLowerCase();
+    // ALWAYS keep the raw request/response text - every finding must carry its req/resp (operator rule), and an
+    // API/POST finding with no web UI relies on it as the PRIMARY proof. Bounded so it is not a wall.
+    if (e.kind === 'request_response') {
+      if (reqRespText >= 3) continue;
+      reqRespText++;
+      out.push(e);
+      continue;
+    }
+    if (e.kind === 'screenshot') {
+      const isReqResShot = /proxy-reqres|auto-reqres|auto-req-|auto-res-|-request\b|-response\b/.test(k);
+      if (isReqResShot) {
+        if (reqResShots >= 2) continue; // 2 rendered req/resp panes is enough (the same exchange)
+        reqResShots++;
+        out.push(e);
+        continue;
+      }
+      // REAL web exploit screenshots - capped at `cap` (10), SEPARATE from the req/resp exhibits above.
+      if (webShots >= cap) continue;
+      webShots++;
+      out.push(e);
+      continue;
+    }
+    // command_output / scan_output / har - bounded supporting evidence.
+    if (cmdOut >= 4) continue;
+    cmdOut++;
+    out.push(e);
+  }
+  return out;
 }
 
 export function sevClass(sev: number): string {

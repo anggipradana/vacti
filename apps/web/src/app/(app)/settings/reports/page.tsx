@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
-import { desc, eq } from 'drizzle-orm';
+import { desc, eq, ne } from 'drizzle-orm';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../components/ui/card';
 import { Checkbox } from '../../../../components/ui/checkbox';
 import { Input } from '../../../../components/ui/input';
@@ -40,7 +40,11 @@ export default async function ReportSettingsPage({ searchParams }: { searchParam
   const locale = await getLocale();
   const FIELDS = fields(locale);
   const db = getDb();
-  const projectRows = await db.select().from(projects).orderBy(desc(projects.createdAt));
+  const projectRows = await db
+    .select()
+    .from(projects)
+    .where(ne(projects.slug, 'ai-pentest'))
+    .orderBy(desc(projects.createdAt));
   const sp = await searchParams;
   // Cookie-aware: must follow the ACTIVE project. Defaulting to the newest project made the AI
   // exec-summary (and branding edits) silently target the wrong project.

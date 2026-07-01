@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
-import { desc, eq, getTableColumns } from 'drizzle-orm';
+import { desc, eq, getTableColumns, ne } from 'drizzle-orm';
 import { CalendarClock } from 'lucide-react';
 import { Card, CardContent } from '../../../../components/ui/card';
 import { FormBanner } from '../../../../components/ui/form-banner';
@@ -37,7 +37,11 @@ export default async function SchedulesPage({
   const locale = await getLocale();
   const canManage = userCan(user, Permission.InitiateScans);
   const db = getDb();
-  const projectRows = await db.select().from(projects).orderBy(desc(projects.createdAt));
+  const projectRows = await db
+    .select()
+    .from(projects)
+    .where(ne(projects.slug, 'ai-pentest'))
+    .orderBy(desc(projects.createdAt));
   const sp = await searchParams;
   const projectId = await getActiveProjectId(sp.project, projectRows);
   // Schedules have no projectId of their own, so scope them via the active project's targets with an

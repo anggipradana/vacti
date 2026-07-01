@@ -4,5 +4,5 @@ export * from './va-report';
 export * from './ti-report';
 export * from './pentest-report';
 export * from './render';
-export { showEvidence, evidenceRank, orderEvidence } from './shared';
+export { showEvidence, evidenceRank, orderEvidence, curateEvidence, EVIDENCE_CAP } from './shared';
 export * from './bssn';

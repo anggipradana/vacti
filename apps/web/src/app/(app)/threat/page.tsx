@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { Suspense } from 'react';
-import { desc, eq, count, sql } from 'drizzle-orm';
+import { count, desc, eq, ne, sql } from 'drizzle-orm';
 import { RefreshCw, ShieldCheck, Bug, Activity, Plus } from 'lucide-react';
 import { PageHeader } from '../../../components/ui/page-header';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card';
@@ -70,7 +70,11 @@ export default async function ThreatPage({
   if (!user) redirect('/login');
   const locale = await getLocale();
   const db = getDb();
-  const projectRows = await db.select().from(projects).orderBy(desc(projects.createdAt));
+  const projectRows = await db
+    .select()
+    .from(projects)
+    .where(ne(projects.slug, 'ai-pentest'))
+    .orderBy(desc(projects.createdAt));
   const sp = await searchParams;
   const projectId = await getActiveProjectId(sp.project, projectRows);
   const brandFilter = sp.bnews ?? 'all';

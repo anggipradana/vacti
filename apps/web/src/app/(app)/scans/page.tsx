@@ -48,7 +48,11 @@ export default async function ScansPage({
   const page = Math.max(1, Number(sp.page ?? 1) || 1);
   const tpage = Math.max(1, Number(sp.tpage ?? 1) || 1);
   const offset = (page - 1) * PAGE_SIZE;
-  const projectRows = await db.select().from(projects).orderBy(desc(projects.createdAt));
+  const projectRows = await db
+    .select()
+    .from(projects)
+    .where(ne(projects.slug, 'ai-pentest'))
+    .orderBy(desc(projects.createdAt));
   const projectId = await getActiveProjectId(sp.project, projectRows);
   // Scope scans + targets to the active project (multi-project workspaces).
   // Scans dashboard is for VA scans only (active/full). Passive-recon-only scans belong to Attack

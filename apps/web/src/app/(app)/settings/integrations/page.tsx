@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
-import { desc, eq } from 'drizzle-orm';
+import { desc, eq, ne } from 'drizzle-orm';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../components/ui/card';
 import { Checkbox } from '../../../../components/ui/checkbox';
 import { Input } from '../../../../components/ui/input';
@@ -57,7 +57,11 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
   const locale = await getLocale();
   const VAULT_KEYS = vaultKeys(locale);
   const db = getDb();
-  const projectRows = await db.select().from(projects).orderBy(desc(projects.createdAt));
+  const projectRows = await db
+    .select()
+    .from(projects)
+    .where(ne(projects.slug, 'ai-pentest'))
+    .orderBy(desc(projects.createdAt));
   const sp = await searchParams;
   // Cookie-aware: follow the active project like the other project-scoped pages (a switch persists).
   const projectId = await getActiveProjectId(sp.project, projectRows);
